@@ -1,3 +1,4 @@
+import { sqRand2D } from "./lumic/common.js";
 import * as debug from "./lumic/debugutils.js";
 
 const w = 2000;
@@ -27,20 +28,32 @@ const ground4 = "#f3fdef";
 const nsx1 = 0.0005;
 const nsy1 = 0.002;
 
+function rndXYSeed(x, y, seed) {
+  return sqRand2D(x, y, seed) - 0.5;
+}
+
 function displaceY(x, y) {
   return noise(100 + x * nsx1, 100 + y * nsy1) - 0.5;
 }
 
 function drawBand(g, yStart, yEnd) {
   g.strokeWeight(1);
-  const r1 = yEnd - yStart;
+
+  // This may look like a bug but is intentional
+  // const r1 = (yEnd - yStart) * 2;
+  const r1 = yEnd - yStart * 2;
   const r2 = 4;
 
   for (var x = -halfW; x <= halfW; x++) {
-    let x1 = x + random(-r1, r1);
-    let y1 = yStart + random(-r2, r2);
-    let x2 = x + random(-r1, r1);
-    let y2 = yEnd + random(-r2, r2);
+    // let x1 = x + random(-r1, r1);
+    // let x2 = x + random(-r1, r1);
+    let x1 = x + rndXYSeed(x, yStart, 100) * r1;
+    let x2 = x + rndXYSeed(x, yEnd, 100) * r1;
+
+    // let y1 = yStart + random(-r2, r2);
+    // let y2 = yEnd + random(-r2, r2);
+    let y1 = yStart + rndXYSeed(x, yStart, 1000) * r2;
+    let y2 = yEnd + rndXYSeed(x, yEnd, 10000) * r2;
 
     y1 += displaceY(x1, y1) * 256;
     y2 += displaceY(x2, y2) * 256;
