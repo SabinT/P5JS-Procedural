@@ -3,6 +3,18 @@ export const TAU = 6.283185307179586476925286766559;
 
 let EPS = 1e-6;
 
+export function vec2(a, b) {
+  return new p5.Vector(a, b);
+}
+
+export function vec3(a, b, c) {
+  return new p5.Vector(a, b, c);
+}
+
+export function avg(x, y) {
+  return 0.5 * (x + y);
+}
+
 export function almostEquals(a, b) {
   return Math.abs(a - b) < EPS;
 }
