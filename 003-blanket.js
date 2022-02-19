@@ -39,19 +39,15 @@ function displaceY(x, y) {
 function drawBand(g, yStart, yEnd) {
   g.strokeWeight(1);
 
-  // This may look like a bug but is intentional
   // const r1 = (yEnd - yStart) * 2;
+  // This may look like a bug but is intentional :P
   const r1 = yEnd - yStart * 2;
   const r2 = 4;
 
   for (var x = -halfW; x <= halfW; x++) {
-    // let x1 = x + random(-r1, r1);
-    // let x2 = x + random(-r1, r1);
     let x1 = x + rndXYSeed(x, yStart, 100) * r1;
     let x2 = x + rndXYSeed(x, yEnd, 100) * r1;
 
-    // let y1 = yStart + random(-r2, r2);
-    // let y2 = yEnd + random(-r2, r2);
     let y1 = yStart + rndXYSeed(x, yStart, 1000) * r2;
     let y2 = yEnd + rndXYSeed(x, yEnd, 10000) * r2;
 
