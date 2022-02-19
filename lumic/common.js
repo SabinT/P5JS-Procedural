@@ -43,7 +43,17 @@ const NOISE3 = 0x1b56c4e9; // 0b0001'1011'0101'0110'1100'0100'1110'1001
 // https://www.ecma-international.org/ecma-262/5.1/#sec-8.5
 const MAX_SQUIRREL = (1 << 31) >>> 0; // 2147483648
 
+/**
+ * Credits: Squirrel Eiserloh's random number generator.
+ * Very nice video about RNGs and noise. Goes into examples and various of qualities of RNGs.
+ * https://www.youtube.com/watch?v=LWFzPP8ZbdU
+ * @param {*} n
+ * @param {*} seed
+ * @returns An integer between 0 and 2147483647
+ */
 function squirrel3(n, seed = 0) {
+  // This is how you multiply 32-bit numbers in JS with proper overflow.
+  // Bitwise operators in JS work on 32-bit numbers.
   n = Math.imul(n, NOISE1);
   n += seed;
   n ^= n >> 8;
