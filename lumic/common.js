@@ -1,6 +1,13 @@
 export const PI = 3.1415926535897932384626433832795;
 export const TAU = 6.283185307179586476925286766559;
 
+export const DEG2RAD = 0.01745329;
+export const RAD2DEG = 57.29578;
+
+const temp_t = (Math.sqrt(5) + 1) / 2;
+export const GOLDEN_ANGLE_DEGREES = 360 / (temp_t * temp_t);
+export const GOLDEN_ANGLE_RADIANS = GOLDEN_ANGLE_DEGREES * DEG2RAD;
+
 let EPS = 1e-6;
 
 export function vec2(a, b) {
@@ -13,6 +20,10 @@ export function vec3(a, b, c) {
 
 export function avg(x, y) {
   return 0.5 * (x + y);
+}
+
+export function polar2cart(r, angleRadians) {
+  return vec2(r * Math.cos(angleRadians), r * Math.sin(angleRadians));
 }
 
 export function almostEquals(a, b) {
