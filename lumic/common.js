@@ -22,8 +22,13 @@ export function avg(x, y) {
   return 0.5 * (x + y);
 }
 
-export function polar2cart(r, angleRadians) {
-  return vec2(r * Math.cos(angleRadians), r * Math.sin(angleRadians));
+export function polar2cart(v) {
+  return vec2(v.x * Math.cos(v.y), v.x * Math.sin(v.y));
+}
+
+export function vertexPolar(p) {
+  const c = polar2cart(p);
+  vertex(c.x, c.y);
 }
 
 export function almostEquals(a, b) {

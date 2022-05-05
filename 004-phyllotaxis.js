@@ -40,7 +40,7 @@ function drawPhyllotactic(n, radialCoeff) {
   const angle = n * GOLDEN_ANGLE_RADIANS;
   const r = radialCoeff * sqrt(n);
 
-  const cart = polar2cart(r, angle);
+  const cart = polar2cart(vec2(r, angle));
 
   const x = cart.x + hw;
   const y = cart.y + hh;
