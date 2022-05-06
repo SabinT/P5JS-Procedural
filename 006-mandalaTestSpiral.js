@@ -4,7 +4,7 @@ import {
   getRandomColor,
 } from "./lumic/palettes.js";
 import * as m from "./lumic/mandala.js";
-import { getRandom, polar2cart } from "./lumic/common.js";
+import { getRandom, GOLDEN_ANGLE_RADIANS, polar2cart, TAU } from "./lumic/common.js";
 
 const w = 600;
 const hw = w / 2;
@@ -61,12 +61,24 @@ function render(g) {
   }
 
   const divisions = 8;
-  const mWidth = width * .8;
+  const mWidth = width * 0.8;
+  const angleRange = 1.75;
+//   const angleRange = GOLDEN_ANGLE_RADIANS / TAU;
+  const rStep = mWidth / (2 * divisions);
+  const spiralFactor = 2;
+  const r1 = 20;
+  const r2 = r1 * spiralFactor;
   for (let i = 0; i < divisions; i++) {
     randomizeStyle();
-    const r1 = (i * mWidth) / (2 * divisions);
-    const r2 = ((i + 1) * mWidth) / (2 * divisions);
-    m.drawRing(r1, r2, m.getRandomSegment(), baseOptions);
+    m.drawRing(r1, r2, m.getRandomSegment(), {
+      ...baseOptions,
+      angleStart: i * angleRange * TAU,
+      angleRange: angleRange * TAU,
+      onBeforeSegment: (s) => {
+        s.r1 += spiralFactor * (rStep * s.a1) / (angleRange * TAU);
+        s.r2 += spiralFactor * (rStep * s.a2) / (angleRange * TAU);
+      },
+    });
   }
 
   pop();

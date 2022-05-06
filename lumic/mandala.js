@@ -1,4 +1,17 @@
-import { avg, vec2, polar2cart, lerp, bezier2D } from "./common.js";
+import {
+  avg,
+  vec2,
+  polar2cart,
+  lerp,
+  bezier2D,
+  bezierQuadratic2DShape,
+  TAU,
+} from "./common.js";
+
+let polarSubdivisionCount = 8;
+export function setPolarSubdivisionCount(n) {
+  polarSubdivisionCount = n;
+}
 
 export function segmentCenter(s) {
   return vec2(avg(s.r1, s.r2), avg(s.a1, s.a2));
@@ -28,9 +41,10 @@ export function polarLine(
   theta1,
   r2,
   theta2,
-  divisions = 8,
+  divisions = null,
   vertexMode = false
 ) {
+  divisions = divisions || polarSubdivisionCount;
   let start = vec2(r1, theta1);
   let end = vec2(r2, theta2);
   for (let i = 0; i < divisions; i++) {
@@ -66,7 +80,7 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
  * Draws a radially repeated ring of custom shape and repeat count.
  * @param {*} rStart Start radius of ring
  * @param {*} rEnd End radius of ring
- * @param {function} drawRingSegmentFunc A function that takes (segment, i, options)
+ * @param {function} segmentFunc A function that takes (segment, i, options)
  *        segment must have properties r1, r2, a1, a2 (angles in radians)
  *        i is the index of the current segment being drawn
  * @param {object} options Arbitrary data for custom ring functions, and some standard customizations
@@ -76,13 +90,13 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
  *        options.filter(i): Decide whether to drop segments based on index (return false to drop)
  *        options.onAfterSegment: custome code to execute after drawing segment
  */
-export function drawRing(rStart, rEnd, drawRingSegmentFunc, options) {
-  const count = options.count || 8;
+export function drawRing(rStart, rEnd, segmentFunc, options) {
+  const count = options?.count || 8;
 
-  const anglePerSegment = TAU / count;
+  const angleRange = options?.angleRange || TAU;
+
+  const anglePerSegment = angleRange / count;
   const offset = 0.5 * anglePerSegment;
-
-  const inset = options?.inset || 0;
 
   for (let i = 0; i < count; i++) {
     if (options?.filter) {
@@ -91,26 +105,42 @@ export function drawRing(rStart, rEnd, drawRingSegmentFunc, options) {
       }
     }
 
-    const angleStart = -offset + i * anglePerSegment;
+    const angleShiftFactor = options?.angleShiftFactor || 0;
+
+    const angleStart =
+      angleShiftFactor * anglePerSegment -
+      offset +
+      i * anglePerSegment +
+      (options?.angleStart || 0);
+
     const angleEnd = angleStart + anglePerSegment;
 
     let segment = {};
 
-    if (inset) {
-      const insetA = constrain(inset, 0, 0.5);
+    const inset = options?.inset || 0;
+    if (inset || options?.insetR || options?.insetA) {
+      let insetA, insetR;
 
-      // Find the change in average arc length due to angle inset
-      const circumference = 2 * PI * avg(rEnd, rStart) / (angleEnd - angleStart);
-      const arcChange =  circumference * insetA;
+      if (options?.autoFixInset) {
+        insetA = constrain(inset, 0, 0.5);
+
+        // Find the change in average arc length due to angle inset
+        const circumference =
+          (2 * PI * avg(rEnd, rStart)) / (angleEnd - angleStart);
+        const arcChange = circumference * insetA;
         const dr = rEnd - rStart;
-        const ar = dr / circumference;
+        //const ar = dr / circumference;
 
-      const insetR = constrain(2 * (rEnd - rStart) / arcChange, 0, 0.5);
+        insetR = constrain((2 * (rEnd - rStart)) / arcChange, 0, 0.5);
+      } else {
+        insetA = options?.insetA || inset;
+        insetR = options?.insetR || inset;
+      }
 
       segment.r1 = lerp(rStart, rEnd, insetR);
       segment.r2 = lerp(rEnd, rStart, insetR);
-      segment.a1 = lerp(angleStart, angleEnd, inset);
-      segment.a2 = lerp(angleEnd, angleStart, inset);
+      segment.a1 = lerp(angleStart, angleEnd, insetA);
+      segment.a2 = lerp(angleEnd, angleStart, insetA);
     } else {
       segment = { r1: rStart, r2: rEnd, a1: angleStart, a2: angleEnd };
     }
@@ -120,13 +150,15 @@ export function drawRing(rStart, rEnd, drawRingSegmentFunc, options) {
       options.onBeforeSegment(segment);
     }
 
-    if (options?.shape) {
+    const createShape = options?.shape && supportsVertexMode.has(segmentFunc);
+
+    if (createShape) {
       beginShape();
     }
 
-    drawRingSegmentFunc(segment, i, options);
+    segmentFunc(segment, i, options);
 
-    if (options?.shape) {
+    if (createShape) {
       endShape();
     }
 
@@ -135,6 +167,11 @@ export function drawRing(rStart, rEnd, drawRingSegmentFunc, options) {
     }
   }
 }
+
+export function emptySegment(s, i, options) {
+    // Wow so empty
+    // But you can still use this segment, if you just want to execute custom callbacks
+  }
 
 export function diamondSegment(s, i, options) {
   //  *----B----*   A = (rm, a2)
@@ -191,7 +228,7 @@ export function triangleSegment(s, i, options) {
 }
 
 // Assuming angle1 < angle2
-function squareSegment(s, i) {
+export function squareSegment(s, i) {
   noFill();
   const midAngle = constrain(avg(s.a1, s.a2), s.a1, s.a2);
   cArc(s.r1, s.a1, midAngle);
@@ -200,14 +237,15 @@ function squareSegment(s, i) {
   polarLine(s.r1, midAngle, s.r2, midAngle);
 }
 
-function cellSegment(s, i) {
+export function cellSegment(s, i) {
   polarLine(s.r1, s.a1, s.r1, s.a2);
   // leading line, closing line will be provided by next segment
   polarLine(s.r1, s.a1, s.r2, s.a1);
   polarLine(s.r2, s.a1, s.r2, s.a2);
 }
 
-function bezierSegment(s, i) {
+export function bezierSegment(s, i) {
+  noFill();
   let a, b, c, d;
 
   a = polar2cart(vec2(s.r1, s.a1));
@@ -217,7 +255,7 @@ function bezierSegment(s, i) {
   bezier2D(a, b, c, d);
 }
 
-function leafSegment(s, i, options) {
+export function leafSegment(s, i, options) {
   let a, b, c, d, e, f, g, h;
   const sc = segmentCenter(s);
 
@@ -230,7 +268,7 @@ function leafSegment(s, i, options) {
     b = p5.Vector.lerp(a, b, 0.5);
     c = p5.Vector.lerp(c, d, 0.5);
 
-    bezier2D(d,c,b,a,options?.shape)
+    bezier2D(d, c, b, a, options?.shape);
   }
 
   {
@@ -242,15 +280,81 @@ function leafSegment(s, i, options) {
     b = p5.Vector.lerp(a, b, 0.5);
     c = p5.Vector.lerp(c, d, 0.5);
 
-    bezier2D(d,c,b,a, options.shape);
+    bezier2D(d, c, b, a, options.shape);
   }
 
-  polarLine(s.r1, s.a1, s.r1, s.a2, 8, options?.shape);
+  const perimiter =
+    "perimeter" in options ? options.perimiter : Math.floor(random(2)) === 0;
+  if (perimiter) {
+    polarLine(s.r1, s.a1, s.r1, s.a2, 8, options?.shape);
+  }
 }
 
 export function boxSegment(s, i, options) {
   polarBox(s.r1, s.a1, s.r2, s.a2, 8, options?.shape);
 }
+
+export function crissCrossPetalSegment(s, i, options) {
+  noFill();
+  var a = polar2cart(vec2(s.r1, s.a1)); // bottom left
+  var b = polar2cart(vec2(s.r2, s.a1)); // top left
+  var c = polar2cart(vec2(s.r2, s.a2)); // top right
+  var d = polar2cart(vec2(s.r1, s.a2)); // bottom right
+
+  var phi = s.a2 - s.a1; // angle subtended by arc
+  var r3 = s.r2 / Math.cos(0.5 * phi);
+  r3 *= options.scaler || 0.97;
+  var e = polar2cart(vec2(r3, avg(s.a1, s.a2)));
+
+  bezier2D(a, b, e, c);
+  bezier2D(b, e, c, d);
+}
+
+export function leafTiltedSegment(s, i, options) {
+  const da = Math.abs(s.a2 - s.a1);
+  s.a1 -= 0.5 * da;
+  s.a2 -= 0.5 * da;
+
+  var a = polar2cart(vec2(s.r1, s.a1)); // bottom left
+  var b = polar2cart(vec2(s.r2, s.a1)); // top left
+  var c = polar2cart(vec2(s.r2, s.a2)); // top right
+  var d = polar2cart(vec2(s.r1, s.a2)); // bottom right
+
+  const skipFactor = options?.skipFactor || 1;
+  const j = Math.floor((i + 1) / skipFactor);
+
+  if (j % 2 == 1) {
+    return;
+  }
+
+  const m = options?.flip || false ? 0 : 1;
+
+  beginShape();
+  if (i % 2 == m) {
+    bezierQuadratic2DShape(a, b, c);
+    bezierQuadratic2DShape(c, d, a);
+  } else {
+    bezierQuadratic2DShape(d, c, b);
+    bezierQuadratic2DShape(b, a, d);
+  }
+  endShape();
+}
+
+export function circleSegment(s, i, options) {
+  var a = polar2cart(segmentCenter(s)); // bottom left
+
+  const diameter = options?.diameter || (s.r2 - s.r1) * 0.5;
+  circle(a.x, a.y, diameter);
+}
+
+const supportsVertexMode = new Set();
+supportsVertexMode.add(diamondSegment);
+supportsVertexMode.add(crossSegment);
+supportsVertexMode.add(triangleSegment);
+supportsVertexMode.add(boxSegment);
+supportsVertexMode.add(leafSegment);
+supportsVertexMode.add(leafTiltedSegment);
+supportsVertexMode.add(circleSegment);
 
 export const allSegments = [
   diamondSegment,
@@ -261,10 +365,15 @@ export const allSegments = [
   bezierSegment,
   leafSegment,
   boxSegment,
+  crissCrossPetalSegment,
+  leafTiltedSegment,
+  circleSegment,
 ];
 
 export function getRandomSegment() {
-  return allSegments[Math.floor(random(allSegments.length))];
+  const pick = allSegments[Math.floor(random(allSegments.length))];
+  console.log(pick);
+  return pick;
 }
 
 export function getSegment(i) {
