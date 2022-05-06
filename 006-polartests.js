@@ -1,6 +1,10 @@
-import { avg, polar2cart, vec2, vertexPolar } from "./lumic/common.js";
-import { greenTheme, getColor } from "./lumic/palettes.js";
+import {
+  greenTheme,
+  cyberpunkTheme,
+  getRandomColor,
+} from "./lumic/palettes.js";
 import * as m from "./lumic/mandala.js";
+import { getRandom, polar2cart } from "./lumic/common.js";
 
 const w = 600;
 const hw = w / 2;
@@ -9,96 +13,81 @@ const hh = h / 2;
 
 const debug = false;
 
-function diamondSegment(r1, a1, r2, a2, i, options) {
-  //  *----B----*   A = (rm, a2)
-  //  *         *   B = (r2, am)
-  //  A         C   C = (rm, a1)
-  //  *         *   D = (r1, am)
-  //  *----D----*
-
-  const rm = avg(r1, r2);
-  const am = avg(a1, a2);
-
-  const divisions = options?.divisions || 8;
-
-  const vertexMode = options?.shape;
-
-  m.polarLine(rm, a2, r2, am, divisions, vertexMode);
-  m.polarLine(r2, am, rm, a1, divisions, vertexMode);
-  m.polarLine(rm, a1, r1, am, divisions, vertexMode);
-  m.polarLine(r1, am, rm, a2, divisions, vertexMode);
-}
-
-function crossSegment(r1, a1, r2, a2, i, options) {
-  //  A---------B   A = (r2, a2)
-  //  *         *   B = (r2, a1)
-  //  *         *   C = (r1, a2)
-  //  *         *   D = (r1, a1)
-  //  C---------D
-
-  const divisions = options?.divisions || 8;
-  const vertexMode = options?.shape;
-
-  m.polarLine(r2, a2, r2, a1, divisions, vertexMode);
-  m.polarLine(r2, a1, r1, a2, divisions, vertexMode);
-  m.polarLine(r1, a2, r1, a1, divisions, vertexMode);
-  m.polarLine(r1, a1, r2, a2, divisions, vertexMode);
-}
-
-function triangleSegment(r1, a1, r2, a2, i, options) {
-  //  *----A----*   A = (r2, am)
-  //  *         *   B = (r1, a2)
-  //  *         *   C = (r1, a1)
-  //  *         *
-  //  B---------C
-
-  const divisions = options?.divisions || 8;
-
-  const am = avg(a1, a2);
-
-  const vertexMode = options.shape;
-
-  m.polarLine(r2, am, r1, a2, divisions, vertexMode);
-  m.polarLine(r1, a2, r1, a1, divisions, vertexMode);
-  m.polarLine(r1, a1, r2, am, divisions, vertexMode);
-}
-
 let g;
+
+const strokeColors = ["#E6007D", "#E6007D", "#BE00E1", "#007DE6"];
+const fillColors = ["#0F284Baa", "#007DE699"];
 
 function render(g) {
   push();
   translate(hw, hh);
 
   noFill();
-  background(200);
-  stroke(12);
+  background(0);
 
-  fill("aquamarine");
-  m.drawRing(40, 80, 16, diamondSegment, { shape: true });
+  const randomizeStyle = () => {
+    stroke(getRandom(strokeColors));
+    fill(getRandom(fillColors));
+  };
 
-  m.drawRing(80, 120, 16, diamondSegment, { shape: true });
+  function randomPolarLines() {
+    return (s) => {
+      const sc = m.segmentCenter(s);
+      const c = polar2cart(sc);
+      circle(c.x, c.y, 2 * (s.r2 - s.r1) * 0.08);
 
-  fill("turquoise");
-  m.drawRing(130, 150, 32, crossSegment, { shape: true});
+      stroke(45);
+      const angle = (Math.floor(random(4)) * PI) / 2;
+      m.polarLine(random(800), angle, sc.x, sc.y, 32);
+      m.polarLine(random(800), angle + PI / 2, sc.x, sc.y, 32);
+      m.polarLine(random(800), angle + PI, sc.x, sc.y, 32);
+      m.polarLine(random(800), angle + (3 * PI) / 2, sc.x, sc.y, 32);
+    };
+  }
 
-  fill("yellow");
-  m.drawRing(160, 180, 16, triangleSegment, { shape: true });
+  const baseOptions = {
+    count: 32,
+    shape: true,
+  };
+
+  for (let i = 0; i < 4; i++) {
+    const seg = getRandom([m.boxSegment, m.diamondSegment]);
+    stroke(50);
+    m.drawRing(i * 20, (i + 1) * 20, seg, {
+      ...baseOptions,
+      count: 8,
+      onAfterSegment: randomPolarLines(),
+    });
+  }
+
+  const divisions = 8;
+  const mWidth = width * .8;
+  for (let i = 0; i < divisions; i++) {
+    randomizeStyle();
+    const r1 = (i * mWidth) / (2 * divisions);
+    const r2 = ((i + 1) * mWidth) / (2 * divisions);
+    m.drawRing(r1, r2, m.getRandomSegment(), baseOptions);
+  }
 
   pop();
 }
 
 window.setup = function () {
   createCanvas(w, h, SVG);
+  render(g);
 };
 
 window.draw = function () {
-  background(10);
-  render(g);
-  // noLoop();
+  //render(g);
+  //noLoop();
 };
 
 window.keyTyped = function () {
   if (key === "s") {
     save();
+  }
+
+  if (key === "r" || key === "R") {
+    render(g);
   }
 };

@@ -31,6 +31,24 @@ export function vertexPolar(p) {
   vertex(c.x, c.y);
 }
 
+export function bezier2D(a, b, c, d, vertexMode = false) {
+  if (vertexMode) {
+    vertex(a.x, a.y);
+    bezierVertex(b.x, b.y, c.x, c.y, d.x, d.y);
+  } else {
+    bezier(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y);
+  }
+}
+
+export function bezierQuadratic2DShape(a, b, c) {
+  vertex(a.x, a.y);
+  quadraticVertex(b.x, b.y, c.x, c.y);
+}
+
+export function line2D(a, b) {
+  line(a.x, a.y, b.x, b.y);
+}
+
 export function almostEquals(a, b) {
   return Math.abs(a - b) < EPS;
 }
@@ -49,19 +67,22 @@ export function arcSweepCircle(g, center, r, ang1, ang2, steps, thickness) {
   }
 }
 
-export function lerp( from,  to,  t){
-  return ((1 - t) * from) + (t * to);
+export function lerp(from, to, t) {
+  return (1 - t) * from + t * to;
 }
 
-export function inverseLerp( from,  to,  value){
+export function inverseLerp(from, to, value) {
   return (value - from) / (to - from);
 }
 
-export function remap( origFrom,  origTo,  targetFrom,  targetTo,  value){
+export function remap(origFrom, origTo, targetFrom, targetTo, value) {
   const rel = inverseLerp(origFrom, origTo, value);
   return lerp(targetFrom, targetTo, rel);
 }
 
+export function getRandom(a) {
+  return a[Math.floor(random(a.length))];
+}
 
 const NOISE1 = 0xb5297a4d; // 0b0110'1000'1110'0011'0001'1101'1010'0100
 const NOISE2 = 0x68e31da4; // 0b1011'0101'0010'1001'0111'1010'0100'1101
