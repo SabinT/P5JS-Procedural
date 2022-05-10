@@ -77,9 +77,9 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
 }
 
 /**
- * Draws a radially repeated ring of custom shape and repeat count.
- * @param {*} rStart Start radius of ring
- * @param {*} rEnd End radius of ring
+ * Draws a radially repeated ring with a custom drawing function.
+ * @param {number} rStart Start radius of ring
+ * @param {number} rEnd End radius of ring
  * @param {function} segmentFunc A function that takes (segment, i, options)
  *        segment must have properties r1, r2, a1, a2 (angles in radians)
  *        i is the index of the current segment being drawn
@@ -89,6 +89,9 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
  *        options.onBeforeSegment: custom code to execute before drawing segment
  *        options.filter(i): Decide whether to drop segments based on index (return false to drop)
  *        options.onAfterSegment: custome code to execute after drawing segment
+ *        options.angleShiftFactor: shift the start angle (0-1) of one segment angle
+ *        options.angleRange: Default 2 * PI if unspecified
+ *        options.angleStart: Specify to start angle at something other than zero
  */
 export function drawRing(rStart, rEnd, segmentFunc, options) {
   const count = options?.count || 8;
@@ -169,9 +172,9 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
 }
 
 export function emptySegment(s, i, options) {
-    // Wow so empty
-    // But you can still use this segment, if you just want to execute custom callbacks
-  }
+  // Wow so empty
+  // But you can still use this segment, if you just want to execute custom callbacks
+}
 
 export function diamondSegment(s, i, options) {
   //  *----B----*   A = (rm, a2)
@@ -237,11 +240,14 @@ export function squareSegment(s, i) {
   polarLine(s.r1, midAngle, s.r2, midAngle);
 }
 
-export function cellSegment(s, i) {
-  polarLine(s.r1, s.a1, s.r1, s.a2);
+export function cellSegment(s, i, options) {
   // leading line, closing line will be provided by next segment
   polarLine(s.r1, s.a1, s.r2, s.a1);
-  polarLine(s.r2, s.a1, s.r2, s.a2);
+
+  if ("perimeter" in options ? options.perimiter : true) {
+    polarLine(s.r1, s.a1, s.r1, s.a2);
+    polarLine(s.r2, s.a1, s.r2, s.a2);
+  }
 }
 
 export function bezierSegment(s, i) {
@@ -283,8 +289,7 @@ export function leafSegment(s, i, options) {
     bezier2D(d, c, b, a, options.shape);
   }
 
-  const perimiter =
-    "perimeter" in options ? options.perimiter : Math.floor(random(2)) === 0;
+  const perimiter = "perimeter" in options ? options.perimiter : true;
   if (perimiter) {
     polarLine(s.r1, s.a1, s.r1, s.a2, 8, options?.shape);
   }
@@ -320,10 +325,11 @@ export function leafTiltedSegment(s, i, options) {
   var c = polar2cart(vec2(s.r2, s.a2)); // top right
   var d = polar2cart(vec2(s.r1, s.a2)); // bottom right
 
+  const shouldSkip = "skipFactor" in options;
   const skipFactor = options?.skipFactor || 1;
   const j = Math.floor((i + 1) / skipFactor);
 
-  if (j % 2 == 1) {
+  if (shouldSkip && j % 2 == 1) {
     return;
   }
 
@@ -347,7 +353,7 @@ export function circleSegment(s, i, options) {
   circle(a.x, a.y, diameter);
 }
 
-const supportsVertexMode = new Set();
+export const supportsVertexMode = new Set();
 supportsVertexMode.add(diamondSegment);
 supportsVertexMode.add(crossSegment);
 supportsVertexMode.add(triangleSegment);
@@ -356,7 +362,25 @@ supportsVertexMode.add(leafSegment);
 supportsVertexMode.add(leafTiltedSegment);
 supportsVertexMode.add(circleSegment);
 
+export const supportsInset = new Set();
+supportsInset.add(diamondSegment);
+supportsInset.add(crossSegment);
+supportsInset.add(boxSegment);
+supportsInset.add(circleSegment);
+
+export const supportsRepeat = new Set();
+supportsRepeat.add(bezierSegment);
+supportsRepeat.add(diamondSegment);
+supportsRepeat.add(crossSegment);
+supportsRepeat.add(squareSegment);
+
+export const hasPerimeter = new Set();
+hasPerimeter.add(boxSegment);
+hasPerimeter.add(squareSegment);
+hasPerimeter.add(leafSegment);
+
 export const allSegments = [
+  emptySegment,
   diamondSegment,
   crossSegment,
   triangleSegment,
@@ -372,7 +396,6 @@ export const allSegments = [
 
 export function getRandomSegment() {
   const pick = allSegments[Math.floor(random(allSegments.length))];
-  console.log(pick);
   return pick;
 }
 

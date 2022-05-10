@@ -71,7 +71,7 @@ function render(g) {
   m.drawRing(260, 295, m.leafSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: -0.25, insetA: 0.25, perimeter: false});
 
   m.cCircle(300);
-  
+
   pop();
 }
 
@@ -80,7 +80,6 @@ window.setup = function () {
 };
 
 window.draw = function () {
-  background(10);
   render(g);
   noLoop();
 };

@@ -6,9 +6,10 @@ import {
 import * as m from "./lumic/mandala.js";
 import { getRandom, GOLDEN_ANGLE_RADIANS, polar2cart, TAU } from "./lumic/common.js";
 
-const w = 600;
+// letter size proportions
+const w = 425;
 const hw = w / 2;
-const h = 600;
+const h = 550;
 const hh = h / 2;
 
 const debug = false;
@@ -23,7 +24,6 @@ function render(g) {
   translate(hw, hh);
 
   noFill();
-  background(0);
 
   const randomizeStyle = () => {
     stroke(getRandom(strokeColors));
