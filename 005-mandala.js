@@ -21,12 +21,12 @@ function render(g) {
 
   stroke(getColor(greenTheme, 2));
 
-  m.drawRing(10, 20, m.squareSegment, { count: 5});
+  m.drawRing(10, 20, m.squareWaveSegment,, { count: 5});
   m.cCircle(30);
 
   m.cCircle(70);
   m.cCircle(75);
-  m.drawRing(80, 90, m.squareSegment, { count: 24 });
+  m.drawRing(80, 90, m.squareWaveSegment,, { count: 24 });
   m.cCircle(95);
   m.cCircle(100);
 
@@ -42,9 +42,9 @@ function render(g) {
 
   stroke(getColor(greenTheme, 0));
 
-  m.drawRing(150, 190, m.leafSegment, { count: 40, perimiter: true });
-  m.drawRing(150, 170, m.leafSegment, { count: 40, perimeter: false });
-  m.drawRing(170, 185, m.leafSegment, { count: 40, perimeter: false, angleShiftFactor : 0.5, insetA: 0.22 });
+  m.drawRing(150, 190, m.leafSegment, { count: 40 });
+  m.drawRing(150, 170, m.leafSegment, { count: 40, hidePerimeter: true });
+  m.drawRing(170, 185, m.leafSegment, { count: 40, hidePerimeter: true, angleShiftFactor : 0.5, insetA: 0.22 });
   m.cCircle(190);
   m.cCircle(200);
 
@@ -67,8 +67,8 @@ function render(g) {
   m.drawRing(240, 240, m.circleSegment, { count: leafCount /4, diameter: 10});
   m.drawRing(240, 240, m.circleSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: 0.5});
 
-  m.drawRing(260, 285, m.leafSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: 0.25, insetA: 0.25, perimeter: false});
-  m.drawRing(260, 295, m.leafSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: -0.25, insetA: 0.25, perimeter: false});
+  m.drawRing(260, 285, m.leafSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: 0.25, insetA: 0.25, hidePerimeter: true});
+  m.drawRing(260, 295, m.leafSegment, { count: leafCount /4, diameter: 10, angleShiftFactor: -0.25, insetA: 0.25, hidePerimeter: true});
 
   m.cCircle(300);
 

@@ -125,3 +125,7 @@ const SQRAND_PRIME = 198491317;
 export function sqRand2D(x, y, seed = 0) {
   return sqRand(x + Math.imul(SQRAND_PRIME, y), seed);
 }
+
+export const sizes = {
+  letter: { w: 425, h: 550 },
+};

@@ -76,6 +76,16 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
   polarLine(r1, a1, r2, a1, divisions, vertexMode);
 }
 
+let globalOverrides = {};
+
+export function setOverrides(options) {
+  globalOverrides = options;
+}
+
+export function resetOverrides() {
+  globalOverrides = undefined;
+}
+
 /**
  * Draws a radially repeated ring with a custom drawing function.
  * @param {number} rStart Start radius of ring
@@ -85,15 +95,27 @@ export function polarBox(r1, a1, r2, a2, divisions = 8, vertexMode = false) {
  *        i is the index of the current segment being drawn
  * @param {object} options Arbitrary data for custom ring functions, and some standard customizations
  *        options.count: number of things to draw (default 8)
+ *        options.skip: skip every "n"th segment
+ *        options.invertSkip: invert the skip pattern
  *        options.shape: Call `beginShape()` and `endShape()` before and after drawing segment
+ *        options.combineShape: Call `beginShape()` and `endShape()` before and after the entire set of repititions
  *        options.onBeforeSegment: custom code to execute before drawing segment
- *        options.filter(i): Decide whether to drop segments based on index (return false to drop)
+ *        options.filter(i, options): Decide whether to drop segments based on index (return false to drop)
  *        options.onAfterSegment: custome code to execute after drawing segment
  *        options.angleShiftFactor: shift the start angle (0-1) of one segment angle
  *        options.angleRange: Default 2 * PI if unspecified
  *        options.angleStart: Specify to start angle at something other than zero
+ *        options.hidePerimeter: Asks the drawing function to not draw radial perimeters (at r1 and r2)
+ *          This does not take effect when an inset is applied
+ *        options.lineDivisions: controls the resolution of curved lines
  */
 export function drawRing(rStart, rEnd, segmentFunc, options) {
+  if (globalOverrides) {
+    options = {...options, ...globalOverrides};
+  }
+
+  options.lineDivisions ||= 8;
+
   const count = options?.count || 8;
 
   const angleRange = options?.angleRange || TAU;
@@ -101,9 +123,25 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
   const anglePerSegment = angleRange / count;
   const offset = 0.5 * anglePerSegment;
 
+  const createInnerShape = options?.shape && !options?.combineShape && supportsVertexMode.has(segmentFunc);
+  options.vertexMode = createInnerShape || options?.combineShape;
+
+  if (options?.combineShape) { beginShape(); }
+
   for (let i = 0; i < count; i++) {
+    if (options.skip) {
+      let shouldSkip = i % (options.skip + 1) === 0;
+      if (options.invertSkip) {
+        shouldSkip = !shouldSkip;
+      }
+
+      if (shouldSkip) {
+        continue;
+      }
+    }
+
     if (options?.filter) {
-      if (filter(i) === false) {
+      if (filter(i, options) === false) {
         continue;
       }
     }
@@ -122,6 +160,8 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
 
     const inset = options?.inset || 0;
     if (inset || options?.insetR || options?.insetA) {
+      options.hidePerimeter = false;
+
       let insetA, insetR;
 
       if (options?.autoFixInset) {
@@ -153,15 +193,13 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
       options.onBeforeSegment(segment);
     }
 
-    const createShape = options?.shape && supportsVertexMode.has(segmentFunc);
-
-    if (createShape) {
+    if (createInnerShape) {
       beginShape();
     }
 
     segmentFunc(segment, i, options);
 
-    if (createShape) {
+    if (createInnerShape) {
       endShape();
     }
 
@@ -169,6 +207,60 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
       options.onAfterSegment(segment);
     }
   }
+
+  if (options?.combineShape) { endShape(); }
+}
+
+let rCurrent = 10;
+
+export function reset() {
+  rCurrent = 0;
+  resetOverrides();
+}
+
+export function getCurrentRadius() {
+  return rCurrent;
+}
+
+export function addRing(ringFunc, rStep, options) {
+  if (supportsInset.has(ringFunc) && random(1) < 0.5) {
+    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+      ...options,
+      inset: 0.2,
+    });
+  }
+
+  if (ringFunc === bezierSegment) {
+    // Also repeat laterally
+    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+      ...options,
+      angleShiftFactor: 0.2,
+    });
+    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+      ...options,
+      angleShiftFactor: -0.2,
+    });
+  }
+
+  drawRing(rCurrent, rCurrent + rStep, ringFunc, options);
+
+  rCurrent += rStep;
+}
+
+export function addSpacer(rStep, start, end) {
+  if (start) {
+    cCircle(rCurrent);
+  }
+
+  rCurrent += rStep;
+
+  if (end) {
+    cCircle(rCurrent);
+  }
+}
+
+export function addCircle() {
+  cCircle(rCurrent);
 }
 
 export function emptySegment(s, i, options) {
@@ -188,7 +280,7 @@ export function diamondSegment(s, i, options) {
 
   const divisions = options?.divisions || 8;
 
-  const vertexMode = options?.shape;
+  const vertexMode = options?.vertexMode;
 
   polarLine(rm, s.a2, s.r2, am, divisions, vertexMode);
   polarLine(s.r2, am, rm, s.a1, divisions, vertexMode);
@@ -204,11 +296,11 @@ export function crossSegment(s, i, options) {
   //  C---------D
 
   const divisions = options?.divisions || 8;
-  const vertexMode = options?.shape;
+  const vertexMode = options?.vertexMode;
 
-  polarLine(s.r2, s.a2, s.r2, s.a1, divisions, vertexMode);
+  if (options?.perimiter) { polarLine(s.r2, s.a2, s.r2, s.a1, divisions, vertexMode); }
   polarLine(s.r2, s.a1, s.r1, s.a2, divisions, vertexMode);
-  polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);
+  if (options?.perimiter) { polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode); }
   polarLine(s.r1, s.a1, s.r2, s.a2, divisions, vertexMode);
 }
 
@@ -223,15 +315,19 @@ export function triangleSegment(s, i, options) {
 
   const am = avg(s.a1, s.a2);
 
-  const vertexMode = options.shape;
+  const vertexMode = options?.vertexMode;
 
   polarLine(s.r2, am, s.r1, s.a2, divisions, vertexMode);
-  polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);
+
+  if (!options?.hidePerimeter) {
+    polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);
+  }
+
   polarLine(s.r1, s.a1, s.r2, am, divisions, vertexMode);
 }
 
 // Assuming angle1 < angle2
-export function squareSegment(s, i) {
+export function squareWaveSegment(s, i) {
   noFill();
   const midAngle = constrain(avg(s.a1, s.a2), s.a1, s.a2);
   cArc(s.r1, s.a1, midAngle);
@@ -240,11 +336,17 @@ export function squareSegment(s, i) {
   polarLine(s.r1, midAngle, s.r2, midAngle);
 }
 
+/**
+ * @deprecated Use boxSegment instead
+ * @param {} s 
+ * @param {*} i 
+ * @param {*} options 
+ */
 export function cellSegment(s, i, options) {
   // leading line, closing line will be provided by next segment
   polarLine(s.r1, s.a1, s.r2, s.a1);
 
-  if ("perimeter" in options ? options.perimiter : true) {
+  if (!options?.hidePerimeter) {
     polarLine(s.r1, s.a1, s.r1, s.a2);
     polarLine(s.r2, s.a1, s.r2, s.a2);
   }
@@ -262,14 +364,13 @@ export function bezierSegment(s, i) {
 }
 
 export function leafSegment(s, i, options) {
-  let a, b, c, d, e, f, g, h;
   const sc = segmentCenter(s);
 
   {
-    a = polar2cart(vec2(s.r2, sc.y));
-    b = polar2cart(vec2(s.r1, sc.y));
-    c = polar2cart(vec2(s.r2, s.a2));
-    d = polar2cart(vec2(s.r1, s.a2));
+    let a = polar2cart(vec2(s.r2, sc.y));
+    let b = polar2cart(vec2(s.r1, sc.y));
+    let c = polar2cart(vec2(s.r2, s.a2));
+    let d = polar2cart(vec2(s.r1, s.a2));
 
     b = p5.Vector.lerp(a, b, 0.5);
     c = p5.Vector.lerp(c, d, 0.5);
@@ -278,10 +379,10 @@ export function leafSegment(s, i, options) {
   }
 
   {
-    a = polar2cart(vec2(s.r1, s.a1));
-    d = polar2cart(vec2(s.r2, sc.y));
-    b = polar2cart(vec2(s.r2, s.a1));
-    c = polar2cart(vec2(s.r1, sc.y));
+    let a = polar2cart(vec2(s.r1, s.a1));
+    let d = polar2cart(vec2(s.r2, sc.y));
+    let b = polar2cart(vec2(s.r2, s.a1));
+    let c = polar2cart(vec2(s.r1, sc.y));
 
     b = p5.Vector.lerp(a, b, 0.5);
     c = p5.Vector.lerp(c, d, 0.5);
@@ -289,14 +390,25 @@ export function leafSegment(s, i, options) {
     bezier2D(d, c, b, a, options.shape);
   }
 
-  const perimiter = "perimeter" in options ? options.perimiter : true;
-  if (perimiter) {
+  if (!options?.hidePerimeter) {
     polarLine(s.r1, s.a1, s.r1, s.a2, 8, options?.shape);
   }
 }
 
 export function boxSegment(s, i, options) {
-  polarBox(s.r1, s.a1, s.r2, s.a2, 8, options?.shape);
+  if (options?.hidePerimeter) {
+    // A----B    A = (r2, a1),   B = (r2, a2)
+    // |    |    C = (r1, a2),   D = (r1, a1)
+    // D----C
+    polarLine(s.r2, s.a2, s.r1, s.a2, options?.lineDivisions || 8, options.vertexMode);
+
+    // Draw leading line only, trailing line provided by next segment, unless there's skip
+    if (options?.skip > 0) {
+      polarLine(s.r1, s.a1, s.r2, s.a1, options?.lineDivisions, options.vertexMode);
+    }
+  } else {
+    polarBox(s.r1, s.a1, s.r2, s.a2, 8, options?.shape);
+  }
 }
 
 export function crissCrossPetalSegment(s, i, options) {
@@ -372,11 +484,11 @@ export const supportsRepeat = new Set();
 supportsRepeat.add(bezierSegment);
 supportsRepeat.add(diamondSegment);
 supportsRepeat.add(crossSegment);
-supportsRepeat.add(squareSegment);
+supportsRepeat.add(squareWaveSegment,);
 
 export const hasPerimeter = new Set();
 hasPerimeter.add(boxSegment);
-hasPerimeter.add(squareSegment);
+hasPerimeter.add(squareWaveSegment,);
 hasPerimeter.add(leafSegment);
 
 export const allSegments = [
@@ -384,8 +496,7 @@ export const allSegments = [
   diamondSegment,
   crossSegment,
   triangleSegment,
-  squareSegment,
-  cellSegment,
+  squareWaveSegment,
   bezierSegment,
   leafSegment,
   boxSegment,
@@ -396,6 +507,9 @@ export const allSegments = [
 
 export function getRandomSegment() {
   const pick = allSegments[Math.floor(random(allSegments.length))];
+
+  console.log(pick.name);
+
   return pick;
 }
 
