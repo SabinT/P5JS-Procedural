@@ -501,7 +501,7 @@ export const allSegments = [
   leafSegment,
   boxSegment,
   crissCrossPetalSegment,
-  leafTiltedSegment,
+  // leafTiltedSegment,
   circleSegment,
 ];
 
