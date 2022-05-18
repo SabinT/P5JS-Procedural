@@ -1,6 +1,7 @@
 import { sizes, getRandom } from "./lumic/common.js";
 import { renderGrid } from "./lumic/grids.js";
 import * as m from "./lumic/mandala.js";
+import * as e from "./lumic/p5Extensions.js"
 
 const gridOptions = {
   rows: 8,
@@ -96,7 +97,9 @@ window.setup = function () {
   render();
 };
 
-window.draw = function () {};
+window.draw = function () {
+
+};
 
 window.keyTyped = function () {
   if (key === "s") {
