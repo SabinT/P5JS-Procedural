@@ -47,6 +47,8 @@ function render() {
       count: count,
       // skip: random() < 0.5 ? skip : undefined,
       invertSkip: true,
+      autoInset: true,
+      autoRepeat: true
     };
 
     m.addRing(seg, step, newOptions);

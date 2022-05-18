@@ -108,10 +108,17 @@ export function resetOverrides() {
  *        options.hidePerimeter: Asks the drawing function to not draw radial perimeters (at r1 and r2)
  *          This does not take effect when an inset is applied
  *        options.lineDivisions: controls the resolution of curved lines
+ *        options.inverted: swap r2 and r1 (i.e., draw the mandala inwards)
  */
 export function drawRing(rStart, rEnd, segmentFunc, options) {
   if (globalOverrides) {
     options = {...options, ...globalOverrides};
+  }
+
+  if (options.inverted) {
+    const tmp = rEnd;
+    rEnd = rStart;
+    rStart = tmp;
   }
 
   options.lineDivisions ||= 8;
@@ -129,7 +136,7 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
   if (options?.combineShape) { beginShape(); }
 
   for (let i = 0; i < count; i++) {
-    if (options.skip) {
+    if (options.skip && !noSkip.has(segmentFunc)) {
       let shouldSkip = i % (options.skip + 1) === 0;
       if (options.invertSkip) {
         shouldSkip = !shouldSkip;
@@ -223,23 +230,27 @@ export function getCurrentRadius() {
 }
 
 export function addRing(ringFunc, rStep, options) {
-  if (supportsInset.has(ringFunc) && random(1) < 0.5) {
-    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
-      ...options,
-      inset: 0.2,
-    });
+  if (options.autoInset) {
+    if (supportsInset.has(ringFunc) && random(1) < 0.5) {
+      drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+        ...options,
+        inset: 0.2,
+      });
+    }
   }
 
-  if (ringFunc === bezierSegment) {
-    // Also repeat laterally
-    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
-      ...options,
-      angleShiftFactor: 0.2,
-    });
-    drawRing(rCurrent, rCurrent + rStep, ringFunc, {
-      ...options,
-      angleShiftFactor: -0.2,
-    });
+  if (options.autoRepeat) {
+    if (ringFunc === bezierSegment) {
+      // Also repeat laterally
+      drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+        ...options,
+        angleShiftFactor: 0.2,
+      });
+      drawRing(rCurrent, rCurrent + rStep, ringFunc, {
+        ...options,
+        angleShiftFactor: -0.2,
+      });
+    }
   }
 
   drawRing(rCurrent, rCurrent + rStep, ringFunc, options);
@@ -490,6 +501,11 @@ export const hasPerimeter = new Set();
 hasPerimeter.add(boxSegment);
 hasPerimeter.add(squareWaveSegment,);
 hasPerimeter.add(leafSegment);
+
+export const noSkip = new Set();
+noSkip.add(squareWaveSegment);
+noSkip.add(crissCrossPetalSegment);
+noSkip.add(crossSegment);
 
 export const allSegments = [
   emptySegment,
