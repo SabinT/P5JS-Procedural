@@ -1,3 +1,5 @@
+import { vec2 } from "./common.js";
+
 export function dot2(p) {
   return p.dot(p);
 }
@@ -18,11 +20,14 @@ export function sdHeart(p) {
   p.x = Math.abs(p.x);
 
   if (p.y + p.x > 1.0) {
-    return sqrt(dot2(p - vec2(0.25, 0.75))) - sqrt(2.0) / 4.0;
+    return sqrt(dot2(vec2(p.x - 0.25, p.y - 0.75))) - sqrt(2.0) / 4.0;
   }
 
+  let q = vec2(p.x, p.y - 1.0);
+  let m = 0.5 * max(p.x + p.y, 0.0);
+
   return (
-    sqrt(min(dot2(p - vec2(0.0, 1.0)), dot2(p - 0.5 * max(p.x + p.y, 0.0)))) *
-    sign(p.x - p.y)
+    sqrt(min(dot2(q), dot2(vec2(p.x - m, p.y - m) ))) *
+    Math.sign(p.x - p.y)
   );
 }

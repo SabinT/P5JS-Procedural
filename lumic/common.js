@@ -14,6 +14,10 @@ export function vec2(a, b) {
   return new p5.Vector(a, b);
 }
 
+export function distance2(a,b) {
+  return dist(a.x, a.y, b.x, b.y);
+}
+
 export function vec3(a, b, c) {
   return new p5.Vector(a, b, c);
 }
