@@ -4,8 +4,8 @@ import { sdHeart } from './lumic/sdf.js'
 
 let circles = []
 const maxIterations = 100000
-const MAX_RADIUS = 20
-const MIN_RADIUS = 5
+const MAX_RADIUS = 10
+const MIN_RADIUS = 2
 const SDF_THRESHOLD = 1000
 const MARGIN_BY_SDF = 0.1
 const debugMode = false
@@ -59,19 +59,7 @@ function pack() {
     i++
   }
 
-  // Output circles as json
-  let outCircles = []
-  for (const c of circles) {
-    outCircles.push(
-        {
-            x: c.center.x,
-            y: c.center.y,
-            r: c.radius
-        }
-    )
-  }
-
-  console.log(JSON.stringify(outCircles))
+  console.log('circles: ' + circles.length)
 
   drawCircles()
 }
@@ -86,7 +74,7 @@ function drawCircles() {
 }
 
 window.setup = function () {
-  createCanvas(1280, 720, SVG)
+  createCanvas(sizes.letter.w, sizes.letter.h, SVG)
   background(10)
   translate(width / 2, height / 2)
   pack()

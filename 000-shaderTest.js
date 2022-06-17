@@ -1,6 +1,7 @@
 import * as common from './lumic/common.js'
 import * as debug from './lumic/debugutils.js'
-import { mothCircles } from './data/mothcircles.js'
+// import { mothCircles } from './data/jsonCircles.js'
+import { heartCircles as jsonCircles} from './data/heartcircles.js'
 
 const w = 2000
 const h = 2000
@@ -26,7 +27,7 @@ let yMin = Number.POSITIVE_INFINITY
 let rMax = Number.NEGATIVE_INFINITY
 let rMin = Number.POSITIVE_INFINITY
 
-mothCircles.circles.forEach((c) => {
+jsonCircles.circles.forEach((c) => {
   if (c.x > xMax) {
     xMax = c.x
   }
@@ -54,12 +55,12 @@ console.log(`y minmax: ${yMin}, ${yMax}`);
 console.log(`r minmax: ${rMin}, ${rMax}`);
 
 let circlesShaderPart = ''
-const maxCircles = 200;
+const maxCircles = 500;
 const zoomOut = 1000;
 const rAdjustment = 0.02;
 
 for (let i = 0; i < maxCircles; i++) {
-  const c = mothCircles.circles[i];
+  const c = jsonCircles.circles[i];
   const x = c.x / zoomOut;
   const y =  - c.y / zoomOut;
   const r = c.r / zoomOut - rAdjustment;

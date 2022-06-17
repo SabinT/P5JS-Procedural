@@ -131,5 +131,5 @@ export function sqRand2D(x, y, seed = 0) {
 }
 
 export const sizes = {
-  letter: { w: 425, h: 550 },
+  letter: { w: 850, h: 1100 },
 };
