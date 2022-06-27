@@ -1,5 +1,7 @@
 import { vec2 } from "./common.js";
 
+const length = (x) => x.mag();
+
 export function dot2(p) {
   return p.dot(p);
 }
