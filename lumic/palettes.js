@@ -3,7 +3,13 @@ export const greenTheme = {
 } ;
 
 export const cyberpunkTheme = {
-    colors: ["#F20587", "#8416F2", "#5C82F2"]
+    colors: ["#F20587", "#8416F2", "#5C82F2"],
+    bgcolors: ["#F20587", "#8416F2", "#5C82F2"]
+};
+
+export const cloverTheme = {
+    colors: ["#034001", "#2E8C03", "#267302", "#62BF04"],
+    bgcolors: ["#022601", "#034001"]
 };
 
 export function getColor(palette, i) {

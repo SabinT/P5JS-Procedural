@@ -6,14 +6,38 @@ import {
   TAU,
   vec2,
   vec4,
+  avg,
 } from "./lumic/common.js";
-import { cyberpunkTheme, getRandomColor } from "./lumic/palettes.js";
+import {
+  cloverTheme,
+  cyberpunkTheme,
+  getColor,
+  getRandomColor,
+  greenTheme,
+} from "./lumic/palettes.js";
 import { sdCircle, sdHeart } from "./lumic/sdf.js";
 import { QuadTree } from "./lumic/quadtree.js";
 
-const debugMode = true;
+const colorTheme = cloverTheme;
 
-function map(p) {
+const debugMode = false;
+
+function sdfBase(p) {
+  // const scale = width * 0.45;
+  // p = p5.Vector.mult(p, -1 / scale);
+  // p = p5.Vector.add(p, vec2(0, 0.6));
+  // return sdHeart(p) * scale;
+
+  const d = sdCircle(p5.Vector.mult(p, 2), 50);
+  return d;
+}
+
+function sdfTop(p) {
+  // const scale = width * 0.45;
+  // p = p5.Vector.mult(p, -1 / scale);
+  // p = p5.Vector.add(p, vec2(0, 0.6));
+  // return sdHeart(p) * scale;
+
   const d = sdCircle(p, 50);
   return d;
 }
@@ -24,8 +48,10 @@ function packCircles(params) {
   const quadTree = new QuadTree(
     7,
     vec4(-width / 2, -height / 2, width / 2, height / 2),
-    true
+    debugMode
   );
+
+  loadPixels();
 
   let i = 0;
   while (i < params.maxIterations && circles.length <= params.maxCircles) {
@@ -33,6 +59,12 @@ function packCircles(params) {
       random(-0.5, 0.5) * (width - 2 * params.pageMargin),
       random(-0.5, 0.5) * (height - 2 * params.pageMargin)
     );
+
+    const sampleCol = color(getRandomColor(colorTheme));
+    sampleCol.setAlpha(150)
+    set(p.x + width/2, p.y + height/2, sampleCol);
+
+    // TODO enforce page margin
 
     let dMultiplier = params?.invert ? -1 : 1;
 
@@ -80,23 +112,13 @@ function packCircles(params) {
         }
       }
 
-      const pageMargin = params.pageMargin;
-      // Check page margin
-      if (
-        p.x - maxDist < -width / 2 + pageMargin ||
-        p.x + maxDist > width / 2 - pageMargin ||
-        p.y - maxDist < -height / 2 + pageMargin ||
-        p.y + maxDist > height / 2 - pageMargin
-      ) {
-        continue;
-      }
-
       // reject samples that are too close or too far away (instead of clamping)
       if (maxDist >= params.minRadius && maxDist <= params.maxRadius) {
         const circ = {
           center: p,
           radius: maxDist,
           closestCircle: closestCircle,
+          colIndex: (closestCircle?.colIndex ?? 0) + 1,
         };
         circles.push(circ);
         quadTree.Insert(
@@ -109,6 +131,8 @@ function packCircles(params) {
     i++;
   }
 
+  updatePixels();
+  
   return circles;
 }
 
@@ -116,48 +140,31 @@ let qt;
 let packingParams;
 let circles;
 
-function pack() {
-  packingParams = {
-    // startCircles: [{ center: vec2(0, 0), radius: 0.4 * height, invert: true }],
-    startCircles: [],
-    minRadius: 5,
-    maxRadius: 20,
-    maxCircles: 500,
-    maxIterations: 10000,
-    sdf: map,
-    sdfThreshold: 1000,
-    // sdfMarginFunc: (d) => d * 0.05,
-    sdfMarginFunc: (d) => (sin((TAU * (d + 50)) / 150) + 1) * 10,
-    pageMargin: 10,
-  };
+function drawCirclesPassMain(circles) {
+  circles.forEach((circ) => {
+    stroke(255);
+    fill(getColor(colorTheme, circ.colIndex));
+    circle(circ.center.x, circ.center.y, 2 * circ.radius);
 
-  circles = packCircles(packingParams);
-
-  // add to quadtree
-  qt = new QuadTree(
-    4,
-    vec4(-width / 2, -height / 2, width / 2, height / 2),
-    debugMode
-  );
-  for (const c of circles) {
-    qt.Insert(
-      c,
-      vec4(
-        c.center.x - c.radius,
-        c.center.y - c.radius,
-        c.center.x + c.radius,
-        c.center.y + c.radius
-      )
-    );
-  }
-
-  console.log("circles: " + circles.length);
+    const r2 = max(0, circ.radius - 5);
+    fill(getColor(colorTheme, circ.colIndex - 1));
+    circle(circ.center.x, circ.center.y, 2 * r2);
+  });
 }
 
-function drawCircles(circles) {
+function drawCirclesPassShadow(circles) {
   circles.forEach((circ) => {
-    // fill(getRandomColor(cyberpunkTheme))
-    circle(circ.center.x, circ.center.y, 2 * circ.radius);
+    const col = color(getRandom(colorTheme.bgcolors));
+    col.setAlpha(10);
+    fill(col);
+    noStroke();
+    circle(circ.center.x, circ.center.y, 15 * circ.radius);
+  });
+}
+
+function drawCircleConnectors1(circles) {
+  circles.forEach((circ) => {
+    const col = getRandomColor(greenTheme);
 
     const margin = 1;
     const other = circ.closestCircle;
@@ -187,52 +194,83 @@ function drawCircles(circles) {
   });
 }
 
+function drawCircleConnectors2(circles) {
+  circles.forEach((circ) => {
+    // const col = color(0,0,0,100)
+    const col = getRandom(colorTheme.colors);
+
+    const other = circ.closestCircle;
+    if (other) {
+      stroke(col);
+      strokeWeight(avg(circ.radius, other.radius) * 0.1);
+      line2D(circ.center, other.center);
+    }
+  });
+}
+
 window.setup = function () {
   createCanvas(sizes.letter.w, sizes.letter.h);
-  // translate(width / 2, height / 2)
-  pack();
-};
 
-window.draw = function () {
+  drawingContext.shadowOffsetX = 2;
+  drawingContext.shadowOffsetY = -2;
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowColor = colorTheme.bgcolors[0];
+
   translate(width / 2, height / 2);
-  background(10);
-  noFill();
-  stroke(255, 0, 0);
-  drawCircles(packingParams.startCircles);
+  background(0);
 
-  fill(color(50, 50, 50, 50));
-  stroke(255);
-  drawCircles(circles);
+  //Bottom layer
+  {
+    packingParams = {
+      // startCircles: [{ center: vec2(0, 0), radius: 0.4 * height, invert: true }],
+      startCircles: [],
+      minRadius: 2,
+      maxRadius: 50,
+      maxCircles: 5000,
+      maxIterations: 50000,
+      sdf: sdfTop,
+      sdfThreshold: 1000,
+      // sdfMarginFunc: (d) => d * 0.05,
+      sdfMarginFunc: (d) => 0,
+      pageMargin: 10,
+    };
 
-  // noLoop();
+    circles = packCircles(packingParams);
 
-  if (debugMode) {
-    const mx = mouseX - width / 2;
-    const my = mouseY - height / 2;
-    //let d = -map(vec2(mx, my))
+    //drawCirclesPassShadow(circles);
+    //drawCircleConnectors2(circles);
+    drawCirclesPassMain(circles);
+  }
 
-    // background(0)
-    //debugSdf()
-    qt.Draw();
+  // Top layer
+  {
+    packingParams = {
+      // startCircles: [{ center: vec2(0, 0), radius: 0.4 * height, invert: true }],
+      startCircles: [],
+      minRadius: 2,
+      maxRadius: 15,
+      maxCircles: 2000,
+      maxIterations: 50000,
+      sdf: sdfTop,
+      sdfThreshold: 1000,
+      // sdfMarginFunc: (d) => d * 0.05,
+      sdfMarginFunc: (d) => (sin((TAU * (d + 300)) / 300) + 1) * 8,
+      pageMargin: 10,
+    };
 
-    // Check collision
-    const r = 20;
-    const tx = 50;
-    const ty = -50;
-    const overlap = qt.GetOverlappingObjects(
-      vec4(mx - r, my - r, mx + r, my + r)
-    );
-    // const overlap = qt.GetOverlappingObjects(vec4(tx - r, ty - r, tx + r, ty + r));
+    circles = packCircles(packingParams);
 
-    stroke("red");
-    fill(color(255, 255, 255, 150));
-    drawCircles(overlap);
+    drawCirclesPassShadow(circles);
+    drawCircleConnectors2(circles);
+    drawCirclesPassMain(circles);
+  }
 
-    fill(color(255, 255, 255, 50));
-    stroke("red");
-    circle(mx, my, 2 * r);
+  if (!debugMode) {
+    noLoop();
   }
 };
+
+window.draw = function () {};
 
 window.keyTyped = function () {
   if (key === "s") {
