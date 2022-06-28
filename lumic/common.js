@@ -14,12 +14,16 @@ export function vec2(a, b) {
   return new p5.Vector(a, b);
 }
 
-export function distance2(a,b) {
-  return dist(a.x, a.y, b.x, b.y);
+export function vec3(x,y,z) {
+  return new p5.Vector(x,y,z);
 }
 
-export function vec3(a, b, c) {
-  return new p5.Vector(a, b, c);
+export function vec4(x,y,z,w) {
+  return {x: x, y: y, z: z, w: w};
+}
+
+export function distance2(a,b) {
+  return dist(a.x, a.y, b.x, b.y);
 }
 
 export function avg(x, y) {
