@@ -9,18 +9,37 @@ import {
   avg,
 } from "./lumic/common.js";
 import {
+  bwTheme,
   cloverTheme,
   cyberpunkTheme,
+  galaxyTheme,
   getColor,
   getRandomColor,
   greenTheme,
+  whiteNoFillTheme,
 } from "./lumic/palettes.js";
+import { drawPageBorder } from "./lumic/borders.js";
 import { sdCircle, sdHeart } from "./lumic/sdf.js";
 import { QuadTree } from "./lumic/quadtree.js";
+import * as m from "./lumic/mandala.js";
 
-const colorTheme = cloverTheme;
+const colorTheme = galaxyTheme;
+const rMandala = 180;
+const colRepeat = 1;
 
 const debugMode = false;
+const testMode = false;
+
+const mandalaSegments = [
+  m.diamondSegment,
+  // m.squareWaveSegment,
+  m.circleSegment,
+  // m.crissCrossPetalSegment,
+  m.leafSegment,
+  m.bezierSegment,
+  m.boxSegment,
+  m.crossSegment,
+];
 
 function sdfBase(p) {
   // const scale = width * 0.45;
@@ -43,6 +62,11 @@ function sdfTop(p) {
 }
 
 function packCircles(params) {
+  if (testMode) {
+    params.maxCircles /= 5;
+    params.maxIterations /= 5;
+  }
+
   let circles = [];
 
   const quadTree = new QuadTree(
@@ -61,8 +85,8 @@ function packCircles(params) {
     );
 
     const sampleCol = color(getRandomColor(colorTheme));
-    sampleCol.setAlpha(150)
-    set(p.x + width/2, p.y + height/2, sampleCol);
+    sampleCol.setAlpha(150);
+    set(p.x + width / 2, p.y + height / 2, sampleCol);
 
     // TODO enforce page margin
 
@@ -132,7 +156,7 @@ function packCircles(params) {
   }
 
   updatePixels();
-  
+
   return circles;
 }
 
@@ -141,14 +165,26 @@ let packingParams;
 let circles;
 
 function drawCirclesPassMain(circles) {
+  let count = 0;
   circles.forEach((circ) => {
+    count++;
     stroke(255);
-    fill(getColor(colorTheme, circ.colIndex));
+    fill(getColor(colorTheme, floor(circ.colIndex / colRepeat)));
+    // stroke(getColor(colorTheme, floor(circ.colIndex / colRepeat) - 1));
     circle(circ.center.x, circ.center.y, 2 * circ.radius);
 
     const r2 = max(0, circ.radius - 5);
-    fill(getColor(colorTheme, circ.colIndex - 1));
+    stroke(colorTheme.bgcolors[0]);
+    fill(getColor(colorTheme, floor(circ.colIndex / colRepeat) + 1));
     circle(circ.center.x, circ.center.y, 2 * r2);
+
+    if (count % 53 == 0) {
+      disableShadows();
+      noFill();
+      stroke(getColor(colorTheme, count));
+      drawPageBorder(10, 1);
+      enableShadows();
+    }
   });
 }
 
@@ -208,16 +244,28 @@ function drawCircleConnectors2(circles) {
   });
 }
 
-window.setup = function () {
-  createCanvas(sizes.letter.w, sizes.letter.h);
-
+function enableShadows() {
   drawingContext.shadowOffsetX = 2;
   drawingContext.shadowOffsetY = -2;
   drawingContext.shadowBlur = 10;
   drawingContext.shadowColor = colorTheme.bgcolors[0];
+}
+
+function disableShadows() {
+  drawingContext.shadowOffsetX = 0;
+  drawingContext.shadowOffsetY = 0;
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowColor = "#000000";
+}
+
+window.setup = function () {
+  pixelDensity(6);
+  createCanvas(sizes.letter.w, sizes.letter.h);
+
+  enableShadows();
 
   translate(width / 2, height / 2);
-  background(0);
+  background(colorTheme.bgcolors[0]);
 
   //Bottom layer
   {
@@ -237,19 +285,38 @@ window.setup = function () {
 
     circles = packCircles(packingParams);
 
-    //drawCirclesPassShadow(circles);
     //drawCircleConnectors2(circles);
     drawCirclesPassMain(circles);
   }
 
+  // Mandala 1
+  {
+    blendMode(ADD);
+    disableShadows();
+    noFill();
+    strokeWeight(2);
+    m.drawRandomMandala(
+      mandalaSegments,
+      rMandala + 100,
+      max(width / 2, height / 2) + 200,
+      50,
+      [64],
+      { perimeter: true, shape: true },
+      whiteNoFillTheme
+    );
+    m.cCircle(rMandala + 100);
+  }
+
   // Top layer
   {
+    enableShadows();
+    strokeWeight(1);
     packingParams = {
-      // startCircles: [{ center: vec2(0, 0), radius: 0.4 * height, invert: true }],
-      startCircles: [],
+      startCircles: [{ center: vec2(0, 0), radius: rMandala, invert: false }],
+      // startCircles: [],
       minRadius: 2,
       maxRadius: 15,
-      maxCircles: 2000,
+      maxCircles: 5000,
       maxIterations: 50000,
       sdf: sdfTop,
       sdfThreshold: 1000,
@@ -260,10 +327,60 @@ window.setup = function () {
 
     circles = packCircles(packingParams);
 
+    blendMode(MULTIPLY);
     drawCirclesPassShadow(circles);
+    blendMode(ADD);
     drawCircleConnectors2(circles);
+    blendMode(BLEND);
     drawCirclesPassMain(circles);
   }
+
+  // Mandala 2
+  {
+    strokeWeight(1.25);
+
+    blendMode(MULTIPLY);
+    const darkenCol = color(colorTheme.bgcolors[0]);
+    darkenCol.setAlpha(75);
+    fill(darkenCol);
+    m.cCircle(rMandala);
+
+    //disableShadows();
+    blendMode(BLEND);
+    noFill();
+    stroke(255);
+
+    m.drawRandomMandala(
+      mandalaSegments,
+      80,
+      rMandala - 30,
+      20,
+      [24],
+      { hidePerimeter: false }
+      //bwTheme
+    );
+    m.drawRing(rMandala - 30, rMandala, m.leafSegment, {
+      count: 32,
+      hidePerimeter: false,
+    });
+
+    m.cCircle(50);
+
+    m.drawRandomMandala(
+      mandalaSegments,
+      10,
+      50,
+      15,
+      [6],
+      { hidePerimeter: false }
+      //bwTheme
+    );
+  }
+
+  disableShadows();
+  stroke(255);
+  strokeWeight(2);
+  drawPageBorder(20);
 
   if (!debugMode) {
     noLoop();

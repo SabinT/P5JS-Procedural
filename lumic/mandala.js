@@ -6,6 +6,7 @@ import {
   bezier2D,
   bezierQuadratic2DShape,
   TAU,
+  getRandom,
 } from "./common.js";
 
 let polarSubdivisionCount = 8;
@@ -112,7 +113,7 @@ export function resetOverrides() {
  */
 export function drawRing(rStart, rEnd, segmentFunc, options) {
   if (globalOverrides) {
-    options = {...options, ...globalOverrides};
+    options = { ...options, ...globalOverrides };
   }
 
   if (options.inverted) {
@@ -130,10 +131,15 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
   const anglePerSegment = angleRange / count;
   const offset = 0.5 * anglePerSegment;
 
-  const createInnerShape = options?.shape && !options?.combineShape && supportsVertexMode.has(segmentFunc);
+  const createInnerShape =
+    options?.shape &&
+    !options?.combineShape &&
+    supportsVertexMode.has(segmentFunc);
   options.vertexMode = createInnerShape || options?.combineShape;
 
-  if (options?.combineShape) { beginShape(); }
+  if (options?.combineShape) {
+    beginShape();
+  }
 
   for (let i = 0; i < count; i++) {
     if (options.skip && !noSkip.has(segmentFunc)) {
@@ -215,12 +221,14 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
     }
   }
 
-  if (options?.combineShape) { endShape(); }
+  if (options?.combineShape) {
+    endShape();
+  }
 }
 
 let rCurrent = 10;
 
-export function reset() {
+export function resetMandalaContext() {
   rCurrent = 0;
   resetOverrides();
 }
@@ -309,9 +317,13 @@ export function crossSegment(s, i, options) {
   const divisions = options?.divisions || 8;
   const vertexMode = options?.vertexMode;
 
-  if (options?.perimiter) { polarLine(s.r2, s.a2, s.r2, s.a1, divisions, vertexMode); }
+  if (options?.perimiter) {
+    polarLine(s.r2, s.a2, s.r2, s.a1, divisions, vertexMode);
+  }
   polarLine(s.r2, s.a1, s.r1, s.a2, divisions, vertexMode);
-  if (options?.perimiter) { polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode); }
+  if (options?.perimiter) {
+    polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);
+  }
   polarLine(s.r1, s.a1, s.r2, s.a2, divisions, vertexMode);
 }
 
@@ -349,9 +361,9 @@ export function squareWaveSegment(s, i) {
 
 /**
  * @deprecated Use boxSegment instead
- * @param {} s 
- * @param {*} i 
- * @param {*} options 
+ * @param {} s
+ * @param {*} i
+ * @param {*} options
  */
 export function cellSegment(s, i, options) {
   // leading line, closing line will be provided by next segment
@@ -411,11 +423,25 @@ export function boxSegment(s, i, options) {
     // A----B    A = (r2, a1),   B = (r2, a2)
     // |    |    C = (r1, a2),   D = (r1, a1)
     // D----C
-    polarLine(s.r2, s.a2, s.r1, s.a2, options?.lineDivisions || 8, options.vertexMode);
+    polarLine(
+      s.r2,
+      s.a2,
+      s.r1,
+      s.a2,
+      options?.lineDivisions || 8,
+      options.vertexMode
+    );
 
     // Draw leading line only, trailing line provided by next segment, unless there's skip
     if (options?.skip > 0) {
-      polarLine(s.r1, s.a1, s.r2, s.a1, options?.lineDivisions, options.vertexMode);
+      polarLine(
+        s.r1,
+        s.a1,
+        s.r2,
+        s.a1,
+        options?.lineDivisions,
+        options.vertexMode
+      );
     }
   } else {
     polarBox(s.r1, s.a1, s.r2, s.a2, 8, options?.shape);
@@ -495,11 +521,11 @@ export const supportsRepeat = new Set();
 supportsRepeat.add(bezierSegment);
 supportsRepeat.add(diamondSegment);
 supportsRepeat.add(crossSegment);
-supportsRepeat.add(squareWaveSegment,);
+supportsRepeat.add(squareWaveSegment);
 
 export const hasPerimeter = new Set();
 hasPerimeter.add(boxSegment);
-hasPerimeter.add(squareWaveSegment,);
+hasPerimeter.add(squareWaveSegment);
 hasPerimeter.add(leafSegment);
 
 export const noSkip = new Set();
@@ -531,4 +557,78 @@ export function getRandomSegment() {
 
 export function getSegment(i) {
   return allSegments[i % allSegments.length];
+}
+
+export function drawRandomMandala(
+  segmentTypes,
+  rMin,
+  rMax,
+  rStep,
+  countSeq,
+  overrides,
+  colorTheme
+) {
+  resetMandalaContext();
+
+  // Start from edge and work backwards
+  addSpacer(rMax);
+  setOverrides({ hidePerimeter: true, inverted: true, ...overrides });
+
+  if (colorTheme) {
+    stroke(getRandom(colorTheme.colors));
+  }
+
+  addCircle();
+
+  const counts = countSeq ?? [8, 8, 6, 6, 3, 3];
+  let ringNum = 0;
+  while (getCurrentRadius() > rMin) {
+    let seg = getRandom(segmentTypes);
+    if (seg === bezierSegment) {
+      seg = diamondSegment;
+    }
+
+    // seg = getRandom([crissCrossPetalSegment, leafSegment, crossSegment]);
+
+    let step = -rStep;
+
+    if (
+      seg === crissCrossPetalSegment ||
+      seg === crossSegment ||
+      seg === leafSegment
+    ) {
+      step = -rStep * 1.5;
+    }
+
+    if (getCurrentRadius() + step < rMin) {
+      break;
+    }
+
+    const count = counts[min(ringNum++, counts.length - 1)];
+
+    const newOptions = {
+      count: count,
+    };
+
+    if (colorTheme) {
+      fill(getRandom(colorTheme.bgcolors));
+    }
+
+    addRing(seg, step, newOptions);
+
+    if (random(1) < 0.25 && supportsRepeat.has(seg)) {
+      // Small repeat chance
+      addRing(seg, step, newOptions);
+    }
+
+    noFill();
+    if (random() < 0.75) {
+      // adding perimeter doesn't make sense for squareWaveSegment
+      if (random(1) < 1 && seg !== squareWaveSegment) {
+        addSpacer(-5, true, true);
+      } else {
+        addSpacer(-5, false, false);
+      }
+    }
+  }
 }

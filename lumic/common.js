@@ -10,6 +10,10 @@ export const GOLDEN_ANGLE_RADIANS = GOLDEN_ANGLE_DEGREES * DEG2RAD;
 
 let EPS = 1e-6;
 
+export function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
 export function vec2(a, b) {
   return new p5.Vector(a, b);
 }

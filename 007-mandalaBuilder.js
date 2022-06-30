@@ -17,7 +17,7 @@ m.setOverrides({ hidePerimeter: true });
 
 function render() {
   clear();
-  m.reset();
+  m.resetMandalaContext();
   m.addSpacer(10);
 
   push();

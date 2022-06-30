@@ -17,7 +17,7 @@ function renderMandala(i, j, w, h, gridOptions) {
 
   const rMax = (min(w, h) - 10) / 2;
   const rMin = 5;
-  m.reset();
+  m.resetMandalaContext();
 
   // Start from edge and work backwards
   m.addSpacer(rMax);
