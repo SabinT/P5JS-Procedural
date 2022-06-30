@@ -5,6 +5,11 @@ export const greenTheme = {
     bgcolors: ["#000000"]
 };
 
+export const tealTheme = {
+    colors: ["#038C7F", "#027368", "#80F2E7", "#03A688"],
+    bgcolors: ["#01261F"]
+};
+
 export const galaxyTheme = {
     colors: ["#F220FA", "#7200E0", "#B400F5", "#E6006D", "#0079FA"],
     bgcolors: ["#5B187D", "#661848"]
