@@ -1,4 +1,4 @@
-import { distance2, getRandom, sizes, vec2 } from './lumic/common.js'
+import { distance2d, getRandom, sizes, vec2 } from './lumic/common.js'
 import { cyberpunkTheme, getRandomColor } from './lumic/palettes.js'
 import { sdHeart } from './lumic/sdf.js'
 
@@ -47,7 +47,7 @@ function pack() {
     if (maxD > margin && maxD < SDF_THRESHOLD) {
       // Intersect withe existing circles
       for (const circ of circles) {
-        const d = distance2(p, circ.center) - circ.radius - margin
+        const d = distance2d(p, circ.center) - circ.radius - margin
         maxD = min(d, maxD)
       }
 

@@ -1,5 +1,5 @@
 import {
-  distance2,
+  distance2d,
   getRandom,
   line2D,
   sizes,
@@ -104,7 +104,7 @@ function packCircles(params) {
       for (const circ of params.startCircles) {
         let dMultiplier = circ?.invert ? -1 : 1;
         const d =
-          dMultiplier * (distance2(p, circ.center) - circ.radius) - margin;
+          dMultiplier * (distance2d(p, circ.center) - circ.radius) - margin;
 
         maxDist = min(d, maxDist);
 
@@ -122,7 +122,7 @@ function packCircles(params) {
       for (const circ of overlapping) {
         let dMultiplier = circ?.invert ? -1 : 1;
         const d =
-          dMultiplier * (distance2(p, circ.center) - circ.radius) - margin;
+          dMultiplier * (distance2d(p, circ.center) - circ.radius) - margin;
 
         if (abs(d) < dClosest) {
           dClosest = abs(d);
@@ -260,7 +260,7 @@ function disableShadows() {
 
 window.setup = function () {
   pixelDensity(6);
-  createCanvas(sizes.letter.w, sizes.letter.h);
+  createCanvas(sizes.letter.h, sizes.letter.w);
 
   enableShadows();
 

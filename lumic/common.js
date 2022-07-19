@@ -10,12 +10,30 @@ export const GOLDEN_ANGLE_RADIANS = GOLDEN_ANGLE_DEGREES * DEG2RAD;
 
 let EPS = 1e-6;
 
+export const length = (p) => mag(p.x,p.y);
+
 export function mod(n, m) {
   return ((n % m) + m) % m;
 }
 
 export function vec2(a, b) {
   return new p5.Vector(a, b);
+}
+
+export function subtract2d(a, b) {
+  return vec2(a.x - b.x, a.y - b.y);
+}
+
+export function add2d(a, b) {
+  return vec2(a.x + b.x, a.y + b.y);
+}
+
+export function scale2d(a, s) {
+  return vec2(a.x * s, a.y * s);
+}
+
+export function mul2d(a, b) {
+  return vec2(a.x * b.x, a.y * b.y);
 }
 
 export function vec3(x,y,z) {
@@ -26,7 +44,7 @@ export function vec4(x,y,z,w) {
   return {x: x, y: y, z: z, w: w};
 }
 
-export function distance2(a,b) {
+export function distance2d(a,b) {
   return dist(a.x, a.y, b.x, b.y);
 }
 
