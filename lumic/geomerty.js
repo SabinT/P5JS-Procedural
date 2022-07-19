@@ -1,4 +1,45 @@
-import { subtract2d, add2d, scale2d, length } from './common.js';
+import { subtract2d, add2d, scale2d, length, vec2 } from './common.js';
+
+const clipShapes = [];
+
+export function addClipShape(shape, inside) {
+  clipShapes.push({ shape: shape, inside: inside });
+}
+
+export function clearClipShapes() {
+  clipShapes.length = 0;
+}
+
+export function clipLine(line) {
+  let lines = [line];
+  clipShapes.forEach
+  (clipShape => {
+    let newLines = [];
+    lines.forEach(line => {
+      const result = clipShape.shape.clipLine(line, clipShape.inside);
+      if (result && result.length > 0) {
+        newLines.push(...result);
+      }
+    });
+
+    // Update line list before clipping with next shape
+    lines = newLines;
+  });
+
+  return lines;
+}
+
+export function clipLines(lines) {
+  const newLines = [];
+  lines.forEach(line => {
+    const result = clipLine(line);
+    if (result && result.length > 0) {
+      newLines.push(...result);
+    }
+  });
+
+  return newLines;
+}
 
 /**
  * Assumes you have already established that the points are colinear
@@ -83,7 +124,7 @@ export class Circle {
         if (!inside) {
           lines.push(new Line(a, b));
         }
-        
+
         return lines;
       }
 
@@ -107,5 +148,30 @@ export class Circle {
       }
     
       return lines;
+  }
+}
+
+export class Polygon {
+  constructor(center, radius, sides, rotation = 0) {
+    this.center = center;
+    this.radius = radius;
+    this.sides = sides;
+    this.rotation = rotation;
+  }
+
+  getLines() {
+    const lines = [];
+    const angleStep = TWO_PI / this.sides;
+    const offset = angleStep / 2 + this.rotation;
+
+    for (let i = 0; i < this.sides; i++) {
+      const a1 = i * angleStep + offset;
+      const a2 = (i + 1) * angleStep + offset;
+      const a = add2d(this.center, scale2d(vec2(cos(a1), sin(a1)), this.radius));
+      const b = add2d(this.center, scale2d(vec2(cos(a2), sin(a2)), this.radius));
+      lines.push(new Line(a, b));
+    }
+
+    return lines;
   }
 }
