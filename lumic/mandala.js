@@ -110,6 +110,10 @@ export function resetOverrides() {
  *          This does not take effect when an inset is applied
  *        options.lineDivisions: controls the resolution of curved lines
  *        options.inverted: swap r2 and r1 (i.e., draw the mandala inwards)
+ *        options.inset: inset the ring by this amount
+ *        options.insetA: inset the ring angle by this amount
+ *        options.insetR: inset the ring radius by this amount
+ *        options.mask: Use a text mask to disable certain segments. "-" means don't draw, "x" means draw.
  */
 export function drawRing(rStart, rEnd, segmentFunc, options) {
   if (globalOverrides) {
@@ -141,7 +145,16 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
     beginShape();
   }
 
+  const hasMask = options?.mask && options?.mask.length > 0;
+
   for (let i = 0; i < count; i++) {
+    const maskChar = hasMask ? options.mask[i % options.mask.length] : null;
+    if (hasMask) {
+      if (maskChar === "-") {
+        continue;
+      }
+    }
+
     if (options.skip && !noSkip.has(segmentFunc)) {
       let shouldSkip = i % (options.skip + 1) === 0;
       if (options.invertSkip) {
@@ -500,6 +513,20 @@ export function circleSegment(s, i, options) {
 
   const diameter = options?.diameter || (s.r2 - s.r1) * 0.5;
   circle(a.x, a.y, diameter);
+}
+
+export function textSegment(s, i, options) {
+  const fontSize = options.fontSize || (s.r2 - s.r1) * 0.5;
+  const font = options.font || "Arial";
+  const char = options.text[i % options.text.length];
+  
+  push();
+  const c = polar2cart(segmentCenter(s));
+  translate(c.x, c.y);
+  rotate(avg(s.a1, s.a2) + Math.PI / 2 + (options.rotation || 0));
+  textFont(font, fontSize);
+  text(char, 0, 0);
+  pop();
 }
 
 export const supportsVertexMode = new Set();

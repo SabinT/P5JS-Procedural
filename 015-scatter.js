@@ -23,7 +23,7 @@ import { sdCircle, sdHeart } from "./lumic/sdf.js";
 import { QuadTree } from "./lumic/quadtree.js";
 import * as m from "./lumic/mandala.js";
 
-const colorTheme = galaxyTheme;
+const colorTheme = cloverTheme;
 const rMandala = 180;
 const colRepeat = 1;
 
