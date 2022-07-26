@@ -1,4 +1,4 @@
-import { subtract2d, add2d, scale2d, length, vec2 } from './common.js';
+import { subtract2d, add2d, scale2d, length, vec2, TAU } from './common.js';
 
 const clipShapes = [];
 
@@ -10,6 +10,7 @@ export function clearClipShapes() {
   clipShapes.length = 0;
 }
 
+// TODO BUGBUG something wrong when clipping many lines with many circles
 export function clipLine(line) {
   let lines = [line];
   clipShapes.forEach
@@ -18,7 +19,7 @@ export function clipLine(line) {
     lines.forEach(line => {
       const result = clipShape.shape.clipLine(line, clipShape.inside);
       if (result && result.length > 0) {
-        newLines.push(...result);
+        newLines = newLines.concat(result);
       }
     });
 
@@ -159,10 +160,30 @@ export class Polygon {
     this.rotation = rotation;
   }
 
+  getAngleStepOffset() {
+    const angleStep = TWO_PI / this.sides;
+    const offset = ((this.sides % 2 === 0) ? 0 : -angleStep / 4) + this.rotation;
+    return { angleStep, offset };
+  }
+
+  getPoint(i) {
+    const { angleStep, offset } = this.getAngleStepOffset();
+    const angle = i * angleStep + offset;
+    const a = add2d(this.center, scale2d(vec2(cos(angle), sin(angle)), this.radius));
+    return a;
+  }
+
+  getPoints() {
+    const points = [];
+    for (let i = 0; i < this.sides; i++) {
+      points.push(this.getPoint(i));
+    }
+    return points;
+  }
+
   getLines() {
     const lines = [];
-    const angleStep = TWO_PI / this.sides;
-    const offset = angleStep / 2 + this.rotation;
+    const { angleStep, offset } = this.getAngleStepOffset();
 
     for (let i = 0; i < this.sides; i++) {
       const a1 = i * angleStep + offset;
@@ -173,5 +194,37 @@ export class Polygon {
     }
 
     return lines;
+  }
+
+  drawLines() {
+    // this.draw();return;
+
+    this.getLines().forEach(
+      // Clip the lines and draw them
+      line => {
+        const result = clipLine(line);
+        result.forEach(
+          line => line.draw()
+        );
+      }
+    );
+  }
+
+  draw() {
+    const { angleStep, offset } = this.getAngleStepOffset();
+
+    beginShape();
+    for (let i = 0; i < this.sides; i++) {
+      const angle = i * angleStep + offset;
+      const a = add2d(this.center, scale2d(vec2(cos(angle), sin(angle)), this.radius));
+      vertex(a.x, a.y);
+    }
+    endShape(CLOSE);
+  }
+
+  drawInscribedCircle() {
+    const a = TAU / this.sides;
+    const r = this.radius * cos(a / 2);
+    circle(this.center.x, this.center.y, 2 * r);
   }
 }

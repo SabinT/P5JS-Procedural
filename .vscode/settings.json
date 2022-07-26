@@ -1,4 +1,11 @@
 {
   "liveServer.settings.port": 5501,
-  "colorize.languages": ["typescript", "javascript", "css", "scss"]
+  "editor.acceptSuggestionsOnCommitCharacter": false,
+  "colorize.languages": [
+    "typescript",
+    "javascript",
+    "css",
+    "scss"
+  ],
+  "editor.acceptSuggestionOnCommitCharacter": false
 }

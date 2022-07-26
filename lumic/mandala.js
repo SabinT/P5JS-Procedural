@@ -511,7 +511,7 @@ export function leafTiltedSegment(s, i, options) {
 export function circleSegment(s, i, options) {
   var a = polar2cart(segmentCenter(s)); // bottom left
 
-  const diameter = options?.diameter || (s.r2 - s.r1) * 0.5;
+  const diameter = options?.diameter || (s.r2 - s.r1);
   circle(a.x, a.y, diameter);
 }
 
