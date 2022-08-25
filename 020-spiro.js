@@ -26,12 +26,11 @@ function renderCell(i, j, w, h, gridOptions) {
   let tStart = 0;
   let tEnd = 100;
   let tStep = 0.01;
+  
   var f;
 
   if (cell == 0) {
-    f = (t) => {
-      return butterfly(t);
-    }
+    f = butterfly;
   } else {
     const R = 3;
     const r = Math.floor(random(1, 15)) / 13;
@@ -39,7 +38,7 @@ function renderCell(i, j, w, h, gridOptions) {
 
     tEnd = 100;
     tStep = 0.01;
-    f = (t) => {
+    f = function(t) {
       return hypotrochoid(R,r,d,t);
     }
   }
