@@ -210,16 +210,18 @@ export class Polygon {
     );
   }
 
-  draw() {
+  draw(g) {
+   if (!g) { g = window; }
+
     const { angleStep, offset } = this.getAngleStepOffset();
 
-    beginShape();
+    g.beginShape();
     for (let i = 0; i < this.sides; i++) {
       const angle = i * angleStep + offset;
       const a = add2d(this.center, scale2d(vec2(cos(angle), sin(angle)), this.radius));
-      vertex(a.x, a.y);
+      g.vertex(a.x, a.y);
     }
-    endShape(CLOSE);
+    g.endShape(CLOSE);
   }
 
   drawInscribedCircle() {

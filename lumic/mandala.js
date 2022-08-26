@@ -103,7 +103,7 @@ export function resetOverrides() {
  *        options.onBeforeSegment: custom code to execute before drawing segment
  *        options.filter(i, options): Decide whether to drop segments based on index (return false to drop)
  *        options.onAfterSegment: custome code to execute after drawing segment
- *        options.angleShiftFactor: shift the start angle (0-1) of one segment angle
+ *        options.angleShift: shift the start angle (0-1) of one segment angle
  *        options.angleRange: Default 2 * PI if unspecified
  *        options.angleStart: Specify to start angle at something other than zero
  *        options.hidePerimeter: Asks the drawing function to not draw radial perimeters (at r1 and r2)
@@ -133,7 +133,7 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
   const angleRange = options?.angleRange || TAU;
 
   const anglePerSegment = angleRange / count;
-  const offset = 0.5 * anglePerSegment;
+  const fixedOffset = 0.5 * anglePerSegment;
 
   const createInnerShape =
     options?.shape &&
@@ -172,11 +172,11 @@ export function drawRing(rStart, rEnd, segmentFunc, options) {
       }
     }
 
-    const angleShiftFactor = options?.angleShiftFactor || 0;
+    const angleShift = options?.angleShift || 0;
 
     const angleStart =
-      angleShiftFactor * anglePerSegment -
-      offset +
+      angleShift * anglePerSegment -
+      fixedOffset +
       i * anglePerSegment +
       (options?.angleStart || 0);
 
@@ -265,11 +265,11 @@ export function addRing(ringFunc, rStep, options) {
       // Also repeat laterally
       drawRing(rCurrent, rCurrent + rStep, ringFunc, {
         ...options,
-        angleShiftFactor: 0.2,
+        angleShift: 0.2,
       });
       drawRing(rCurrent, rCurrent + rStep, ringFunc, {
         ...options,
-        angleShiftFactor: -0.2,
+        angleShift: -0.2,
       });
     }
   }

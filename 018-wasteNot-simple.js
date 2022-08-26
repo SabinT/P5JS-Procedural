@@ -44,7 +44,7 @@ function render(g) {
 
   fill(0);
   noStroke();
-  m.drawRing(300, 400, m.leafSegment, { count: 18, angleShiftFactor: 0.5 });
+  m.drawRing(300, 400, m.leafSegment, { count: 18, angleShift: 0.5 });
 
   pop();
 }

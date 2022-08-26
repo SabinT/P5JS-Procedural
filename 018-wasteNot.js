@@ -35,20 +35,20 @@ function render(g) {
   m.drawRing(150, 190, m.leafSegment, { count: count1 });
   m.drawRing(150, 110, m.leafSegment, { count: count1 });
   m.drawRing(90, 70, m.diamondSegment, {  perimeter: false, count: count1 });
-  m.drawRing(110, 90, m.bezierSegment, { count: count1, angleShiftFactor: 0.5 });
+  m.drawRing(110, 90, m.bezierSegment, { count: count1, angleShift: 0.5 });
   fill(255);
   m.drawRing(140, 160, m.circleSegment, { count: count1 });
   noFill();
   stroke(255);
   m.drawRing(130, 170, m.circleSegment, { count: count1 });
   fill(0);
-  m.drawRing(190, 170, m.circleSegment, { count: count1, angleShiftFactor: 0.5 });
+  m.drawRing(190, 170, m.circleSegment, { count: count1, angleShift: 0.5 });
 
   stroke(0);
   m.drawRing(70, 55, m.diamondSegment, { count: count1});
-  m.drawRing(50, 30, m.leafSegment, { count: 16, angleShiftFactor: 0.5 });
+  m.drawRing(50, 30, m.leafSegment, { count: 16, angleShift: 0.5 });
 
-  m.drawRing(30, 0, m.diamondSegment, { count: 16, angleShiftFactor: 0.5 });
+  m.drawRing(30, 0, m.diamondSegment, { count: 16, angleShift: 0.5 });
 
 
   noFill();
@@ -73,11 +73,11 @@ function render(g) {
   stroke(0);
   // m.drawRing(220, 240, m.boxSegment, { count: count2 * 2 });
   fill(0);
-  m.drawRing(240, 270, m.leafSegment, { perimeter: false, shape: false, count: count2 * 1.25, angleShiftFactor: 0});
-  m.drawRing(240, 215, m.leafSegment, { perimeter: false, shape: false, count: count2 * 1.25, angleShiftFactor: 0});
+  m.drawRing(240, 270, m.leafSegment, { perimeter: false, shape: false, count: count2 * 1.25, angleShift: 0});
+  m.drawRing(240, 215, m.leafSegment, { perimeter: false, shape: false, count: count2 * 1.25, angleShift: 0});
   stroke(255);
-  m.drawRing(225, 260, m.bezierSegment, { count: count2 * 1.25, angleShiftFactor: 0.5});
-  m.drawRing(260, 225, m.bezierSegment, { count: count2 * 1.25, angleShiftFactor: 0.5});
+  m.drawRing(225, 260, m.bezierSegment, { count: count2 * 1.25, angleShift: 0.5});
+  m.drawRing(260, 225, m.bezierSegment, { count: count2 * 1.25, angleShift: 0.5});
   
   noFill();
   stroke(0);
@@ -85,12 +85,12 @@ function render(g) {
   
   strokeWeight(1.5);
   fill(0);
-  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShiftFactor: 0.5, inset: 0. });
-  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShiftFactor: 0.5 });
-  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShiftFactor: 0.5 });
-  // m.drawRing(270, 295, m.diamondSegment, { count: count2, angleShiftFactor: 0.5 });
+  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShift: 0.5, inset: 0. });
+  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShift: 0.5 });
+  // m.drawRing(245, 270, m.diamondSegment, { count: count2, angleShift: 0.5 });
+  // m.drawRing(270, 295, m.diamondSegment, { count: count2, angleShift: 0.5 });
 
-  // m.drawRing(245, 270, m.s, { count: count2, angleShiftFactor: 0.5, inset: 0. });
+  // m.drawRing(245, 270, m.s, { count: count2, angleShift: 0.5, inset: 0. });
 
 
   stroke(0);
