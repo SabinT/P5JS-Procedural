@@ -36,7 +36,7 @@ export const cloverTheme = {
 };
 
 export function getColor(palette, i) {
-    return palette.colors[mod(i, palette.colors.length)];
+    return palette.colors[i % palette.colors.length];
 }
 
 export function getRandomColor(palette) {

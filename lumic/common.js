@@ -11,6 +11,9 @@ export const GOLDEN_ANGLE_RADIANS = GOLDEN_ANGLE_DEGREES * DEG2RAD;
 
 let EPS = 1e-6;
 
+export const vlerp = p5.Vector.lerp;
+export const lerp2d = p5.Vector.lerp;
+
 export const length = (p) => mag(p.x,p.y);
 
 export function mod(n, m) {
@@ -51,6 +54,12 @@ export function distance2d(a,b) {
 
 export function avg(x, y) {
   return 0.5 * (x + y);
+}
+
+export function cart2Polar(v) {
+  const r = length(v);
+  const a = atan2(v.y, v.x);
+  return vec2(r,a);
 }
 
 export function polar2cart(v) {

@@ -1,4 +1,5 @@
-import { subtract2d, add2d, scale2d, length, vec2, TAU } from './common.js';
+import { subtract2d, add2d, scale2d, cart2Polar, length, vec2, TAU, vlerp } from './common.js';
+import { polarLine } from './mandala.js';
 
 const clipShapes = [];
 
@@ -95,8 +96,31 @@ export class Line {
     this.b = b;
   }
 
+  draw(polar = false, polarBlend = 1, divisions = 8) {
+    if (polar) {
+      const p1 = cart2Polar(this.a);
+      const p2 = cart2Polar(this.b);
+      if (p2.y < p1.y) { p2.y += TAU; }
+      polarLine(p1.x, p1.y, p2.x, p2.y, divisions, false, polarBlend);
+    } else {
+      line(this.a.x, this.a.y, this.b.x, this.b.y);
+    }
+  }
+}
+
+export class Lines {
+  constructor(lines) {
+    this.lines = lines || [];
+  }
+
+  add(line) {
+    this.lines.push(line);
+  }
+
   draw() {
-    line(this.a.x, this.a.y, this.b.x, this.b.y);
+    this.lines.forEach(line => {
+      line.draw();
+    });
   }
 }
 
@@ -196,7 +220,7 @@ export class Polygon {
     return lines;
   }
 
-  drawLines() {
+  drawLines(polar, polarBlend, divisions) {
     // this.draw();return;
 
     this.getLines().forEach(
@@ -204,7 +228,7 @@ export class Polygon {
       line => {
         const result = clipLine(line);
         result.forEach(
-          line => line.draw()
+          line => line.draw(polar, polarBlend, divisions)
         );
       }
     );
@@ -213,15 +237,47 @@ export class Polygon {
   draw(g) {
    if (!g) { g = window; }
 
-    const { angleStep, offset } = this.getAngleStepOffset();
-
     g.beginShape();
     for (let i = 0; i < this.sides; i++) {
-      const angle = i * angleStep + offset;
-      const a = add2d(this.center, scale2d(vec2(cos(angle), sin(angle)), this.radius));
+      const a = this.getPoint(i);
+      const b = this.getPoint((i + 1) % this.sides);
       g.vertex(a.x, a.y);
     }
     g.endShape(CLOSE);
+  }
+
+  drawChiseled(g, inwardOffset, lengthOffset) {
+    if (!g) { g = window; }
+
+    for (let i = 0; i < this.sides; i++) {
+      const start = this.getPoint(i);
+      const end = this.getPoint((i + 1) % this.sides);
+
+      // Move a and b towwards each other
+      const dir = subtract2d(end, start);
+      const offset = lengthOffset * length(dir);
+      dir.normalize();
+      const a = add2d(start, scale2d(dir, offset));
+      const b = add2d(end, scale2d(dir, -offset));
+
+      // Move c and d inwards
+      let cc = scale2d(start, 1 - inwardOffset);
+      let dd = scale2d(end, 1 - inwardOffset);
+
+      let c = add2d(cc, scale2d(dir, offset));
+      let d = add2d(dd, scale2d(dir, -offset));
+
+      g.beginShape();
+      g.vertex(a.x, a.y);
+      g.vertex(b.x, b.y);
+      g.vertex(d.x, d.y);
+      g.vertex(c.x, c.y);
+      g.endShape(CLOSE);
+    }
+  }
+
+  getInscribedRadius() {
+    return this.radius * cos(PI / this.sides);
   }
 
   drawInscribedCircle() {

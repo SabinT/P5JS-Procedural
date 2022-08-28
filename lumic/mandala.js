@@ -7,6 +7,7 @@ import {
   bezierQuadratic2DShape,
   TAU,
   getRandom,
+  vlerp,
 } from "./common.js";
 
 let polarSubdivisionCount = 8;
@@ -43,18 +44,28 @@ export function polarLine(
   r2,
   theta2,
   divisions = null,
-  vertexMode = false
+  vertexMode = false,
+  polarBlend = 1
 ) {
   divisions = divisions || polarSubdivisionCount;
   let start = vec2(r1, theta1);
   let end = vec2(r2, theta2);
+  let cartStart = polar2cart(start);
+  let cartEnd = polar2cart(end);
   for (let i = 0; i < divisions; i++) {
     const t1 = i / divisions;
     const t2 = (i + 1) / divisions;
-    const p1 = p5.Vector.lerp(start, end, t1);
-    const p2 = p5.Vector.lerp(start, end, t2);
-    const a = polar2cart(p1);
-    const b = polar2cart(p2);
+    const p1 = vlerp(start, end, t1);
+    const p2 = vlerp(start, end, t2);
+    let a = polar2cart(p1);
+    let b = polar2cart(p2);
+
+    if (polarBlend < 1) {
+      const a1 = vlerp(cartStart, cartEnd, t1);
+      const a2 = vlerp(cartStart, cartEnd, t2);
+      a = vlerp(a1, a, polarBlend);
+      b = vlerp(a2, b, polarBlend);
+    }
 
     if (vertexMode) {
       vertex(a.x, a.y);

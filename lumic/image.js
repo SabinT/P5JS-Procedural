@@ -20,7 +20,7 @@ export function getPixelBrightness(img, x, y) {
 export function getBrightness(x, y) {
     // Start position for the bytes of a pixel in the pixels array
     let d = pixelDensity();
-    let pos = (y * d * width + x * d) * 4;
+    let pos = (y * d * width + x * d) * 4; // Doesn't work for pixelDensity > 1
   
     let r = pixels[pos];
     let g = pixels[pos + 1];
