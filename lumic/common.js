@@ -14,7 +14,7 @@ let EPS = 1e-6;
 export const vlerp = p5.Vector.lerp;
 export const lerp2d = p5.Vector.lerp;
 
-export const length = (p) => mag(p.x,p.y);
+export const length = (p) => mag(p.x, p.y);
 
 export function mod(n, m) {
   return ((n % m) + m) % m;
@@ -40,15 +40,15 @@ export function mul2d(a, b) {
   return vec2(a.x * b.x, a.y * b.y);
 }
 
-export function vec3(x,y,z) {
-  return new p5.Vector(x,y,z);
+export function vec3(x, y, z) {
+  return new p5.Vector(x, y, z);
 }
 
-export function vec4(x,y,z,w) {
-  return {x: x, y: y, z: z, w: w};
+export function vec4(x, y, z, w) {
+  return { x: x, y: y, z: z, w: w };
 }
 
-export function distance2d(a,b) {
+export function distance2d(a, b) {
   return dist(a.x, a.y, b.x, b.y);
 }
 
@@ -59,7 +59,7 @@ export function avg(x, y) {
 export function cart2Polar(v) {
   const r = length(v);
   const a = atan2(v.y, v.x);
-  return vec2(r,a);
+  return vec2(r, a);
 }
 
 export function polar2cart(v) {
@@ -168,4 +168,5 @@ export function sqRand2D(x, y, seed = 0) {
 
 export const sizes = {
   letter: { w: 850, h: 1100 },
+  seatac: { w: 1500, h: 700 },
 };

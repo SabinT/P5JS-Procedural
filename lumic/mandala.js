@@ -35,7 +35,7 @@ export function cArc(radius, angle1, angle2) {
  * @param {*} radius
  */
 export function cCircle(radius) {
-  circle(0, 0, 2 * radius);
+  circle(0, 0, 2 * (radius || rCurrent));
 }
 
 export function polarLine(
@@ -261,8 +261,16 @@ export function getCurrentRadius() {
   return rCurrent;
 }
 
+export function setCurrentRadius(r) {
+  rCurrent = r;
+}
+
+export function adjustRadius(r) {
+  rCurrent += r;
+}
+
 export function addRing(ringFunc, rStep, options) {
-  if (options.autoInset) {
+  if (options?.autoInset) {
     if (supportsInset.has(ringFunc) && random(1) < 0.5) {
       drawRing(rCurrent, rCurrent + rStep, ringFunc, {
         ...options,
@@ -271,7 +279,7 @@ export function addRing(ringFunc, rStep, options) {
     }
   }
 
-  if (options.autoRepeat) {
+  if (options?.autoRepeat) {
     if (ringFunc === bezierSegment) {
       // Also repeat laterally
       drawRing(rCurrent, rCurrent + rStep, ringFunc, {
@@ -522,7 +530,7 @@ export function leafTiltedSegment(s, i, options) {
 export function circleSegment(s, i, options) {
   var a = polar2cart(segmentCenter(s)); // bottom left
 
-  const diameter = options?.diameter || (s.r2 - s.r1);
+  const diameter = options?.diameter || s.r2 - s.r1;
   circle(a.x, a.y, diameter);
 }
 
@@ -530,7 +538,7 @@ export function textSegment(s, i, options) {
   const fontSize = options.fontSize || (s.r2 - s.r1) * 0.5;
   const font = options.font || "Arial";
   const char = options.text[i % options.text.length];
-  
+
   push();
   const c = polar2cart(segmentCenter(s));
   translate(c.x, c.y);

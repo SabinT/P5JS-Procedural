@@ -1,16 +1,16 @@
-import * as common from './lumic/common.js'
-import * as debug from './lumic/debugutils.js'
+import * as common from "./lumic/common.js";
+import * as debug from "./lumic/debugutils.js";
 // import { mothCircles } from './data/jsonCircles.js'
-import { heartCircles as jsonCircles} from './data/heartcircles.js'
+import { heartCircles as jsonCircles } from "./data/heartcircles3x4.js";
 
-const w = 2000
-const h = 2000
+const w = 2000;
+const h = 2000;
 
-const screenW = 800
-const screenH = 800
+const screenW = 800;
+const screenH = 800;
 
 // the 'varying's are shared between both vertex & fragment shaders
-let varying = 'precision highp float; varying vec2 vPos;'
+let varying = "precision highp float; varying vec2 vPos;";
 
 // the vertex shader is called for each vertex
 let vs =
@@ -18,35 +18,35 @@ let vs =
   `
   attribute vec3 aPosition;
   void main() { vPos = (gl_Position = vec4(aPosition,1.0)).xy; }
-  `
+  `;
 
-let xMax = Number.NEGATIVE_INFINITY
-let xMin = Number.POSITIVE_INFINITY
-let yMax = Number.NEGATIVE_INFINITY
-let yMin = Number.POSITIVE_INFINITY
-let rMax = Number.NEGATIVE_INFINITY
-let rMin = Number.POSITIVE_INFINITY
+let xMax = Number.NEGATIVE_INFINITY;
+let xMin = Number.POSITIVE_INFINITY;
+let yMax = Number.NEGATIVE_INFINITY;
+let yMin = Number.POSITIVE_INFINITY;
+let rMax = Number.NEGATIVE_INFINITY;
+let rMin = Number.POSITIVE_INFINITY;
 
 jsonCircles.circles.forEach((c) => {
   if (c.x > xMax) {
-    xMax = c.x
+    xMax = c.x;
   }
   if (c.x < xMin) {
-    xMin = c.x
+    xMin = c.x;
   }
 
   if (c.y > yMax) {
-    yMax = c.y
+    yMax = c.y;
   }
   if (c.y < yMin) {
-    yMin = c.y
+    yMin = c.y;
   }
 
   if (c.r > rMax) {
-    rMax = c.r
+    rMax = c.r;
   }
   if (c.r < rMin) {
-    rMin = c.r
+    rMin = c.r;
   }
 });
 
@@ -54,25 +54,29 @@ console.log(`x minmax: ${xMin}, ${xMax}`);
 console.log(`y minmax: ${yMin}, ${yMax}`);
 console.log(`r minmax: ${rMin}, ${rMax}`);
 
-let circlesShaderPart = ''
-const maxCircles = 500;
+let circlesShaderPart = "";
+const maxCircles = 1000;
 const zoomOut = 1000;
 const rAdjustment = 0.02;
 
 for (let i = 0; i < maxCircles; i++) {
   const c = jsonCircles.circles[i];
   const x = c.x / zoomOut;
-  const y =  - c.y / zoomOut;
+  const y = -c.y / zoomOut;
   const r = c.r / zoomOut - rAdjustment;
 
   if (i == 0) {
-    circlesShaderPart += `float d = M(p,V(${x.toFixed(2)},${y.toFixed(2)}), ${r.toFixed(2)});`
+    circlesShaderPart += `float d = M(p,V(${x.toFixed(2)},${y.toFixed(
+      2
+    )}), ${r.toFixed(2)});`;
   } else {
-    circlesShaderPart += `d = C(d,M(p,V(${x.toFixed(2)},${y.toFixed(2)}), ${r.toFixed(2)}));`
+    circlesShaderPart += `d = C(d,M(p,V(${x.toFixed(2)},${y.toFixed(
+      2
+    )}), ${r.toFixed(2)}));`;
   }
 }
 
-console.log(circlesShaderPart)
+console.log(circlesShaderPart);
 
 // the fragment shader is called for each pixel
 let fs =
@@ -110,13 +114,13 @@ let fs =
 let testShader;
 
 window.setup = function () {
-  createCanvas(screenW, screenH, WEBGL)
+  createCanvas(screenW, screenH, WEBGL);
 
-  testShader = createShader(vs, fs)
-  shader(testShader)
+  testShader = createShader(vs, fs);
+  shader(testShader);
 
-  background(255)
-  quad(-1, -1, 1, -1, 1, 1, -1, 1)
-}
+  background(255);
+  quad(-1, -1, 1, -1, 1, 1, -1, 1);
+};
 
-window.draw = function () {}
+window.draw = function () {};
