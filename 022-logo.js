@@ -76,7 +76,7 @@ function getRadiusAndAngleForAnchor(p, anchorPos) {
   return [r, angle];
 }
 
-const baseWeight = 3;
+const baseWeight = 2;
 
 function render(g) {
   noFill();
@@ -112,25 +112,13 @@ function render(g) {
         noFill();
         stroke(0);
         strokeWeight(baseWeight);
-        // const innerPoly = new Polygon(
-        //   vec2(0, 0),
-        //   p.radius - innerRadiusOffset,
-        //   p.sides,
-        //   p.rotation
-        // );
-        // innerPoly.drawChiseled(g, chiselInward, chiselLength);
-
-        const innerTri = new Polygon(
+        const innerPoly = new Polygon(
           vec2(0, 0),
           p.radius - innerRadiusOffset,
-          3,
-          PI / 6
+          p.sides,
+          p.rotation
         );
-        // innerTri.draw(g);
-
-        innerTri.radius = innerTri.getInscribedRadius() - baseWeight / 2;
-        innerTri.rotation = PI / 6 + PI;
-        // innerTri.draw(g);
+        innerPoly.drawChiseled(g, chiselInward, chiselLength);
       }
     } else {
       noFill();

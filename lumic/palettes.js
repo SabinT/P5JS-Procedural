@@ -5,6 +5,11 @@ export const greenTheme = {
   bgcolors: ["#000000"],
 };
 
+export const vibrantTheme = {
+    colors : ["#582D75", "#17ACD4", "#A1C915", "#FA9311", "#DB1D3A"],
+    bgcolors: ["#000000"]
+};
+
 export const tealTheme = {
   colors: ["#038C7F", "#027368", "#80F2E7", "#03A688"],
   bgcolors: ["#01261F"],
