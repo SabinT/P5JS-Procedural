@@ -85,8 +85,9 @@ export function bezierQuadratic2DShape(a, b, c) {
   quadraticVertex(b.x, b.y, c.x, c.y);
 }
 
-export function line2D(a, b) {
-  line(a.x, a.y, b.x, b.y);
+export function line2D(a, b, g) {
+  if (!g) { g = window; }
+  g.line(a.x, a.y, b.x, b.y);
 }
 
 export function almostEquals(a, b) {
