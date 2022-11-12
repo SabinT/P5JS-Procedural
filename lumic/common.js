@@ -16,6 +16,14 @@ export const lerp2d = p5.Vector.lerp;
 
 export const length = (p) => mag(p.x, p.y);
 
+const urlParams = new Proxy(new URLSearchParams(window.location.search), {
+  get: (searchParams, prop) => searchParams.get(prop),
+});
+
+export function getUrlParam(param) {
+  return urlParams[param];
+}
+
 export function mod(n, m) {
   return ((n % m) + m) % m;
 }
