@@ -1,6 +1,8 @@
 export const PI = 3.1415926535897932384626433832795;
 export const TAU = 6.283185307179586476925286766559;
 export const E = 2.71828182845904523536;
+export const PHI = (1 + Math.sqrt(5)) / 2;
+
 
 export const DEG2RAD = 0.01745329;
 export const RAD2DEG = 57.29578;

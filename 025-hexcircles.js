@@ -18,70 +18,17 @@ for (n of nums) {
 
  */
 
-
-import { getUrlParam, PI, TAU, vec2 } from "./lumic/common.js";
+import {
+  cart2Polar,
+  DEG2RAD,
+  getUrlParam,
+  PI,
+  TAU,
+  vec2,
+} from "./lumic/common.js";
 import { Polygon } from "./lumic/geomerty.js";
 import { getHexRing, hexToCartesian } from "./lumic/hex.js";
-import { getColor, vibrantTheme } from "./lumic/palettes.js";
-
-const missingFrames = [
-    203,
-    204,
-    245,
-    246,
-    247,
-    248,
-    249,
-    310,
-    331,
-    342,
-    383,
-    384,
-    385,
-    386,
-    397,
-    398,
-    429,
-    430,
-    481,
-    482,
-    513,
-    514,
-    555,
-    566,
-    567,
-    568,
-    609,
-    610,
-    611,
-    612,
-    613,
-    654,
-    675,
-    686,
-    687,
-    718,
-    719,
-    720,
-    721,
-    752,
-    753,
-    784,
-    785,
-    786,
-    787,
-    808,
-    839,
-    880,
-    881,
-    892,
-    913,
-    914,
-    925,
-    936,
-    937,
-    958
-]
+import * as pal from "./lumic/palettes.js";
 
 const w = 1920;
 const hw = w / 2;
@@ -100,7 +47,9 @@ const rec = {
 const R = 80;
 const minR = 0;
 let insetStep = 10;
-const rings = 7;
+const rings = 8;
+
+var colIndex = 0;
 
 let hexSeq = 0;
 function drawHex(p, R, ring) {
@@ -116,19 +65,44 @@ function drawHex(p, R, ring) {
 
   const hex = new Polygon(vec2(0, 0), R, 6, PI / 2 + angleOffset);
 
-  const t = (TAU * rec.currentFrame) / (rec.fps * rec.loopTime) + hexSeq;
-  let step = insetStep + map(sin(t), -1, 1, 0, 20);
-  let r = R - ring * step;
-  for (let i = 0; i <= rings - ring && r > minR; i++) {
-    const mult = i % 2 == 0 ? 255 : 0;
-    const col = vibrantTheme.colors[i % vibrantTheme.colors.length];
-    // col.setAlpha(255 * mult);
-    fill(col);
-    hex.radius = r;
-    hex.draw();
+  // Draw a circle at center
 
-    r -= step;
-  }
+  const period = 10;
+  const t = ((millis() / 1000) * TAU) / period;
+  const ns = 20;
+
+  let i = 0;
+  const n1 = sin(t + i) * 1;
+  const n2 = cos(t + i) * 1;
+
+  stroke(255);
+  var col = color(pal.getColor(pal.vibrantTheme, colIndex));
+  col.setAlpha(50);
+  fill(col);
+
+  const x = noise(q.x + n1, q.y) * ns;
+  const y = noise(q.x, q.y + n2) * ns;
+
+  // Looping noise for radius, based on dist from center
+  const pp = cart2Polar(q);
+  const nr = noise(pp.x, pp.y + t) * 50;
+
+  const r = R * sin(60 * DEG2RAD) * 4 - nr;
+  circle(x, y, r);
+  colIndex++;
+
+  // hex.draw();
+
+  // const t = (TAU * rec.currentFrame) / (rec.fps * rec.loopTime) + hexSeq;
+  // let step = insetStep + map(sin(t), -1, 1, 0, 20);
+  // let r = R - ring * step;
+  // for (let i = 0; i <= rings - ring && r > minR; i++) {
+  //   fill(i % 2 == 0 ? 255 : 0);
+  //   hex.radius = r;
+  //   hex.draw();
+
+  //   r -= step;
+  // }
 
   pop();
   hexSeq++;
@@ -139,7 +113,11 @@ function memoKey(center) {
 }
 
 function render(g) {
+  blendMode(NORMAL);
   background(10);
+
+  colIndex = 0;
+  blendMode(ADD);
 
   const startHex = { center: vec2(0, 0), ring: 0 };
   const hexes = [];
@@ -177,33 +155,39 @@ function render(g) {
 window.setup = function () {
   createCanvas(w, h);
   frameRate(60);
+  blendMode(SCREEN);
+  // noLoop();
 };
 
 window.draw = function () {
   translate(hw, hh);
+  // background(0);
 
-  const targetFrame = getUrlParam('frame');
+  const targetFrame = getUrlParam("frame");
   const singleFrame = targetFrame !== undefined && targetFrame !== null;
 
   if (singleFrame) {
     rec.currentFrame = targetFrame;
   }
 
-  const isMisingFrame = getUrlParam("missing") && frameCount > 0 && frameCount < missingFrames.length;
+  const isMisingFrame =
+    getUrlParam("missing") &&
+    frameCount > 0 &&
+    frameCount < missingFrames.length;
   if (isMisingFrame) {
-    rec.currentFrame = missingFrames[frameCount - 1]
+    rec.currentFrame = missingFrames[frameCount - 1];
   }
 
   hexSeq = 0;
   render();
 
   if (
-    (getUrlParam("save")  &&
-        rec.currentFrame <= rec.recLoopCount * rec.loopTime * rec.fps) ||
+    (getUrlParam("save") &&
+      rec.currentFrame <= rec.recLoopCount * rec.loopTime * rec.fps) ||
     getUrlParam("frame") ||
     isMisingFrame
   ) {
-    save("hex" + str(rec.currentFrame).padStart(4,0) + ".png");
+    save("hex" + str(rec.currentFrame).padStart(4, 0) + ".png");
   }
 
   // To save battery
