@@ -1,4 +1,4 @@
-import { PHI, TAU, vec2 } from "./lumic/common.js";
+import { PHI, scale2d, TAU, vec2 } from "./lumic/common.js";
 import { vibrantTheme } from "./lumic/palettes.js";
 
 const w = 1000;
@@ -9,21 +9,23 @@ const hh = h / 2;
 let g;
 
 /**
- * 
+ *
  * @param {*} n Number of points
  * @param {*} s How much to scale unit square
  */
 function rectFibo(n, s) {
-  let pts = []
+  let pts = [];
   for (let i = 0; i < n; i++) {
     let x = (i / PHI) % 1;
     let y = i / n;
-        
-    x = (x - 0.5) * s;
-    y = (y - 0.5) * s;
-    
-    pts.push(vec2(x,y));
+
+    x = x * s;
+    y = y * s;
+
+    pts.push(vec2(x, y));
   }
+
+  return pts;
 }
 
 // A function that draws a tileable pattern using given draw function,
@@ -61,54 +63,95 @@ function drawTileable(drawFunc) {
   pop();
 }
 
+const fgcolors = ["#f14b73", "#ee8290", "#ffdf26", "#b4e77f", "#00d58f"];
+const bgcolors = ["#085b41", "#0c7b5b", "#0e9a76", "#10b98d", "#12d8a3"];
+
 const R = Math.random;
 
-function pattern() {
-  angleMode(RADIANS);
-  const pal = vibrantTheme;
+// Draw vertical lines randomly but thinner towards center
+function lines() {
+  // scale(0.5);
+  strokeWeight(2);
+  const fx = (x) => Math.pow(sin(x * PI), 10);
 
-  const rMin = 30;
-  const rMax = 50;
-  const count = 100;
+  const n = 100;
+  for (let i = 0; i < n; i++) {
+    let x = R();
+
+    // Higher chance mid will be rejected
+    while (R() < fx(x)) {
+      x = R();
+    }
+
+    x *= w;
+
+    const y1 = R() * h;
+    const y2 = y1 + R() * h;
+
+    const colIndex = Math.floor(R() * bgcolors.length);
+    const col = bgcolors[colIndex];
+
+    stroke(col);
+    const df = () => line(x, y1, x, y2);
+    drawTileable(df);
+    // df();
+  }
+}
+
+function pattern() {
+  noStroke();
+
+  const rMin = 10;
+  const rMax = 30;
+  const count = 200;
 
   // scale(0.5, 0.5);
 
   // random number biased towards 0.5
-  const fx = (x) => sin(x * PI);
+  const fx = (x) => Math.pow(1 - sin(x * PI), 0.3);
 
-  // Draw circles randomly, thinner at the horizontal center.
-  for (let i = 0; i < count; i++) {
-    let x = R();
+  // Get a list of points in fibonacci lattice
+  const pts = rectFibo(count, /* scale: */ 1);
 
-    if (R() < fx(x)) { continue; }
+  // Draw the fibo points
+  for (let i = 0; i < pts.length; i++) {
+    let pt = pts[i];
 
-    x *= w;
-    const y = random(0, h);
-    const r = random(rMin, rMax);
+    if (R() > fx(pt.x)) {
+      continue;
+    }
 
-    // if (abs(x) < sin(x / w * TAU)) {
-    //   continue;
-    // }
+    pt = scale2d(pt, w);
 
-    const col = pal.colors[int(random(0, pal.colors.length))];
+    pt.x += noise(pt.x, pt.y) * 5;
+    pt.y += noise(pt.x + 100, pt.y) * 5;
+
+    // color according to y but with some randomness
+    const colIndex = Math.floor((pt.y / h) * fgcolors.length);
+
+    const col = fgcolors[colIndex];
     fill(col);
-    const df = () => circle(x, y, r);
+
+    const r = random(rMin, rMax);
+    const df = () => circle(pt.x, pt.y, r);
     drawTileable(df);
   }
 }
 
 function render(g) {
-  const df = () => circle(0, 0, 200);
-
+  lines();
   pattern();
 }
 
 window.setup = function () {
   createCanvas(w, h);
+  pixelDensity(1);
+
+  angleMode(RADIANS);
 };
 
 window.draw = function () {
-  background(10);
+  background(bgcolors[0]);
   render(g);
   noLoop();
 };
