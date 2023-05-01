@@ -99,6 +99,15 @@ export function resetOverrides() {
 }
 
 /**
+ * Draws a ring with a custom drawing function, at the current radius
+ */
+export function drawRepeat(segmentFunc, options) {
+  const r1 = rCurrent;
+  const r2 = rCurrent;
+  drawRing(r1, r2, segmentFunc, options);
+}
+
+/**
  * Draws a radially repeated ring with a custom drawing function.
  * @param {number} rStart Start radius of ring
  * @param {number} rEnd End radius of ring
@@ -372,13 +381,21 @@ export function triangleSegment(s, i, options) {
 
   const vertexMode = options?.vertexMode;
 
-  polarLine(s.r2, am, s.r1, s.a2, divisions, vertexMode);
+  polarLine(s.r2, am, s.r1, s.a2, divisions, vertexMode, options.polarBlend);
 
   if (!options?.hidePerimeter) {
-    polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);
+    polarLine(
+      s.r1,
+      s.a2,
+      s.r1,
+      s.a1,
+      divisions,
+      vertexMode,
+      options.polarBlend
+    );
   }
 
-  polarLine(s.r1, s.a1, s.r2, am, divisions, vertexMode);
+  polarLine(s.r1, s.a1, s.r2, am, divisions, vertexMode, options.polarBlend);
 }
 
 // Assuming angle1 < angle2
