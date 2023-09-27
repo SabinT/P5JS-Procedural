@@ -7,7 +7,7 @@ import {
   vec2,
   vec4,
   avg,
-  length,
+  len2d,
 } from "./lumic/common.js";
 import {
   bwTheme,
@@ -102,7 +102,7 @@ function packCircles(params) {
     // fill(sampleCol);
     // noStroke();
 
-    if (length(p) > (random() * width) / 2 && bottom) {
+    if (len2d(p) > (random() * width) / 2 && bottom) {
       noFill();
       stroke(sampleCol);
       strokeWeight(1);

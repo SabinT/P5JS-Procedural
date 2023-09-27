@@ -16,7 +16,13 @@ let EPS = 1e-6;
 export const vlerp = p5.Vector.lerp;
 export const lerp2d = p5.Vector.lerp;
 
-export const length = (p) => mag(p.x, p.y);
+export function len2d(p) {
+  return mag(p.x, p.y);
+}
+
+export function dot2d (a, b) {
+  return a.x * b.x + a.y * b.y;
+}
 
 const urlParams = new Proxy(new URLSearchParams(window.location.search), {
   get: (searchParams, prop) => searchParams.get(prop),
@@ -67,7 +73,7 @@ export function avg(x, y) {
 }
 
 export function cart2Polar(v) {
-  const r = length(v);
+  const r = len2d(v);
   const a = atan2(v.y, v.x);
   return vec2(r, a);
 }
@@ -98,6 +104,30 @@ export function bezierQuadratic2DShape(a, b, c) {
 export function line2D(a, b, g) {
   if (!g) { g = window; }
   g.line(a.x, a.y, b.x, b.y);
+}
+
+export function transform(origin, right, p) {
+  const up = vec2(-right.y, right.x);
+  return add2d(origin, add2d(scale2d(right, p.x), scale2d(up, p.y)));
+}
+
+export function ray2D(origin, dir, len, g) {
+  if (!g) { g = window; }
+  g.line(origin.x, origin.y, origin.x + dir.x * len, origin.y + dir.y * len);
+}
+
+export function rotate2D(v, theta) {
+  const c = Math.cos(theta);
+  const s = Math.sin(theta);
+  return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+export function normalize2d(v) {
+  return vec2(v.x / len2d(v), v.y / len2d(v));
+}
+
+export function rotateDeg2D(v, theta) {
+  return rotate2D(v, theta * DEG2RAD);
 }
 
 export function almostEquals(a, b) {

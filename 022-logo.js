@@ -1,5 +1,5 @@
 import { Lines, Polygon } from "./lumic/geomerty.js";
-import { PI, vec2, vlerp, length, TAU } from "./lumic/common.js";
+import { PI, vec2, vlerp, len2d, TAU } from "./lumic/common.js";
 import { createSlider } from "./lumic/p5Extensions.js";
 import { polarLine } from "./lumic/mandala.js";
 
@@ -67,7 +67,7 @@ function getRadiusAndAngleForAnchor(p, anchorPos) {
     circle(c.x, c.y, 5);
   }
 
-  let r = length(c);
+  let r = len2d(c);
 
   if (debug) {
     polarLine(0, 0, r, angle, 8, false, 0);

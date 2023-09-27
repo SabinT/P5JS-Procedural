@@ -1,4 +1,4 @@
-import { vec2, length } from "./common.js";
+import { vec2, len2d } from "./common.js";
 
 export function dot2(p) {
   return p.dot(p);
@@ -9,7 +9,7 @@ export function dot2(p) {
  * https://iquilezles.org/www/articles/distfunctions2d/distfunctions2d.htm
  */
 export function sdCircle(p, r) {
-  return length(p) - r;
+  return len2d(p) - r;
 }
 
 /**
