@@ -1,4 +1,4 @@
-import { add2d, line2D, mul2d, ray2D, rotateDeg2D, sub2d, transform, vec2, normalize2d } from "./lumic/common.js";
+import { add2d, line2D, mul2d, ray2D, rot2dDeg, sub2d, transform, vec2, normalize2d } from "./lumic/common.js";
 import { drawShape, getOuterTangents, outerTangentPath } from "./lumic/geomerty.js";
 
 let origin, right;
@@ -29,7 +29,7 @@ window.draw = function () {
 
     // c2.c = vec2(mouseX - width / 2, mouseY - height / 2);
 
-    const pts = outerTangentPath(c1.c, c2.c, c1.r, c2.r, 16, true)
+    const pts = outerTangentPath(c1.c, c2.c, c1.r, c2.r, 16, false)
 
     noStroke();
     fill("#3c7e9f2d")

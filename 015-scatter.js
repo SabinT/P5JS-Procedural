@@ -1,5 +1,5 @@
 import {
-  distance2d,
+  dist2d,
   getRandom,
   line2D,
   sizes,
@@ -105,7 +105,7 @@ function packCircles(params) {
       for (const circ of params.startCircles) {
         let dMultiplier = circ?.invert ? -1 : 1;
         const d =
-          dMultiplier * (distance2d(p, circ.center) - circ.radius) - margin;
+          dMultiplier * (dist2d(p, circ.center) - circ.radius) - margin;
 
         maxDist = min(d, maxDist);
 
@@ -123,7 +123,7 @@ function packCircles(params) {
       for (const circ of overlapping) {
         let dMultiplier = circ?.invert ? -1 : 1;
         const d =
-          dMultiplier * (distance2d(p, circ.center) - circ.radius) - margin;
+          dMultiplier * (dist2d(p, circ.center) - circ.radius) - margin;
 
         if (abs(d) < dClosest) {
           dClosest = abs(d);

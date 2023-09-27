@@ -1,4 +1,4 @@
-import { vec2, distance2d, line2D } from "./lumic/common.js";
+import { vec2, dist2d, line2D } from "./lumic/common.js";
 import { getOuterTangents, smoothPath, totalPathLength } from "./lumic/geomerty.js";
 
 let currentPoints = [];
@@ -62,7 +62,7 @@ window.draw = function () {
 
         drawPathPoints(path);
 
-        const ladder = ladderize(path);
+        const ladder = ladderize(path, settings);
         renderLadder(ladder);
     }
 }
@@ -120,11 +120,11 @@ window.keyTyped = function () {
     }
 };
 
-function ladderize(path) {
+function ladderize(path, settings) {
     let ladder = [];
     let ladderPath = [];
 
-    ladder.push({ p: path[0], r: settings.distToLadderCircleRadius(distance2d(path[0], path[1])) });
+    ladder.push({ p: path[0], r: settings.distToLadderCircleRadius(dist2d(path[0], path[1])) });
     ladderPath.push(path[0]);
 
     // for each segment, calculate tangent and normal
@@ -133,7 +133,7 @@ function ladderize(path) {
         let p1 = path[i + 1];
         let tangent = p5.Vector.sub(p1, p0).normalize();
         let normal = createVector(-tangent.y, tangent.x);
-        const d = distance2d(p0, p1);
+        const d = dist2d(p0, p1);
 
         // Draw the tangent and normal
         stroke(10, 0, 0);
@@ -151,7 +151,7 @@ function ladderize(path) {
         ladderPath.push(circlePos);
     }
 
-    ladder.push({ p: path[path.length - 1], r: settings.distToLadderCircleRadius(distance2d(path[path.length - 2], path[path.length - 1])) });
+    ladder.push({ p: path[path.length - 1], r: settings.distToLadderCircleRadius(dist2d(path[path.length - 2], path[path.length - 1])) });
     ladderPath.push(path[path.length - 1]);
 
     // Draw ladder
@@ -265,7 +265,7 @@ function resampleShrinking(path, rangeByLengthRemaining) {
         let startPoint = path[currentSegmentIndex];
         let endPoint = path[currentSegmentIndex + 1];
 
-        let segmentLength = distance2d(startPoint, endPoint);
+        let segmentLength = dist2d(startPoint, endPoint);
 
         if (positionInCurrentSegment + remainingDistance < segmentLength) {
             let ratio = (positionInCurrentSegment + remainingDistance) / segmentLength;

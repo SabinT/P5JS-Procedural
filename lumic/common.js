@@ -40,6 +40,10 @@ export function vec2(a, b) {
   return new p5.Vector(a, b);
 }
 
+export function cloneVec2(v) {
+  return vec2(v.x, v.y);
+}
+
 export function sub2d(a, b) {
   return vec2(a.x - b.x, a.y - b.y);
 }
@@ -64,7 +68,7 @@ export function vec4(x, y, z, w) {
   return { x: x, y: y, z: z, w: w };
 }
 
-export function distance2d(a, b) {
+export function dist2d(a, b) {
   return dist(a.x, a.y, b.x, b.y);
 }
 
@@ -116,7 +120,7 @@ export function ray2D(origin, dir, len, g) {
   g.line(origin.x, origin.y, origin.x + dir.x * len, origin.y + dir.y * len);
 }
 
-export function rotate2D(v, theta) {
+export function rot2d(v, theta) {
   const c = Math.cos(theta);
   const s = Math.sin(theta);
   return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
@@ -126,8 +130,8 @@ export function normalize2d(v) {
   return vec2(v.x / len2d(v), v.y / len2d(v));
 }
 
-export function rotateDeg2D(v, theta) {
-  return rotate2D(v, theta * DEG2RAD);
+export function rot2dDeg(v, theta) {
+  return rot2d(v, theta * DEG2RAD);
 }
 
 export function almostEquals(a, b) {

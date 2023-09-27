@@ -1,4 +1,4 @@
-import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, distance2d, rotate2D as rot2d, normalize2d as norm2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
+import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d as norm2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
 import { polarLine } from './mandala.js';
 
 const clipShapes = [];
@@ -108,7 +108,7 @@ export function smoothPath(pts, iterations) {
 export function totalPathLength(path) {
   let totalLength = 0;
   for (let i = 1; i < path.length; i++) {
-    totalLength += distance2d(path[i - 1], path[i]);
+    totalLength += dist2d(path[i - 1], path[i]);
   }
   return totalLength;
 }
@@ -132,7 +132,7 @@ export function resample2(path, desiredDistanceRange) {
     let startPoint = path[currentSegmentIndex];
     let endPoint = path[currentSegmentIndex + 1];
 
-    let segmentLength = distance2d(startPoint, endPoint);
+    let segmentLength = dist2d(startPoint, endPoint);
 
     if (positionInCurrentSegment + remainingDistance < segmentLength) {
       let ratio = (positionInCurrentSegment + remainingDistance) / segmentLength;
@@ -254,6 +254,14 @@ export function angleNormTau(angle) {
 
 export function signedAngle(from, to) {
   return Math.atan2(to.y, to.x) - Math.atan2(from.y, from.x);
+}
+
+export function drawPath(path) {
+  beginShape();
+  for (let pt of path) {
+      vertex(pt.x, pt.y);
+  }
+  endShape();
 }
 
 export function drawFrame(origin, right, len) {
@@ -426,7 +434,7 @@ export class Circle {
   }
 
   containsPoint(p) {
-    const inside = distance2d(this.center, p) <= this.r;
+    const inside = dist2d(this.center, p) <= this.r;
     return inverted ? !inside : inside;
   }
 
