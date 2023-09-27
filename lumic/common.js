@@ -40,7 +40,7 @@ export function vec2(a, b) {
   return new p5.Vector(a, b);
 }
 
-export function subtract2d(a, b) {
+export function sub2d(a, b) {
   return vec2(a.x - b.x, a.y - b.y);
 }
 

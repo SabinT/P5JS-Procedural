@@ -3,7 +3,7 @@ import {
   line2D,
   remap,
   scale2d,
-  subtract2d,
+  sub2d,
   vec2,
 } from "./lumic/common.js";
 import * as debug from "./lumic/debugutils.js";
@@ -91,7 +91,7 @@ window.setup = function () {
 
   while (framesToAdd > 0) {
     const pos = spiro.getPosition(tCur);
-    const tangent = subtract2d(pos, prevPos);
+    const tangent = sub2d(pos, prevPos);
     tangent.normalize();
 
     frames.push(new Frame2D(pos, tangent));

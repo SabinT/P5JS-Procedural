@@ -1,5 +1,5 @@
 import { Frame2D } from "./frame.js";
-import { add2d, subtract2d, vec2, TAU } from "./common.js";
+import { add2d, sub2d, vec2, TAU } from "./common.js";
 
 export class Wheel {
     constructor(center, radius, speed) {
@@ -36,7 +36,7 @@ export class Spiro2D {
     getStartTangent(eps = 0.001) {
         var a = this.getPosition(eps);
         var b = this.getPosition(-eps);
-        var dir = subtract2d(a,b);
+        var dir = sub2d(a,b);
         dir.normalize();
         return dir;
     }

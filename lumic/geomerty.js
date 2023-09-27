@@ -1,4 +1,4 @@
-import { subtract2d as sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, distance2d, rotate2D, normalize2d as norm2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
+import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, distance2d, rotate2D as rot2d, normalize2d as norm2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
 import { polarLine } from './mandala.js';
 
 const clipShapes = [];
@@ -260,7 +260,7 @@ export function drawFrame(origin, right, len) {
   stroke(255, 0, 0);
   ray2D(origin, right, len);
   stroke(0, 255, 0);
-  ray2D(origin, rotate2D(right, PI * 0.5), len);
+  ray2D(origin, rot2d(right, PI * 0.5), len);
 }
 
 export function drawShape(pts) {
@@ -319,7 +319,7 @@ export function outerTangentPath(c1, c2, r1, r2, segments = 8, debugDraw = false
   const angleStep = (angleC - angleA) / segments;
   for (let i = 0; i <= segments; i++) {
     const angle = angleA + i * angleStep;
-    const p = add2d(mul2d(rotate2D(f1.right, angle), vec2(r1, r1)), c1);
+    const p = add2d(mul2d(rot2d(f1.right, angle), vec2(r1, r1)), c1);
     pts.push(p);
   }
 
@@ -327,7 +327,7 @@ export function outerTangentPath(c1, c2, r1, r2, segments = 8, debugDraw = false
   const angleStep2 = (angleB - angleD) / segments;
   for (let i = 0; i <= segments; i++) {
     const angle = angleD + i * angleStep2;
-    const p = add2d(mul2d(rotate2D(f2.right, angle), vec2(r2, r2)), c2);
+    const p = add2d(mul2d(rot2d(f2.right, angle), vec2(r2, r2)), c2);
     pts.push(p);
   }
 
@@ -355,8 +355,8 @@ export function getOuterTangents(c1, c2, r1, r2, debugDraw = false) {
   const alpha = Math.acos((r1 - r2) / (dist));
 
   // Radial lines pointing from center of circle towards tangent points
-  const n1 = rotate2D(ndir, alpha);
-  const n2 = rotate2D(ndir, -alpha);
+  const n1 = rot2d(ndir, alpha);
+  const n2 = rot2d(ndir, -alpha);
 
   const a = vec2(c1.x + n1.x * r1, c1.y + n1.y * r1);
   const b = vec2(c2.x + n1.x * r2, c2.y + n1.y * r2);

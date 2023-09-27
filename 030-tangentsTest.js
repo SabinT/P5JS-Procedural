@@ -1,4 +1,4 @@
-import { add2d, line2D, mul2d, ray2D, rotateDeg2D, subtract2d, transform, vec2, normalize2d } from "./lumic/common.js";
+import { add2d, line2D, mul2d, ray2D, rotateDeg2D, sub2d, transform, vec2, normalize2d } from "./lumic/common.js";
 import { drawShape, getOuterTangents, outerTangentPath } from "./lumic/geomerty.js";
 
 let origin, right;
