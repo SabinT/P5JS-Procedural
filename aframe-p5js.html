@@ -1,0 +1,50 @@
+<script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+<a-scene embedded style="height: 600px;width: 600px;" start>
+    <a-box id="box" position="-1 1 -3" rotation="0 45 0"></a-box>
+    <a-sphere id="sphere" position="1 0 -5" radius="1.25" rotation="0 -90 0"></a-sphere>
+    <a-sky color="#ECECEC"></a-sky>
+</a-scene>
+
+<script type="text/javascript">
+    function sketch1(p) {
+        let mat;
+
+        p.setup = function () {
+            const canvas = p.createCanvas(200, 200);
+            canvas.id("boxTex");
+            canvas.style("display", "none");
+
+            const box = document.getElementById("box");
+            box.setAttribute("material", "src:#boxTex");
+            mat = box.getObject3D('mesh').material;
+        };
+
+        p.draw = function () {
+            p.background(0);
+            p.fill(255);
+            p.circle(100, 100, 50 + p.sin(p.millis()) * 20);
+
+            mat.map.needsUpdate = true;
+        };
+    }
+
+    function sketch2(p) {
+        p.setup = function () {
+            const canvas = p.createCanvas(200, 200);
+            canvas.id("sphereTex");
+            canvas.style("display", "none");
+
+            const sphere = document.getElementById("sphere");
+            sphere.setAttribute("material", "src:#sphereTex");
+
+            p.background(0);
+            p.fill('red');
+            p.circle(100, 100, 50 + p.sin(p.millis()) * 20);
+            p.noLoop();
+        };
+    }
+
+    new p5(sketch1);
+    new p5(sketch2);
+</script>
