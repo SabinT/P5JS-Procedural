@@ -27,7 +27,7 @@ import {
   vec2,
 } from "./lumic/common.js";
 import { Polygon } from "./lumic/geomerty.js";
-import { getHexRing, hexToCartesian } from "./lumic/hex.js";
+import { getHexRing, hexToCartesianAxial } from "./lumic/hex.js";
 import * as pal from "./lumic/palettes.js";
 
 const w = 1080;
@@ -95,7 +95,7 @@ function drawHex(p, R, ring) {
   noFill();
 
   push();
-  const q = hexToCartesian(p.x, p.y, R);
+  const q = hexToCartesianAxial(p.x, p.y, R);
   translate(q.x, q.y);
   //   const angleOffset = + hexSeq * 0.1 + t;
   const angleOffset = 0;

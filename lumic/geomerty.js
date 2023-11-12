@@ -352,6 +352,24 @@ export function outerTangentPath(c1, c2, r1, r2, segments = 8, debugDraw = false
   return pts;
 }
 
+export function getArcPoints(frame, fromAngle, toAngle, r, segments) {
+  if (abs(fromAngle - toAngle) < 60 * DEG2RAD) {
+    // alert("Arc angle too small" + (fromAngle - toAngle) * RAD2DEG);
+    debugger;
+  }
+
+  let pts = [];
+  
+  const angleStep = (toAngle - fromAngle) / segments;
+  for (let i = 0; i <= segments; i++) {
+    const angle = fromAngle + i * angleStep;
+    const p = add2d(mul2d(rot2d(frame.right, angle), vec2(r, r)), frame.origin);
+    pts.push(p);
+  }
+
+  return pts;
+}
+
 export function getOuterTangents(c1, c2, r1, r2, debugDraw = false) {
   const dir = vec2(c2.x - c1.x, c2.y - c1.y);
   const dist = mag(dir.x, dir.y);
