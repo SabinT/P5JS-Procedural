@@ -4,11 +4,27 @@ import { getHexRing, hexToCartesianAxial, hexToCartesianOddr, drawHexOddR, drawH
 import { getColor, vibrantTheme } from "../lumic/palettes.js";
 
 const s = {
-    gridHW: 4,
+    gridHW: 3,
     gridHH: 8,
-    debugTile: true,
-    radius: 40
+    debugTile: false,
+    radius: 40,
+    bgColor: "#292929",
 }
+
+function makeStyles(color, weight, offset) {
+    return [
+        { color: color, weight: weight, offset: offset },
+        { color: color, weight: weight, offset: -offset },
+    ];
+}
+
+const styles = [
+    ...makeStyles("white", 4, 16),
+    ...makeStyles("green", 4, 12),
+    { color: "red", weight: 4, offset: 0 },
+    ...makeStyles("black", 4, 4),
+    ...makeStyles("white", 4, 8),
+]
 
 const scaler = 0.8;
 const w = 700 * scaler;
@@ -30,7 +46,7 @@ window.draw = function () {
 };
 
 function render(g) {
-    background(10);
+    background(s.bgColor);
 
     const hexes = [];
 
@@ -55,7 +71,9 @@ function render(g) {
         // Random integer between [0,5]
         let turns = Math.floor(Math.random() * 6);
 
-        drawHexTile(hex.center, hex.radius, /* tilemask */ mask, turns, /* debugDraw */ true);
+        for (let style of styles) {
+            drawHexTile(hex.center, hex.radius, /* tilemask */ mask, turns, style, /* debugDraw */ false);
+        }
     }
 
     if (s.debugTile) {
@@ -71,7 +89,7 @@ function render(g) {
 
         fill("green");
 
-        drawHexTile(hex.center, hex.radius, /* tilemask */ defaultJoinMask, /* turns */ 0, /* debugDraw */ true);
+        drawHexTile(hex.center, hex.radius, /* tilemask */ defaultJoinMask, /* turns */ 0, styles[0], /* debugDraw */ true);
     }
 }
 

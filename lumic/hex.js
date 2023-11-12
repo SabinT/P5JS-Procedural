@@ -1,10 +1,9 @@
-import { vec2, PI, scale2d, add2d, normalize2d, sub2d, DEG2RAD } from './common.js'
-import { Polygon, angleNormPi, angleNormTau, drawPath, getArcPoints, signedAngle } from "./geomerty.js";
+import { vec2, PI, scale2d, add2d, normalize2d, sub2d, DEG2RAD, lerp2d } from './common.js'
+import { Polygon, angleNormPi, angleNormTau, drawPath, drawOffsetPath, getArcPoints, signedAngle } from "./geomerty.js";
 
 const root3 = Math.sqrt(3);
 
 const templateHex = new Polygon(vec2(0, 0), 1, 6, PI / 2); // pointy top
-
 
 // Axial coordinates
 // See for lots more info: https://www.redblobgames.com/grids/hexagons/
@@ -117,6 +116,31 @@ function getSolosAndPairs(bitmaskArray) {
         addPair(index1, index2);
     }
 
+    const pairsParsed = Array.from(pairs).map(pair => pair.split(',').map(Number));
+
+    // If all opposite, make all next
+    if (pairs.size === 3) {
+        let allOpposite = true;
+        for (let i = 0; i < pairsParsed.length; i++) {
+            const pair = pairsParsed[i];
+            const index1 = pair[0];
+            const index2 = pair[1];
+
+            if (distWrap(index1, index2) != 3) {
+                allOpposite = false;
+                break;
+            }
+        }
+
+        if (allOpposite) {
+            pairs.clear();
+            pairedPoints.clear();
+            for (let i = 0; i < bitmaskArray.length; i += 2) {
+                addPair(i, (i + 1) % 6);
+            }
+        }
+    }
+
     function addPair(index1, index2) {
         // Check if either point is already in a pair
         if (!pairedPoints.has(index1) && !pairedPoints.has(index2)) {
@@ -192,6 +216,7 @@ export function generateRandomJoinArray(probabilities) {
     for (let i = 0; i < 6; i++) {
         randomJoinArray.push(generateRandomJoinMask(probabilities));
     }
+
     return randomJoinArray;
 }
 
@@ -202,7 +227,7 @@ export function generateRandomJoinArray(probabilities) {
  * @param {*} tileMask An array of 6 integers, each representing the type of join for every midpoint
  * @param {*} turns Integer representing the number of 60 degree turns to rotate the tile
  */
-export function drawHexTile(p, R, tileMask, turns, debugDraw = false) {
+export function drawHexTile(p, R, tileMask, turns, style, debugDraw = false) {
     if (tileMask === undefined) {
         tileMask = defaultJoinMask;
     }
@@ -246,6 +271,13 @@ export function drawHexTile(p, R, tileMask, turns, debugDraw = false) {
         const m = scale2d(add2d(pt, nextPt), 0.5);
         mids.push(m);
         midNormals.push(normalize2d(m));
+
+        // Draw mid normal
+        if (debugDraw) {
+            stroke("lime");
+            strokeWeight(1);
+            line(m.x, m.y, m.x + midNormals[i].x * 10, m.y + midNormals[i].y * 10);
+        }
     }
 
     // Get joins and solos from tile mask
@@ -259,6 +291,9 @@ export function drawHexTile(p, R, tileMask, turns, debugDraw = false) {
         const p1 = mids[i0];
         const p2 = mids[i1];
 
+        // Normals of midpoints become tangents for curves
+        const t1 = midNormals[i0];
+        const t2 = midNormals[i1];
 
         if (distWrap(i0, i1) === 1) {
             let ic = (i0 + 1) % 6;
@@ -266,10 +301,13 @@ export function drawHexTile(p, R, tileMask, turns, debugDraw = false) {
                 ic = 0;
             }
 
-            drawNextJoin(p1, p2, /* arcCenter */ pts[ic]);
+            drawNextJoin(p1, p2, /* arcCenter */ pts[ic], t1, t2, style);
         }
         else if (distWrap(i0, i1) === 2) {
-            drawSkipJoin(p1, p2, /* hexCenter */ hex.center);
+            drawSkipJoin(p1, p2, /* hexCenter */ hex.center, style);
+        }
+        else if (distWrap(i0, i1) === 3) {
+            drawOppositeJoin(p1, p2, style);
         }
         else {
             strokeWeight(1);
@@ -298,7 +336,7 @@ function distWrap(point1, point2) {
     return Math.min(directDistance, wrapAroundDistance);
 }
 
-function drawNextJoin(p0, p1, c) {
+function drawNextJoin(p0, p1, c, t0, t1, style) {
     const pp0 = sub2d(p0, c);
     const pp1 = sub2d(p1, c);
     const frame = { origin: c, right: normalize2d(pp0) };
@@ -307,18 +345,17 @@ function drawNextJoin(p0, p1, c) {
 
     const r = sub2d(p0, c).mag();
 
-    let arcPts = getArcPoints(frame, /* fromAngle */ 0, /* toAngle */ angleDiff, r, /* segments */ 16);
-
-    // Draw the arc
-    stroke("yellow");
-    strokeWeight(2);
+    stroke(style.color);
+    strokeWeight(style.weight);
     noFill();
-    // arc(c.x, c.y, 2 * r, 2 * r, startAngle, startAngle + angleDiff);
 
+    let arcPts = getArcPoints(frame, /* fromAngle */ 0, /* toAngle */ angleDiff, r + style.offset, /* segments */ 16);
     drawPath(arcPts);
+
+    // drawOffsetPath(arcPts, style.offset, t0, t1);
 }
 
-function drawSkipJoin(p0, p1, hexCenter) {
+function drawSkipJoin(p0, p1, hexCenter, style) {
     const pp0 = sub2d(p0, hexCenter);
     const pp1 = sub2d(p1, hexCenter);
 
@@ -336,13 +373,34 @@ function drawSkipJoin(p0, p1, hexCenter) {
 
     const r = sub2d(arcCenter, p0).mag();
 
-    let arcPts = getArcPoints(frame, /* fromAngle */ 0, /* toAngle */ angleDiff, r, /* segments */ 16);
+    let arcPts = getArcPoints(frame, /* fromAngle */ 0, /* toAngle */ angleDiff, r + style.offset, /* segments */ 16);
 
     // Draw the arc
-    stroke("orange");
-    strokeWeight(2);
-    noFill();
-    // arc(c.x, c.y, 2 * r, 2 * r, startAngle, startAngle + angleDiff);
+    stroke(style.color);
+    strokeWeight(style.weight);
 
     drawPath(arcPts);
+}
+
+function drawOppositeJoin(p0, p1, style) {
+    // TODO keep this resolution independent
+    const unitsPerPoint = 1;
+    const lineLength = sub2d(p0, p1).mag();
+
+    const numPoints = Math.floor(lineLength / unitsPerPoint);
+
+    const dir = normalize2d(sub2d(p0, p1));
+
+    const pts = [];
+
+    for (let i = 0; i < numPoints; i++) {
+        let t = i / (numPoints - 1);
+        const p = lerp2d(p0, p1, t);
+        pts.push(p);
+    }
+
+    stroke(style.color);
+    strokeWeight(style.weight);
+
+    drawOffsetPath(pts, style.offset);
 }

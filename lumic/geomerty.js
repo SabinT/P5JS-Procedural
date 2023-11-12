@@ -1,4 +1,4 @@
-import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d as norm2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
+import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
 import { polarLine } from './mandala.js';
 
 const clipShapes = [];
@@ -259,10 +259,68 @@ export function signedAngle(from, to) {
 export function drawPath(path) {
   beginShape();
   for (let pt of path) {
-      vertex(pt.x, pt.y);
+    vertex(pt.x, pt.y);
   }
   endShape();
 }
+
+export function getTangents(path) {
+  if (path.length < 2) {
+    return [vec2(0, 0)];
+  }
+
+  const tangents = [];
+
+  const t0 = normalize2d(sub2d(path[1], path[0]));
+  tangents.push(t0);
+
+  // Except first and last
+  for (let i = 1; i < path.length - 1; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const c = path[i + 1];
+
+    // Compute vectors a->b and b->c, then normalize their sum
+    const ab = normalize2d(sub2d(b, a));
+    const bc = normalize2d(sub2d(c, b));
+    const t = normalize2d(add2d(ab, bc));
+
+    tangents.push(t);
+  }
+
+  const tn = normalize2d(sub2d(path[path.length - 1], path[path.length - 2]));
+  tangents.push(tn);
+
+  return tangents;
+}
+
+export function drawOffsetPath(path, offset, startTangent, endTangent) {
+  const tangents = getTangents(path);
+
+  if (startTangent) {
+    tangents[0] = startTangent;
+  }
+
+  if (endTangent) {
+    tangents[tangents.length - 1] = endTangent;
+  }
+
+  // Precompute all vertices
+  const offsetVertices = [];
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const p = path[i];
+    const t = tangents[i];
+
+    const right = rot2d(t, PI * 0.5);
+    const v = add2d(p, scale2d(right, offset));
+
+    offsetVertices.push(v);
+  }
+
+  drawPath(offsetVertices);
+}
+
 
 export function drawFrame(origin, right, len) {
   stroke(255, 0, 0);
@@ -353,13 +411,8 @@ export function outerTangentPath(c1, c2, r1, r2, segments = 8, debugDraw = false
 }
 
 export function getArcPoints(frame, fromAngle, toAngle, r, segments) {
-  if (abs(fromAngle - toAngle) < 60 * DEG2RAD) {
-    // alert("Arc angle too small" + (fromAngle - toAngle) * RAD2DEG);
-    debugger;
-  }
-
   let pts = [];
-  
+
   const angleStep = (toAngle - fromAngle) / segments;
   for (let i = 0; i <= segments; i++) {
     const angle = fromAngle + i * angleStep;
