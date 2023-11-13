@@ -3,13 +3,12 @@ import { Polygon } from "../lumic/geomerty.js";
 import { getHexRing, hexToCartesianAxial, hexToCartesianOddr, drawHexOddR, drawHexTile, defaultJoinMask, generateRandomJoinArray } from "../lumic/hex.js";
 import { getColor, vibrantTheme } from "../lumic/palettes.js";
 
-const s = {
-    gridHW: 3,
-    gridHH: 8,
-    debugTile: false,
-    radius: 40,
-    bgColor: "#292929",
-}
+const scaler = 0.75;
+const w = 700 * scaler;
+const hw = w / 2;
+const h = 1600 * scaler;
+const hh = h / 2;
+
 
 function makeStyles(color, weight, offset) {
     return [
@@ -18,25 +17,51 @@ function makeStyles(color, weight, offset) {
     ];
 }
 
+const palette1 = [
+    "#FFFFFF",
+    "#ff00d0",
+    "#14D9D9",
+    "#1573bf",
+    "#F27EDF",
+];
+
+const palette2 = [
+    "#FFFFFF",
+    "#3fa1fe",
+    "#0170e2",
+    "#c9ade1",
+    "#e41ee0",
+];
+
+const palette = palette2;
+
+const R = 80;
+
+const s = {
+    gridHW: 3,
+    gridHH: 8,
+    debugTile: false,
+    radius: R * scaler,
+    bgColor: palette[1],
+}
+
 const styles = [
-    ...makeStyles("white", 4, 16),
-    ...makeStyles("green", 4, 12),
-    { color: "red", weight: 4, offset: 0 },
-    ...makeStyles("black", 4, 4),
-    ...makeStyles("white", 4, 8),
+    { color: palette[2], weight: R / 10 * scaler, offset: 0 },
+    ...makeStyles(palette[2], R / 20 * scaler, 8 * scaler),
+    ...makeStyles(palette[0], R / 20 * scaler, 16 * scaler),
+    ...makeStyles(palette[1], R / 20 * scaler, 12 * scaler),
+    // ...makeStyles(palette[3], 4, 8),
 ]
 
-const scaler = 0.8;
-const w = 700 * scaler;
-const hw = w / 2;
-const h = 1600 * scaler;
-const hh = h / 2;
-
 let g;
+let seed;
 
 window.setup = function () {
+    // seed from time
+    seed = Date.now();
+    console.log(seed);
+
     createCanvas(w, h);
-    frameRate(60);
 };
 
 window.draw = function () {
@@ -99,7 +124,7 @@ window.keyTyped = function () {
     }
 
     if (key === "s") {
-        save();
+        save("hex_" + seed + ".png");
     }
 
     if (key === "q") {
