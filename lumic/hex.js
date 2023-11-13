@@ -110,11 +110,11 @@ function getSolosAndPairs(bitmaskArray) {
     }
 
     // If more than two solos, pair them up
-    while (solos.length > 1) {
-        const index1 = solos.pop();
-        const index2 = solos.pop();
-        addPair(index1, index2);
-    }
+    // while (solos.length > 1) {
+    //     const index1 = solos.pop();
+    //     const index2 = solos.pop();
+    //     addPair(index1, index2);
+    // }
 
     const pairsParsed = Array.from(pairs).map(pair => pair.split(',').map(Number));
 
@@ -133,11 +133,11 @@ function getSolosAndPairs(bitmaskArray) {
         }
 
         if (allOpposite) {
-            pairs.clear();
-            pairedPoints.clear();
-            for (let i = 0; i < bitmaskArray.length; i += 2) {
-                addPair(i, (i + 1) % 6);
-            }
+            // pairs.clear();
+            // pairedPoints.clear();
+            // for (let i = 0; i < bitmaskArray.length; i += 2) {
+            //     addPair(i, (i + 1) % 6);
+            // }
         }
     }
 
@@ -322,8 +322,7 @@ export function drawHexTile(p, R, tileMask, turns, style, debugDraw = false) {
 
     for (const solo of solos) {
         const p1 = mids[solo];
-        const p2 = sub2d(p1, scale2d(midNormals[solo], 20));
-        line(p1.x, p1.y, p2.x, p2.y);
+        drawSoloJoin(p1, midNormals[solo], style);
     }
 
     pop();
@@ -403,4 +402,18 @@ function drawOppositeJoin(p0, p1, style) {
     strokeWeight(style.weight);
 
     drawOffsetPath(pts, style.offset);
+}
+
+function drawSoloJoin(p0, t0, style) {
+    const p1 = add2d(p0, scale2d(t0, 10));
+
+    stroke(style.color);
+    strokeWeight(style.weight);
+    // fill(style.color);
+    noFill();
+
+    // Draw semi-circle towards the tangent
+    let frame = { origin: p0, right: t0 };
+    let arcPts = getArcPoints(frame, /* fromAngle */ - PI / 2, /* toAngle */ PI / 2, /* radius */ style.offset, /* segments */ 16);
+    drawPath(arcPts);
 }

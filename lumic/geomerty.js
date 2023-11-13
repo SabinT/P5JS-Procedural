@@ -256,12 +256,17 @@ export function signedAngle(from, to) {
   return Math.atan2(to.y, to.x) - Math.atan2(from.y, from.x);
 }
 
-export function drawPath(path) {
+export function drawPath(path, closed = false) {
   beginShape();
   for (let pt of path) {
     vertex(pt.x, pt.y);
   }
-  endShape();
+
+  if (closed) {
+    endShape(CLOSE);
+  } else {
+    endShape();
+  }
 }
 
 export function getTangents(path) {
@@ -554,7 +559,7 @@ export class Polygon {
   }
 
   getAngleStepOffset() {
-    const angleStep = TWO_PI / this.sides;
+    const angleStep = TAU / this.sides;
     const offset = ((this.sides % 2 === 0) ? 0 : -angleStep / 4) + this.rotation;
     return { angleStep, offset };
   }
@@ -562,7 +567,7 @@ export class Polygon {
   getPoint(i) {
     const { angleStep, offset } = this.getAngleStepOffset();
     const angle = i * angleStep + offset;
-    const a = add2d(this.center, scale2d(vec2(cos(angle), sin(angle)), this.radius));
+    const a = add2d(this.center, scale2d(vec2(Math.cos(angle), Math.sin(angle)), this.radius));
     return a;
   }
 
