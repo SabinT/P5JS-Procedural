@@ -209,17 +209,18 @@ function render(g) {
 
     // framerate(30);
 
-    const nf = 30;
+    const nf = 15;
 
     // Figure out which row to animate
     const t = (frameCount % nf) / nf;
+    const d = 1 / nf;
     const n = Math.floor(frameCount / nf) % (s.gridHH * 2 + 1) - s.gridHH;
 
     for (let y = -s.gridHH; y <= s.gridHH; y++) {
         for (let x = -s.gridHW; x <= s.gridHW; x++) {
             let addedTurns = 0;
             if (y == n) {
-                turnList2DAdjusted[y][x] = easeInOutQuad(t) * 1 + turnList2D[y][x];
+                turnList2DAdjusted[y][x] = easeInOutQuad(t + d) * 1 + turnList2D[y][x];
             } else {
                 turnList2D[y][x] = Math.round(turnList2DAdjusted[y][x]);
             }
