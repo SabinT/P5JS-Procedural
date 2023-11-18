@@ -390,18 +390,39 @@ function drawOppositeJoin(p0, p1, style) {
 
     const dir = normalize2d(sub2d(p0, p1));
 
-    const pts = [];
+    // Break the join into two lines to prevent
+    // a certain six-pointed star pattern from forming
+    // as three paths cross over each other
+    const line1 = [];
+    const line2 = [];
+
+    const tOffset = 0.15;
 
     for (let i = 0; i < numPoints; i++) {
         let t = i / (numPoints - 1);
         const p = lerp2d(p0, p1, t);
-        pts.push(p);
+
+        if (t < 0.5 - tOffset) {
+            line1.push(p);
+        }
+        else if (t > 0.5 + tOffset) {
+            line2.push(p);
+        }
     }
 
     stroke(style.color);
     strokeWeight(style.weight);
 
-    drawOffsetPath(pts, style.offset);
+    drawOffsetPath(line1, style.offset);
+    drawOffsetPath(line2, style.offset);
+
+    // Circles at the end of line 1 and start of line 2
+    // This ends up creating a mandala where the star would be
+    const r = style.offset;
+    const c1 = line1[line1.length - 1];
+    const c2 = line2[0];
+    circle(c1.x, c1.y, 2 * r);
+    circle(c2.x, c2.y, 2 * r);
 }
 
 function drawSoloJoin(p0, t0, style) {

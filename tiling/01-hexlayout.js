@@ -203,6 +203,10 @@ function renderBg() {
     }
 }
 
+let cycleWaitTime = 0;
+let cycleWaitActive = false;
+let previousN = 0;
+let waitCount = 0;
 function render(g) {
     // draw bg onto canvas
     image(bg, -hw, -hh);
@@ -214,7 +218,21 @@ function render(g) {
     // Figure out which row to animate
     const t = (frameCount % nf) / nf;
     const d = 1 / nf;
-    const n = Math.floor(frameCount / nf) % (s.gridHH * 2 + 1) - s.gridHH;
+    const n = Math.floor(frameCount / nf - waitCount) % (s.gridHH * 2 + 1) - s.gridHH;
+
+    if (previousN != n) {
+        cycleWaitTime = 0;
+        cycleWaitActive = true;
+    }
+
+    if (cycleWaitActive) {
+        cycleWaitTime += deltaTime / 1000;
+        if (cycleWaitTime > 0.5) {
+            cycleWaitActive = false;
+            waitCount += 1;
+        }
+        return;
+    }
 
     for (let y = -s.gridHH; y <= s.gridHH; y++) {
         for (let x = -s.gridHW; x <= s.gridHW; x++) {
@@ -250,6 +268,8 @@ function render(g) {
                 drawHexTile(hex.center, hex.radius, /* tilemask */ mask, turns, style, /* debugDraw */ false);
             }
         }
+
+        previousN = n;
     }
 
     if (s.debugTile) {
