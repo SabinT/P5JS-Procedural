@@ -56,7 +56,7 @@ const R = w / 8;
 
 const s = {
     gridHW: 3,
-    gridHH: 7,
+    gridHH: 8,
     debugTile: false,
     radius: R * scaler,
     bgColor: palette[1],
@@ -140,6 +140,11 @@ window.setup = function () {
         }
     }
 
+    // Center row of hexagons all have same pattern
+    for (let x = -s.gridHW; x <= s.gridHW; x++) {
+        maskList2D[0][x] = defaultJoinMask;
+    }
+
     // seed from time
     seed = Date.now();
     console.log(seed);
@@ -148,15 +153,54 @@ window.setup = function () {
 
     bg = createGraphics(w, h);
 
-    renderBg();
+    renderBgSine();
 };
 
 window.draw = function () {
     translate(hw, hh);
     randomSeed(seed);
     render();
-    // noLoop();
+    noLoop();
 };
+
+function renderBgSine() {
+    bg.background(s.bgColor);
+
+    bg.translate(hw, hh);
+
+    const halfLines = 150;
+    const xSegments = 256;
+    const lineSeparation = s.radius * 0.5;
+
+    const col = color(s.bgPatternColor);
+    col.setAlpha(255 * 0.5);
+    bg.strokeWeight(strokeBaseWidth * 0.5);
+    bg.fill(s.bgColor);
+
+    const sineFunc = (x) => sin(x * PI * 2 * 2.5) * 0.5;
+
+    const dx = hw / xSegments;
+    const dy = hh / halfLines;
+
+    // Sine-wave like lines
+    for (let i = -halfLines; i <= halfLines; i++) {
+        const baseY = dy * i;
+        for (let j = -xSegments; j <= xSegments; j++) {
+            if (random() > 0.5) continue;
+
+            const x1 = dx * j;
+            const x2 = dx * (j + 1);
+            
+            const y1 = baseY + sineFunc(j / xSegments) * lineSeparation;
+            const y2 = baseY + sineFunc((j + 1) / xSegments) * lineSeparation;
+
+            bg.stroke(col);
+            bg.line(x1, y1, x2, y2);
+        }
+    }
+    
+}
+
 
 function renderBg() {
     bg.background(s.bgColor);
