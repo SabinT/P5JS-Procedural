@@ -48,6 +48,10 @@ export function sub2d(a, b) {
   return vec2(a.x - b.x, a.y - b.y);
 }
 
+export function fromTo2d(from, to) {
+  return sub2d(to, from);
+}
+
 export function add2d(a, b) {
   return vec2(a.x + b.x, a.y + b.y);
 }

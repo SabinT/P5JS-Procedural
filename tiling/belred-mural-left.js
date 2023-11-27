@@ -9,97 +9,57 @@ import {
   tileSettings,
 } from "../lumic/hex.js";
 import { easeInOutQuad } from "../lumic/easing.js";
+import { sideWidth, muralHeight, paletteSide, makeStyles, drawMargin, marginDefault, fixedSeed, seedLeft, setSeed } from "./belred.js";
 
-const scaler = 0.75;
-const w = 700 * scaler;
+const pxDensity = 4;
+const scaler = 3;
+const w = (sideWidth / 12) * 100 * scaler;
 const hw = w / 2;
-const h = 1600 * scaler;
+const h = (muralHeight / 12) * 100 * scaler;
 const hh = h / 2;
 
 let bg;
 
-function makeStyles(color, weight, offset, style = STYLES.LINES) {
-  return [
-    { color: color, weight: weight, offset: offset, style: style },
-    { color: color, weight: weight, offset: -offset, style: style },
-  ];
-}
-
-const palette1 = ["#FFFFFF", "#ff00d0", "#14D9D9", "#1573bf", "#F27EDF"];
-
-const palette2 = ["#3fa1fe", "#FFFFFF", "#0170e2", "#e5c7ff", "#e41ee0"];
-
-const palette3 = ["#7078FF", "#FCFCFC", "#5218ED", "#C670FF", "#DD0275"];
-
-const palette4 = ["#7078FF", "#FCFCFC", "#5218ED", "#01ab70", "#02c4dd"];
-
-const paletteSide = ["#F7489D", "#000000", "#f7ba48", "#F74E48", "##B648F7"];
-
-const paletteRandom = [
-  "#ffffff3f",
-  "#00000029",
-  "#ffffff1c",
-  "#00000010",
-  "#ffffff15",
-];
-
 const palette = paletteSide;
 
-const R = w / 8;
+const R = (0.75 * w) / 8;
 
 const s = {
   gridHW: 3,
-  gridHH: 8,
+  gridHH: 14,
   debugTile: false,
-  radius: R * scaler,
+  radius: R,
   bgColor: palette[1],
   bgPatternColor: palette[3],
 };
 
-const strokeBaseWidth = (R / 20) * scaler;
+const strokeBaseWidth = R / 20;
+const baseOffset = strokeBaseWidth * 0.25;
 
-const styleLines = [
-  {
-    color: palette[2],
-    weight: strokeBaseWidth * 2,
-    offset: 0,
-    style: STYLES.LINES,
-  },
-  ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * scaler, STYLES.LINES),
-  // ...makeStyles(palette[1], strokeBaseWidth, 12 * scaler, STYLES.LINES),
-  ...makeStyles(palette[2], strokeBaseWidth, 16 * scaler, STYLES.LINES),
-  ...makeStyles(palette[4], strokeBaseWidth, 14 * scaler, STYLES.LINES),
-];
+const cci = 2;
+const bci = 1;
+const bli = 4;
 
 const styleCircuits = [
-  // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * scaler, STYLES.CIRCUITS),
-  // ...makeStyles(palette[0], strokeBaseWidth, 16 * scaler, STYLES.CIRCUITS),
+  // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
+  // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
   {
-    color: palette[3],
+    color: palette[cci],
     weight: strokeBaseWidth * 3,
     offset: 0,
     style: STYLES.LINES,
   },
   {
-    color: palette[2],
+    color: palette[cci],
     weight: strokeBaseWidth * 1.5,
     offset: 0,
     style: STYLES.CIRCUITS,
   },
-  ...makeStyles(palette[1], strokeBaseWidth, 12 * scaler),
-  ...makeStyles(palette[4], strokeBaseWidth, 14 * scaler, STYLES.LINES),
+  ...makeStyles(palette[1], strokeBaseWidth, baseOffset * 12),
 ];
 
-const stylesRandom = [
-  ...makeStyles(paletteSide[1], strokeBaseWidth, 12 * scaler),
-  // ...makeStyles(palette[0], strokeBaseWidth, 16 * scaler, STYLES.CIRCUITS),
-  {
-    color: paletteSide[2],
-    weight: strokeBaseWidth * 2,
-    offset: 0,
-    style: STYLES.CIRCUITS,
-  },
-  ...makeStyles(paletteSide[2], strokeBaseWidth, 14 * scaler, STYLES.LINES),
+const stylesFinal = [
+  ...makeStyles(palette[4], strokeBaseWidth, baseOffset * 14, STYLES.LINES),
 ];
 
 const styles = styleCircuits;
@@ -126,14 +86,16 @@ function resetLineDash(g) {
 }
 
 window.setup = function () {
-  tileSettings.noSolos = true;
+  setSeed(seedLeft);
+
+  tileSettings.noSolos = false;
   tileSettings.preventOverlap = true;
   // tileSettings.circlePattern = true;
-  tileSettings.angularJoins = true;
+  tileSettings.angularJoins = false;
   tileSettings.drawPathFunc = drawPathRandomized;
   tileSettings.drawEndCaps = false;
 
-  strokeJoin(BEVEL);
+  strokeJoin(ROUND);
 
   for (let y = -s.gridHH; y <= s.gridHH; y++) {
     hexList2D[y] = [];
@@ -155,7 +117,7 @@ window.setup = function () {
       maskList2D[y][x] = mask;
 
       // Random integer between [0,5]
-      let turns = Math.floor(Math.random() * 6);
+      let turns = Math.floor(random() * 6);
       // turnList.push(turns);
       turnList2D[y][x] = turns;
       turnList2DAdjusted[y][x] = turns;
@@ -175,11 +137,7 @@ window.setup = function () {
     maskList2D[0][x] = defaultJoinMask;
   }
 
-  // seed from time
-  seed = Date.now();
-  console.log(seed);
-
-  pixelDensity(2);
+  pixelDensity(pxDensity);
 
   createCanvas(w, h);
 
@@ -190,21 +148,20 @@ window.setup = function () {
 
 window.draw = function () {
   translate(hw, hh);
-  randomSeed(seed);
   render();
   noLoop();
 };
 
 function renderBgSine() {
-  bg.background(s.bgColor);
+  bg.background(palette[bci]);
 
   bg.translate(hw, hh);
 
   const halfLines = 150;
   const xSegments = 256;
-  const lineSeparation = s.radius * 0.5;
+  const lineSeparation = s.radius * 0.4;
 
-  const col = color(s.bgPatternColor);
+  const col = color(palette[bli]);
   col.setAlpha(255 * 0.5);
   bg.strokeWeight(strokeBaseWidth * 0.5);
   bg.fill(s.bgColor);
@@ -212,7 +169,7 @@ function renderBgSine() {
   const sineFunc = (x) => sin(x * PI * 2 * 2.5) * 0.5;
 
   const dx = hw / xSegments;
-  const dy = hh / halfLines;
+  const dy = hh / halfLines + 1;
 
   // Sine-wave like lines
   for (let i = -halfLines; i <= halfLines; i++) {
@@ -292,7 +249,7 @@ function render(g) {
       // mask = defaultJoinMask;
 
       // Random integer between [0,5]
-      // let turns = Math.floor(Math.random() * 6);
+      // let turns = Math.floor(random() * 6);
 
       // tileSettings.drawPathFunc = drawPathRandomized;
 
@@ -316,6 +273,38 @@ function render(g) {
 
     previousN = n;
   }
+
+  // Draw final pass
+  for (let y = -s.gridHH; y <= s.gridHH; y++) {
+    for (let x = -s.gridHW; x <= s.gridHW; x++) {
+      let addedTurns = 0;
+      if (y == n) {
+        turnList2DAdjusted[y][x] = easeInOutQuad(t + d) * 1 + turnList2D[y][x];
+      } else {
+        turnList2D[y][x] = Math.round(turnList2DAdjusted[y][x]);
+      }
+
+      const hex = hexList2D[y][x];
+      const mask = maskList2D[y][x];
+
+      let turns = turnList2DAdjusted[y][x];
+
+      tileSettings.drawPathFunc = drawPath;
+
+      for (let style of stylesFinal) {
+        drawHexTile(
+          hex.center,
+          hex.radius,
+          /* tilemask */ mask,
+          turns,
+          style,
+          /* debugDraw */ false
+        );
+      }
+    }
+  }
+
+  drawMargin(bg, marginDefault, palette);
 
   if (s.debugTile) {
     const hex = { center: vec2(0, 0), radius: s.radius };

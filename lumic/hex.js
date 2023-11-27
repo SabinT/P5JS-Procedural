@@ -58,6 +58,33 @@ export function hexToCartesianOddr(hex, R) {
   return vec2(x, y);
 }
 
+/*
+var axial_direction_vectors = [
+    Hex(+1, 0), Hex(+1, -1), Hex(0, -1), 
+    Hex(-1, 0), Hex(-1, +1), Hex(0, +1), 
+]
+
+function axial_direction(direction):
+    return axial_direction_vectors[direction]
+
+function axial_add(hex, vec):
+    return Hex(hex.q + vec.q, hex.r + vec.r)
+
+function axial_neighbor(hex, direction):
+    return axial_add(hex, axial_direction(direction))
+*/
+
+export function getAdjacentOddr(hex) {
+  return [
+    vec2(hex.x + 1, hex.y + 0),
+    vec2(hex.x + 1, hex.y - 1),
+    vec2(hex.x + 0, hex.y - 1),
+    vec2(hex.x - 1, hex.y + 0),
+    vec2(hex.x - 1, hex.y + 1),
+    vec2(hex.x + 0, hex.y + 1),
+  ];
+}
+
 export function drawHexOddR(p, R) {
   push();
   const q = hexToCartesianOddr(p, R);
@@ -89,8 +116,17 @@ const JOIN_TYPE_SKIP = 4;
 const JOIN_TYPE_OPPOSITE = 8;
 
 // Function to create and initialize bitmask array
-function createJoinMaskArray() {
+export function createJoinMaskArray() {
   return new Array(6).fill(0);
+}
+
+export function createOppositeJoins() {
+  const bitmaskArray = createJoinMaskArray();
+  for (let i = 0; i < 6; i++) {
+    setJoinType(bitmaskArray, i, JOIN_TYPE_OPPOSITE);
+  }
+
+  return bitmaskArray;
 }
 
 // Function to set a join type for a given midpoint
@@ -251,7 +287,7 @@ function generateRandomJoinMask(probabilities, singleFlag) {
       return;
     }
 
-    if (Math.random() < probabilities[index]) {
+    if (random() < probabilities[index]) {
       bitmask |= joinType;
       isOneFlagSet = true;
     }
@@ -436,6 +472,7 @@ function drawNextJoin(p0, p1, c, t0, t1, style) {
     // arcPts = [p0, p1, p2, p3];
     arcPts = [p0, pMid, p3];
     tileSettings.drawPathFunc(arcPts);
+    roundEnds(arcPts, style.weight * 0.5, style.color);
   } else {
     tileSettings.drawPathFunc(arcPts);
   }
@@ -482,30 +519,33 @@ function drawSkipJoin(p0, p1, hexCenter, t0, t1, style) {
     // keep offset relative for resolution independence
     const offset = 0.25 * rArc;
 
-    const dhc = sub2d(hexCenter, p0).mag;
+    const dhc = sub2d(hexCenter, p0).mag();
+
+    const pullCenter = 0.0;
 
     const start = arcPts[0];
     const end = arcPts[arcPts.length - 1];
     // const offStart = move(start, t0, -offset);
     // const offEnd = move(end, t1, -offset);
-    const offStart = moveTowards(start, hexCenter, 0.5 * dhc);
-    const offEnd = moveTowards(end, hexCenter, 0.5 * dhc);
+    const offStart = moveTowards(start, hexCenter, pullCenter * dhc);
+    const offEnd = moveTowards(end, hexCenter, pullCenter * dhc);
 
     const path = [start, offStart, offEnd, end];
     tileSettings.drawPathFunc(path);
 
-    // round the ends at start
+    // round the ends at start/end
     noStroke();
     fill(style.color);
     circle(start.x, start.y, style.weight);
+    circle(end.x, end.y, style.weight);
   } else {
     tileSettings.drawPathFunc(arcPts);
   }
 }
 
-function drawOppositeJoin(p0, p1, options) {
-  let { isCircuit, isLines, isCircles } = checkStyle(options);
-  const isCenterLine = options.offset === 0;
+function drawOppositeJoin(p0, p1, style) {
+  let { isCircuit, isLines, isCircles } = checkStyle(style);
+  const isCenterLine = style.offset === 0;
 
   // TODO keep this resolution independent
   const unitsPerPoint = 1;
@@ -562,26 +602,27 @@ function drawOppositeJoin(p0, p1, options) {
         line2.push(p);
       }
     }
-
-    // stroke(t * 255, 255 - t * 255, 0);
-    // circle(p.x, p.y, 2 + t * 5 + 10);
   }
 
-  stroke(options.color);
-  strokeWeight(options.weight);
+  stroke(style.color);
+  strokeWeight(style.weight);
 
   //   drawOffsetPath(line1, options.offset, t0, tangEnd);
   //   tileSettings.drawPathFunc(line1);
-  drawOffsetPath(line1, sideDir, options.offset, /* closed: */ false);
+  drawOffsetPath(line1, sideDir, style.offset, /* closed: */ false);
+  if (isCircuit) {
+    roundEnds(line1, style.weight * 0.65, style.color);
+  }
 
   if (isLines) {
     // drawOffsetPath(line2, options.offset, t0, tangEnd);
     // tileSettings.drawPathFunc(line2);
-    drawOffsetPath(line2, sideDir, options.offset, /* closed: */ false);
+    drawOffsetPath(line2, sideDir, style.offset, /* closed: */ false);
+    // roundEnds(line2, style.weight * 0.65, style.color);
 
     // Circles at the end of line 1 and start of line 2
     // This ends up creating a mandala where the star would be
-    const r = options.offset;
+    const r = style.offset;
     const c1 = line1[line1.length - 1];
     const c2 = line2[0];
 
@@ -600,6 +641,13 @@ function drawOppositeJoin(p0, p1, options) {
       }
     }
   }
+}
+
+function roundEnds(path, radius, color) {
+  noStroke();
+  fill(color);
+  circle(path[0].x, path[0].y, 2 * radius);
+  circle(path[path.length - 1].x, path[path.length - 1].y, 2 * radius);
 }
 
 const strokeEndHex = new Polygon(vec2(0, 0), 1, 6, PI / 2); // pointy top
