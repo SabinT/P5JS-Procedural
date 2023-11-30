@@ -58,6 +58,25 @@ export function hexToCartesianOddr(hex, R) {
   return vec2(x, y);
 }
 
+export function oddrToAxial(hex) {
+    var q = hex.x - (hex.y - (hex.y&1)) / 2;
+    var r = hex.y;
+    return vec2(q, r);
+}
+
+export function axialDistance(a, b) {
+    return (abs(a.x - b.x) 
+          + abs(a.x + a.y - b.x - b.y)
+          + abs(a.y - b.y)) / 2;
+}
+
+export function getCenterDistOddr(hex) {
+  const ax = oddrToAxial(hex.center);
+  const cax = oddrToAxial(vec2(0, 0));
+  const d = axialDistance(ax, cax);
+  return d;
+}
+
 /*
 var axial_direction_vectors = [
     Hex(+1, 0), Hex(+1, -1), Hex(0, -1), 

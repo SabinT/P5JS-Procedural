@@ -1,9 +1,9 @@
 import { STYLES } from "../lumic/hex.js";
 
-export const fixedSeed = false;
-export const seedCenter = 123;
-export const seedRight = 123;
-export const seedLeft = 123;
+export const fixedSeed = true;
+export const seedCenter = 1701112842825;
+export const seedRight = 1701113035742;
+export const seedLeft = 1701113068397;
 
 // inches
 export const centerWidth = 7 * 12;
@@ -13,7 +13,7 @@ export const sideWidth = 50;
 const baseMargin = 2; // inches
 
 export const pxDensity = 1;
-const scaler = 3;
+const scaler = 1;
 
 export const marginDefault = {
   top: getRes(baseMargin),
@@ -22,11 +22,11 @@ export const marginDefault = {
   right: getRes(baseMargin),
 };
 
-export const marginCenter  = {
-    ...marginDefault,
-    // 16 inches extra margin for info and QR code
-    bottom: getRes(baseMargin + 16),
-}
+export const marginCenter = {
+  ...marginDefault,
+  // 16 inches extra margin for info and QR code
+  bottom: getRes(baseMargin + 16),
+};
 
 export function getRes(inches) {
   return (inches / 12) * 100 * scaler;
@@ -127,14 +127,100 @@ export function drawMargin(g, margin, palette) {
   pop();
 }
 
+let seed;
+
 export function setSeed(num) {
-    // seed from time
-    let seed = Date.now();
-  
-    if (fixedSeed) {
-      seed = num;
-    }
-  
-    randomSeed(seed);
-    console.log(seed);
+  // seed from time
+  seed = Date.now();
+
+  if (fixedSeed) {
+    seed = num;
   }
+
+  randomSeed(seed);
+  console.log(seed);
+}
+
+export function getSeed() {
+  return seed;
+}
+
+// Anim stuff
+const animSettings = {
+  secsPerRing: 2,
+  secsRingOffset: 0.5,
+  randTurnMax: 3,
+};
+
+let animStartMillis = 0;
+
+export function nonRealtimeMillis() {
+  return frameCount * 1000 / 60;
+}
+
+export function startAnim(numRings) {
+  // Don't start new anim if enough time hasn't elapsed
+  const fullAnimSecs =
+    animSettings.secsPerRing + animSettings.secsRingOffset * numRings;
+
+  if (animElapsed() < fullAnimSecs) {
+    console.log("Anim already in progress");
+    return;
+  }
+
+  animStartMillis = nonRealtimeMillis();
+}
+
+export function animElapsed() {
+  return (nonRealtimeMillis() - animStartMillis) / 1000;
+}
+
+const isAnimInProgress = {};
+const animCompleteCount = {};
+
+const animProgress = {};
+
+/**
+ * @returns {number} 0-1
+ */
+function stepAnimateRing(ring) {
+  const millisPerRing = animSettings.secsPerRing * 1000;
+  const millisOffset = animSettings.secsRingOffset * 1000;
+  const adjStart = animStartMillis + millisOffset * ring;
+  const elapsed = nonRealtimeMillis() - adjStart;
+  const t = elapsed / millisPerRing;
+
+  // If in progress previous frame, and complete this frame,
+  // increment the complete count
+  if (isAnimInProgress[ring] && t >= 1) {
+    animCompleteCount[ring] = animCompleteCount[ring] || 0;
+    animCompleteCount[ring]++;
+  }
+
+  isAnimInProgress[ring] = t > 0 && t < 1;
+
+  if (isAnimInProgress[ring]) {
+    animProgress[ring] = t;
+  } else {
+    animProgress[ring] = 0;
+  }
+
+  return constrain(t, 0, 1);
+}
+
+export function stepAnimate(startRing, endRing) {
+  for (let ring = startRing; ring <= endRing; ring++) {
+    stepAnimateRing(ring);
+  }
+}
+export function getAnimCompleteCount(ring) {
+  return animCompleteCount[ring] || 0;
+}
+
+export function getAnimProgress(ring) {
+  return animProgress[ring] || 0;
+}
+
+export function isAnimActive(ring) {
+  return isAnimInProgress[ring] || false;
+}

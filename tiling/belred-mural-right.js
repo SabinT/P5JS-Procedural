@@ -20,6 +20,7 @@ import {
   fixedSeed,
   seedRight,
   setSeed,
+  getSeed,
 } from "./belred.js";
 
 const pxDensity = 4;
@@ -161,6 +162,7 @@ window.setup = function () {
 
 window.draw = function () {
   translate(hw, hh);
+  // randomSeed(getSeed());
   render();
   noLoop();
 };
@@ -368,7 +370,7 @@ window.keyTyped = function () {
   }
 
   if (key === "s") {
-    save("hex_" + seed + ".png");
+    save("right_" + getSeed() + ".png");
   }
 
   if (key === "q") {

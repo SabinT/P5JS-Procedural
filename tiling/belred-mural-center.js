@@ -1,4 +1,4 @@
-import { PI, vec2 } from "../lumic/common.js";
+import { DEG2RAD, PI, vec2 } from "../lumic/common.js";
 import { Polygon } from "../lumic/geomerty.js";
 import {
   hexToCartesianOddr,
@@ -9,8 +9,11 @@ import {
   tileSettings,
   getAdjacentOddr,
   createOppositeJoins,
+  oddrToAxial,
+  axialDistance,
+  getCenterDistOddr,
 } from "../lumic/hex.js";
-import { easeInOutQuad } from "../lumic/easing.js";
+import { easeInOutElastic, easeInOutQuad, easeOutElastic } from "../lumic/easing.js";
 import {
   drawMargin,
   paletteSide,
@@ -21,6 +24,12 @@ import {
   fixedSeed,
   seedCenter,
   setSeed,
+  getSeed,
+  startAnim,
+  stepAnimate,
+  getAnimProgress,
+  getAnimCompleteCount,
+  isAnimActive,
 } from "./belred.js";
 
 const { w, h, hw, hh } = getResolutionCenter();
@@ -63,7 +72,7 @@ const styleLines = [
   },
   ...makeStyles(
     palette[0],
-    strokeBaseWidth * 1.75,
+    strokeBaseWidth * 1.25,
     baseOffset * 6,
     STYLES.LINES
   ),
@@ -120,7 +129,7 @@ window.setup = function () {
       // maskList.push(mask);
       maskList2D[y][x] = mask;
 
-      if (random() > 0.8) {
+      if (random() > 0.9) {
         maskList2D[y][x] = createOppositeJoins();
       }
 
@@ -141,11 +150,11 @@ window.setup = function () {
   }
 
   // Center row of hexagons all have same pattern
-//   for (let x = -s.gridHW; x <= s.gridHW; x++) {
-//     if (random() > 0.25) {
-//       maskList2D[0][x] = createOppositeJoins();
-//     }
-//   }
+  //   for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  //     if (random() > 0.25) {
+  //       maskList2D[0][x] = createOppositeJoins();
+  //     }
+  //   }
 
   createCanvas(w, h);
 
@@ -157,7 +166,7 @@ window.setup = function () {
 window.draw = function () {
   translate(hw, hh);
   render();
-  noLoop();
+  // noLoop();
 };
 
 function renderBgSine() {
@@ -258,8 +267,14 @@ let cycleWaitActive = false;
 let previousN = 0;
 let waitCount = 0;
 function render(g) {
+  stepAnimate(0, 8);
+
   // draw bg onto canvas
-  image(bg, -hw, -hh);
+  if (!s.debugTile) {
+    image(bg, -hw, -hh);
+  } else {
+    background(s.bgColor);
+  }
 
   // framerate(30);
 
@@ -288,16 +303,24 @@ function render(g) {
   for (let y = -s.gridHH; y <= s.gridHH; y++) {
     for (let x = -s.gridHW; x <= s.gridHW; x++) {
       let addedTurns = 0;
-      if (y == n) {
-        turnList2DAdjusted[y][x] = easeInOutQuad(t + d) * 1 + turnList2D[y][x];
-      } else {
-        turnList2D[y][x] = Math.round(turnList2DAdjusted[y][x]);
-      }
+      // if (y == n) {
+      //   turnList2DAdjusted[y][x] = easeInOutQuad(t + d) * 1 + turnList2D[y][x];
+      // } else {
+      //   turnList2D[y][x] = Math.round(turnList2DAdjusted[y][x]);
+      // }
 
       const hex = hexList2D[y][x];
       const mask = maskList2D[y][x];
 
-      let turns = turnList2DAdjusted[y][x];
+      // Anim stuff
+      const dist = getCenterDistOddr(hex);
+      const animActive = isAnimActive(dist);
+      const animProgress = getAnimProgress(dist);
+      const animCompleteCount = getAnimCompleteCount(dist);
+      const animTurns = animCompleteCount + easeInOutQuad(animProgress);    
+
+      // let turns = turnList2DAdjusted[y][x] + animTurns;
+      let turns = turnList2D[y][x] + animTurns;
 
       turns += addedTurns;
 
@@ -315,15 +338,46 @@ function render(g) {
       // Random integer between [0,5]
       // let turns = Math.floor(Math.random() * 6);
 
-      for (let style of styles) {
-        drawHexTile(
-          hex.center,
-          hex.radius,
-          /* tilemask */ mask,
-          turns,
-          style,
-          /* debugDraw */ false
-        );
+      if (!s.debugTile) {
+        for (let style of styles) {
+          drawHexTile(
+            hex.center,
+            hex.radius,
+            /* tilemask */ mask,
+            turns,
+            style,
+            /* debugDraw */ false
+          );
+        }
+      }
+
+      if (s.debugTile) {
+        push();
+        const cart = hexToCartesianOddr(hex.center, hex.radius);
+        translate(cart.x, cart.y);
+
+        stroke(0);
+        strokeWeight(strokeBaseWidth);
+        textAlign(CENTER, CENTER);
+        
+        // Print anim progress
+        textSize(R * 0.3);
+        
+        fill(0, 255, 0);
+        text(`${animCompleteCount}`, -R * 0.25, R * 0.5);
+        fill(animActive ? 255 : 150);
+        text(`${animProgress.toFixed(2)}`, R * 0.25, R * 0.5);
+
+        const animTurn = animTurns * 60 * DEG2RAD;
+        rotate(animTurn);
+
+        // Print distance from center
+        fill(255, d * 40, animActive ? 255 : 150);
+        textSize(R * 0.75);
+        text(`${dist}`, 0, 0);
+
+
+        pop();
       }
     }
 
@@ -331,28 +385,6 @@ function render(g) {
   }
 
   drawMargin(bg, marginCenter, palette);
-
-  if (s.debugTile) {
-    const hex = { center: vec2(0, 0), radius: s.radius };
-
-    // Clear out a circle in the center
-    fill(10);
-    stroke(255);
-    strokeWeight(1);
-
-    circle(0, 0, s.radius * 1.25);
-
-    fill("green");
-
-    drawHexTile(
-      hex.center,
-      hex.radius,
-      /* tilemask */ defaultJoinMask,
-      /* turns */ 0,
-      styles[0],
-      /* debugDraw */ true
-    );
-  }
 }
 
 window.keyTyped = function () {
@@ -361,7 +393,7 @@ window.keyTyped = function () {
   }
 
   if (key === "s") {
-    save("hex_" + seed + ".png");
+    save("center_" + getSeed() + ".png");
   }
 
   if (key === "q") {
@@ -375,4 +407,8 @@ window.keyTyped = function () {
     render();
     console.log(insetStep);
   }
+};
+
+window.mouseClicked = function () {
+  startAnim();
 };

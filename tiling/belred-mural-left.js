@@ -9,7 +9,7 @@ import {
   tileSettings,
 } from "../lumic/hex.js";
 import { easeInOutQuad } from "../lumic/easing.js";
-import { sideWidth, muralHeight, paletteSide, makeStyles, drawMargin, marginDefault, fixedSeed, seedLeft, setSeed } from "./belred.js";
+import { sideWidth, muralHeight, paletteSide, makeStyles, drawMargin, marginDefault, fixedSeed, seedLeft, setSeed, getSeed } from "./belred.js";
 
 const pxDensity = 4;
 const scaler = 3;
@@ -355,7 +355,7 @@ window.keyTyped = function () {
   }
 
   if (key === "s") {
-    save("hex_" + seed + ".png");
+    save("left_" + getSeed() + ".png");
   }
 
   if (key === "q") {
