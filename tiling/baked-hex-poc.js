@@ -3,7 +3,7 @@
 
 // Read from json file
 import { data } from "../data/hexlist.js";
-import { PI, add2d, rot2d, sub2d, vec2 } from "../lumic/common.js";
+import { PI, add2d, rot2d, sqRand, sub2d, vec2 } from "../lumic/common.js";
 import { easeInOutQuad } from "../lumic/easing.js";
 import { Polygon } from "../lumic/geomerty.js";
 import { getDistOddr, hexToCartesianOddr } from "../lumic/hex.js";
@@ -66,7 +66,7 @@ window.setup = function () {
     background(0,0,255);
     // noLoop();
 
-    startAnim(8);
+    startAnim(9);
 };
 
 window.draw = function () {
@@ -146,7 +146,12 @@ function renderShapeMesh(shape) {
     textureMode(NORMAL);
 
     // Animation
-    const dist = getDistOddr(shape.cOddr, vec2(0, 0));
+    let animCx, animCy;
+    let randN = getAnimCompleteCount(8);
+    animCx = round(sqRand(randN) * 3 - 1);
+    animCy = round(sqRand(randN + 1) * 2 - 1);
+
+    const dist = getDistOddr(shape.cOddr, vec2(animCx, animCy));
     const animActive = isAnimActive(dist);
     const animProgress = getAnimProgress(dist);
     const animCompleteCount = getAnimCompleteCount(dist);
