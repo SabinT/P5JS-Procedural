@@ -15,35 +15,6 @@ let hextex;
 
 let g;
 
-// window.setup = function () {
-//     const hexes = data.hexes;
-//     const w = data.w;
-//     const h = data.h;
-//     console.log(w, h);
-
-//     const screenW = w;
-//     const screenH = h;
-
-//     g = createGraphics(w, h, WEBGL);
-//     createCanvas(screenW, screenH);
-  
-//     g.background(255);
-  
-//     circle(w / 2, h / 2, 0.8 * min(w, h));
-  
-//     image(g, 0, 0, screenW, screenH);
-//   };
-  
-//   window.draw = function () {
-//     background(0);
-//     image(g, 0, 0, screenW, screenH);
-  
-//     if (mouseIsPressed) {
-//       // Draw a zoomed in view
-//       debug.drawFullZoomSection(g, 200);
-//     }
-//   };
-
 window.preload = function () {
     hextex = loadImage('../belred-ar-poc/hextex.png');
 }
@@ -60,27 +31,14 @@ window.setup = function () {
 
     shapes = hexes.map(hex => createHexShape(hex.c, hex.cax, hex.r, w, h));
 
-    // hextex = loadImage('../belred-ar-poc/hextex.png');
-
-    // ambientLight(255);
-    background(0,0,255);
-    // noLoop();
-
     startAnim(9);
 };
 
 window.draw = function () {
-    // return;
-
     stepAnimate();
 
     background(0);
 
-    // translate(-width / 2, -height / 2);
-
-    // stroke(255);
-    // strokeWeight(1);
-    // fill(255,0,0);
     for (let i = 0; i < shapes.length; i++) {
         const shape = shapes[i];
         push();
