@@ -1,4 +1,4 @@
-import { DEG2RAD, PI, vec2 } from "../lumic/common.js";
+import { DEG2RAD, PI, sqRand, vec2 } from "../lumic/common.js";
 import { Polygon } from "../lumic/geomerty.js";
 import {
   hexToCartesianOddr,
@@ -12,8 +12,14 @@ import {
   oddrToAxial,
   axialDistance,
   getCenterDistOddr,
+  getDistOddr,
+  exportHexJsonOddr,
 } from "../lumic/hex.js";
-import { easeInOutElastic, easeInOutQuad, easeOutElastic } from "../lumic/easing.js";
+import {
+  easeInOutElastic,
+  easeInOutQuad,
+  easeOutElastic,
+} from "../lumic/easing.js";
 import {
   drawMargin,
   paletteSide,
@@ -47,6 +53,7 @@ const s = {
   radius: R,
   bgColor: palette[1],
   bgPatternColor: palette[3],
+  forExport: true,
 };
 
 const strokeBaseWidth = R / 20;
@@ -161,12 +168,14 @@ window.setup = function () {
   bg = createGraphics(w, h);
 
   renderBgSine();
+
+  startAnim(numAnimRings);
 };
 
 window.draw = function () {
   translate(hw, hh);
   render();
-  // noLoop();
+  noLoop();
 };
 
 function renderBgSine() {
@@ -205,6 +214,8 @@ function renderBgSine() {
     }
   }
 }
+
+const numAnimRings = 10;
 
 function renderBg() {
   bg.background(s.bgColor);
@@ -267,8 +278,6 @@ let cycleWaitActive = false;
 let previousN = 0;
 let waitCount = 0;
 function render(g) {
-  stepAnimate(0, 8);
-
   // draw bg onto canvas
   if (!s.debugTile) {
     image(bg, -hw, -hh);
@@ -300,8 +309,14 @@ function render(g) {
   //     return;
   // }
 
+  const hexListForExport = [];
+
   for (let y = -s.gridHH; y <= s.gridHH; y++) {
     for (let x = -s.gridHW; x <= s.gridHW; x++) {
+      if (s.forExport) {
+        hexListForExport.push(hexList2D[y][x]);
+      }
+
       let addedTurns = 0;
       // if (y == n) {
       //   turnList2DAdjusted[y][x] = easeInOutQuad(t + d) * 1 + turnList2D[y][x];
@@ -312,12 +327,18 @@ function render(g) {
       const hex = hexList2D[y][x];
       const mask = maskList2D[y][x];
 
+      // Randomly pick anim center, seeded by animCompleteCount of center
+      let animCx, animCy;
+      let randN = getAnimCompleteCount(numAnimRings);
+      animCx = round(sqRand(randN) * 3 - 1);
+      animCy = round(sqRand(randN + 1) * 2 - 1);
+
       // Anim stuff
-      const dist = getCenterDistOddr(hex);
+      const dist = getDistOddr(hex.center, vec2(animCx, animCy));
       const animActive = isAnimActive(dist);
       const animProgress = getAnimProgress(dist);
       const animCompleteCount = getAnimCompleteCount(dist);
-      const animTurns = animCompleteCount + easeInOutQuad(animProgress);    
+      const animTurns = animCompleteCount + easeInOutQuad(animProgress);
 
       // let turns = turnList2DAdjusted[y][x] + animTurns;
       let turns = turnList2D[y][x] + animTurns;
@@ -359,10 +380,14 @@ function render(g) {
         stroke(0);
         strokeWeight(strokeBaseWidth);
         textAlign(CENTER, CENTER);
-        
+
+        // Print oddr coords
+        textSize(R * 0.25);
+        fill(200);
+        text(`${hex.center.x},${hex.center.y}`, 0, -R * 0.5);
+
         // Print anim progress
         textSize(R * 0.3);
-        
         fill(0, 255, 0);
         text(`${animCompleteCount}`, -R * 0.25, R * 0.5);
         fill(animActive ? 255 : 150);
@@ -376,7 +401,6 @@ function render(g) {
         textSize(R * 0.75);
         text(`${dist}`, 0, 0);
 
-
         pop();
       }
     }
@@ -384,7 +408,15 @@ function render(g) {
     previousN = n;
   }
 
-  drawMargin(bg, marginCenter, palette);
+  if (!s.forExport) {
+    drawMargin(bg, marginCenter, palette);
+  }
+
+  if (s.forExport) {
+    exportHexJsonOddr(hexListForExport, width, height, "hex.json");
+  }
+
+  stepAnimate();
 }
 
 window.keyTyped = function () {
@@ -410,5 +442,5 @@ window.keyTyped = function () {
 };
 
 window.mouseClicked = function () {
-  startAnim();
+  startAnim(numAnimRings);
 };

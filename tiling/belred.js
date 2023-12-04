@@ -146,13 +146,17 @@ export function getSeed() {
 }
 
 // Anim stuff
-const animSettings = {
-  secsPerRing: 2,
-  secsRingOffset: 0.5,
+export const animSettings = {
+  autoAnim : true,
+  secsPerRing: 1,
+  secsRingOffset: 0.2,
   randTurnMax: 3,
+  captureEnabled: false,
+  captureCycles: 6,
 };
 
-let animStartMillis = 0;
+let animStartMillis = -1000000;
+let animNumRings = 0;
 
 export function nonRealtimeMillis() {
   return frameCount * 1000 / 60;
@@ -161,13 +165,16 @@ export function nonRealtimeMillis() {
 export function startAnim(numRings) {
   // Don't start new anim if enough time hasn't elapsed
   const fullAnimSecs =
-    animSettings.secsPerRing + animSettings.secsRingOffset * numRings;
+    animSettings.secsPerRing * 1.5 + animSettings.secsRingOffset * numRings;
 
   if (animElapsed() < fullAnimSecs) {
     console.log("Anim already in progress");
     return;
   }
 
+  console.log("Starting anim");
+
+  animNumRings = numRings;
   animStartMillis = nonRealtimeMillis();
 }
 
@@ -208,9 +215,39 @@ function stepAnimateRing(ring) {
   return constrain(t, 0, 1);
 }
 
-export function stepAnimate(startRing, endRing) {
-  for (let ring = startRing; ring <= endRing; ring++) {
+export function stepAnimate() {
+  // console.log("numRings", animNumRings);
+
+  if (animSettings.autoAnim) {
+    startAnim(animNumRings);
+  }
+
+  for (let ring = 0; ring <= animNumRings; ring++) {
     stepAnimateRing(ring);
+  }
+
+  if (animSettings.captureEnabled && animNumRings > 0) {
+    // Capture until all complete counts are >= captureCycles
+    let allComplete = true;
+    for (let ring = 0; ring <= animNumRings; ring++) {
+      const compCount = animCompleteCount[ring] || 0;
+      if (compCount < animSettings.captureCycles) {
+        allComplete = false;
+        break;
+      }
+    }
+
+    if (allComplete) {
+      console.log("All complete");
+      animSettings.captureEnabled = false;
+      noLoop();
+    } else {
+      // Save a frame
+      console.log("Saving frame");
+      // Pad frame count to 4 digits
+      const frameCountStr = frameCount.toString().padStart(4, "0");
+      save("frame_" + frameCountStr + ".jpg")
+    }
   }
 }
 export function getAnimCompleteCount(ring) {

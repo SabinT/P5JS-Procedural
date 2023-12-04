@@ -8,6 +8,7 @@ import {
   DEG2RAD,
   lerp2d,
   rot2d,
+  saveJson,
 } from "./common.js";
 import {
   Polygon,
@@ -71,8 +72,12 @@ export function axialDistance(a, b) {
 }
 
 export function getCenterDistOddr(hex) {
-  const ax = oddrToAxial(hex.center);
-  const cax = oddrToAxial(vec2(0, 0));
+  return getDistOddr(hex, vec2(0, 0));
+}
+
+export function getDistOddr(hex1, hex2) {
+  const ax = oddrToAxial(hex1);
+  const cax = oddrToAxial(hex2);
   const d = axialDistance(ax, cax);
   return d;
 }
@@ -696,4 +701,26 @@ function drawSoloJoin(p0, t0, style) {
     /* segments */ 16
   );
   tileSettings.drawPathFunc(arcPts);
+}
+
+export function exportHexJsonOddr(hexList, width, height, filename) {
+  const hexes = [];
+
+  for (const hex of hexList) {
+    const ax = oddrToAxial(hex.center);
+    hexes.push({
+      c: [hex.center.x, hex.center.y],
+      cax: [ax.x, ax.y],
+      r: hex.radius,
+    });
+  }
+
+  const data = {
+    w: width,
+    h: height,
+    hexes: hexes,
+  };
+
+  // stringify and write file
+  saveJson(data, filename);
 }
