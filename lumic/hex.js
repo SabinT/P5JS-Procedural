@@ -54,7 +54,7 @@ export function hexToCartesianAxial(x, y, R) {
  * @returns Converts (col, row) hex coordinates to cartesian coordinates
  */
 export function hexToCartesianOddr(hex, R) {
-  const x = R * sqrt(3) * (hex.x + 0.5 * (hex.y & 1));
+  const x = R * Math.sqrt(3) * (hex.x + 0.5 * (hex.y & 1));
   const y = ((R * 3) / 2) * hex.y;
   return vec2(x, y);
 }

@@ -1,0 +1,25 @@
+<script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+
+<script type="module" src="components/hexgrid.js"></script>
+
+<a-scene stats>
+
+    <a-assets>
+        <img id="hextex" src="./hextex.png">
+
+        <!-- <a-asset-item id="sphere-glb" src="filename.glb"></a-asset-item> -->
+    </a-assets>
+
+    <!-- <a-box id="box" position="-1 1 -3" rotation="0 45 0"></a-box>
+    <a-sphere id="sphere" position="1 0 -5" radius="1.25" rotation="0 -90 0"></a-sphere> -->
+    
+    <a-sky color="#000000"></a-sky>
+
+    <a-entity id="hex-grid" hexgrid="src1: hextex" scale="0.1 0.1 0.1"></a-entity>
+
+    <!-- camera -->
+    <a-entity camera position="0.000 -0.663 1.368" look-controls wasd-controls></a-entity>
+
+
+</a-scene>

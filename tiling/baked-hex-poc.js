@@ -29,7 +29,7 @@ window.setup = function () {
 
     createCanvas(w, h, WEBGL);
 
-    shapes = hexes.map(hex => createHexShape(hex.c, hex.cax, hex.r, w, h));
+    shapes = hexes.map(hex => parseHexData(hex.c, hex.cax, hex.r, w, h));
 
     startAnim(9);
 };
@@ -42,13 +42,12 @@ window.draw = function () {
     for (let i = 0; i < shapes.length; i++) {
         const shape = shapes[i];
         push();
-        // translate(shape.verts[shape.verts.length - 1].x, shape.verts[shape.verts.length - 1].y);
         renderShapeMesh(shape);
         pop();
     }
 }
 
-function createHexShape(centerOddrArr, centerAxArr, radius, texWidth, texHeight) {
+function parseHexData(centerOddrArr, centerAxArr, radius, texWidth, texHeight) {
     // Something that can be turned into a mesh with all necessary attributes
     const centerOddrVec = vec2(centerOddrArr[0], centerOddrArr[1]);
     const centerAxVec = vec2(centerAxArr[0], centerAxArr[1]);
