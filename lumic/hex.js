@@ -37,9 +37,10 @@ export const tileSettings = {
   drawEndCaps: true,
 };
 
-const root3 = Math.sqrt(3);
 
 const templateHex = new Polygon(vec2(0, 0), 1, 6, PI / 2); // pointy top
+
+const root3 = Math.sqrt(3);
 
 // Axial coordinates
 // See for lots more info: https://www.redblobgames.com/grids/hexagons/

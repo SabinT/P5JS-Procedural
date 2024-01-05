@@ -1,7 +1,9 @@
-import { Polygon } from "../../lumic/geomerty.js";
-import { hexToCartesianOddr } from "../../lumic/hex.js";
+// import { Polygon } from "../../lumic/geomerty.js";
 import { data as hexData } from "../data/hexlist.js";
-import { vec2, PI } from "../ar-common.js";
+import { getDistOddr, hexToCartesianOddr, Polygon, vec2, PI, rotateAround } from "../ar-common.js";
+import { sqRand } from "../ar-rand.js";
+import { easeInOutQuad } from "../ar-easing.js";
+import { getAnimCompleteCount, getAnimProgress, isAnimActive, setMillis, startAnim, stepAnimate } from "../ar-anim.js";
 
 AFRAME.registerComponent("hexgrid", {
   schema: {
@@ -19,17 +21,16 @@ AFRAME.registerComponent("hexgrid", {
     console.log(w, h);
 
     this.shapes = hexes
-    .filter(function (hex) {
-      const col = hex.c[0];
-      const row = hex.c[1];
-      if (col < -3 || col > 2 || row < -8 || row > 8) {
-        return false;
-      }
-      else {
-        return true;
-      }
-    })
-    .map(function (hex) {
+      .filter(function (hex) {
+        const col = hex.c[0];
+        const row = hex.c[1];
+        if (col < -3 || col > 2 || row < -8 || row > 8) {
+          return false;
+        } else {
+          return true;
+        }
+      })
+      .map(function (hex) {
         const col = hex.c[0];
         const row = hex.c[1];
         return parseHexData(hex.c, hex.cax, hex.r, w, h);
@@ -70,23 +71,42 @@ AFRAME.registerComponent("hexgrid", {
         console.error("An error happened during texture loading.", err);
       }
     );
+
+    // Start animating
+    startAnim(9);
   },
 
   updateHexyMesh: function () {
+    stepAnimate();
+
     for (let i = 0; i < this.shapes.length; i++) {
       const shape = this.shapes[i];
 
       // const offset = vertices.length;
       const indexOffset = i * 7; // current vertex count
 
+      // Animation
+      let animCx, animCy;
+      let randN = getAnimCompleteCount(8);
+      animCx = Math.round(sqRand(randN) * 3 - 1);
+      animCy = Math.round(sqRand(randN + 1) * 2 - 1);
+  
+      const dist = getDistOddr(shape.cOddr, vec2(animCx, animCy));
+      const animActive = isAnimActive(dist);
+      const animProgress = getAnimProgress(dist);
+      const animCompleteCount = getAnimCompleteCount(dist);
+      const animTurns = animCompleteCount + easeInOutQuad(animProgress);
+
       // Push verts as separate numbers in a single array
       for (let j = 0; j < shape.verts.length; j++) {
-        const v = shape.verts[j];
+        let v = shape.verts[j];
+
+        v = rotateAround(v, shape.pivot, animTurns * PI / 3);
 
         const vOffset = (i * 7 + j) * 3;
         this.vertices[vOffset] = v.x;
         this.vertices[vOffset + 1] = v.y;
-        this.vertices[vOffset + 2] = v.z;
+        this.vertices[vOffset + 2] = 0;
 
         const uvOffset = (i * 7 + j) * 2;
         this.uvs[uvOffset] = shape.uvs[j].x;
@@ -97,16 +117,10 @@ AFRAME.registerComponent("hexgrid", {
         this.indices[i * 18 + j] = shape.tris[j] + indexOffset;
       }
     }
-  
-    // return { vertices: this.vertices, indices: this.indices, uvs: this.uvs };
   },
 
-  tick: function () {
-    if (this.ticked) {
-      // return;
-    } else {
-      this.ticked = true;
-    }
+  tick: function (time, timeDelta) {
+    setMillis(time);
 
     this.updateHexyMesh();
 
@@ -130,46 +144,45 @@ AFRAME.registerComponent("hexgrid", {
 });
 
 function parseHexData(centerOddrArr, centerAxArr, radius, texWidth, texHeight) {
-    // Something that can be turned into a mesh with all necessary attributes
-    const centerOddrVec = vec2(centerOddrArr[0], centerOddrArr[1]);
-    const centerAxVec = vec2(centerAxArr[0], centerAxArr[1]);
+  // Something that can be turned into a mesh with all necessary attributes
+  const centerOddrVec = vec2(centerOddrArr[0], centerOddrArr[1]);
+  const centerAxVec = vec2(centerAxArr[0], centerAxArr[1]);
 
-    const shape = {
-        cOddr: centerOddrVec,
-        cAx: centerAxVec,
-        verts: [],
-        uvs: [],
-        tris: [],
-        turns: 0, // not used yet
-        pivot: vec2(0, 0), // cartesian
-    }
+  const shape = {
+    cOddr: centerOddrVec,
+    cAx: centerAxVec,
+    verts: [],
+    uvs: [],
+    tris: [],
+    pivot: vec2(0, 0), // cartesian
+  };
 
-    const centerCart = hexToCartesianOddr(centerOddrVec, radius);
-    // console.log(centerCart);
-    const poly = new Polygon(centerCart, radius, 6, Math.PI / 2); // pointy side up
-    const pts = poly.getPoints();
+  const centerCart = hexToCartesianOddr(centerOddrVec, radius);
 
-    shape.pivot = centerCart;
+  const poly = new Polygon(centerCart, radius, 6, Math.PI / 2); // pointy side up
+  const pts = poly.getPoints();
 
-    shape.verts.push(...pts); // ring
-    shape.verts.push(centerCart); // center
-    const iCenter = pts.length;
+  shape.pivot = centerCart;
 
-    // Normalize uvs, assume the texture is the full range from 
-    // -h/2 to h/2 and -w/2 to w/2
-    const uvs = pts.map(p => cartToUv(p, texWidth, texHeight));
-    shape.uvs.push(...uvs);
-    shape.uvs.push(cartToUv(centerCart, texWidth, texHeight));
+  shape.verts.push(...pts); // ring
+  shape.verts.push(centerCart); // center
+  const iCenter = pts.length;
 
-    // Triangulate
-    for (let i = 0; i < pts.length; i++) {
-        const iNext = (i + 1) % pts.length;
+  // Normalize uvs, assume the texture is the full range from
+  // -h/2 to h/2 and -w/2 to w/2
+  const uvs = pts.map((p) => cartToUv(p, texWidth, texHeight));
+  shape.uvs.push(...uvs);
+  shape.uvs.push(cartToUv(centerCart, texWidth, texHeight));
 
-        // can't remember if this is CW or CCW, flip if needed
-        shape.tris.push(i, iNext, iCenter);
-    }
+  // Triangulate
+  for (let i = 0; i < pts.length; i++) {
+    const iNext = (i + 1) % pts.length;
 
-    return shape;
+    // can't remember if this is CW or CCW, flip if needed
+    shape.tris.push(i, iNext, iCenter);
+  }
+
+  return shape;
 }
 
 function cartToUv(p, texWidth, texHeight) {
