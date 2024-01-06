@@ -1,9 +1,9 @@
 // import { Polygon } from "../../lumic/geomerty.js";
-import { data as hexData } from "../data/hexlist.js";
-import { getDistOddr, hexToCartesianOddr, Polygon, vec2, PI, rotateAround } from "../ar-common.js";
-import { sqRand } from "../ar-rand.js";
-import { easeInOutQuad } from "../ar-easing.js";
-import { getAnimCompleteCount, getAnimProgress, isAnimActive, setMillis, startAnim, stepAnimate } from "../ar-anim.js";
+import { data as hexData } from "./hexlist.js";
+import { getDistOddr, hexToCartesianOddr, Polygon, vec2, PI, rotateAround } from "./ar-common.js";
+import { sqRand } from "./ar-rand.js";
+import { easeInOutQuad } from "./ar-easing.js";
+import { getAnimCompleteCount, getAnimProgress, isAnimActive, setMillis, startAnim, stepAnimate } from "./ar-anim.js";
 
 AFRAME.registerComponent("hexgrid", {
   schema: {

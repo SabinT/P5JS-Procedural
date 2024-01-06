@@ -5,9 +5,12 @@ export const seedCenter = 1701112842825;
 export const seedRight = 1701113035742;
 export const seedLeft = 1701113068397;
 
+// Center space: 79.1 x 181.2 inches
+const outerMargin = 1; // inches
+
 // inches
-export const centerWidth = 7 * 12;
-export const muralHeight = 16 * 12;
+export const centerWidth = 79 - outerMargin * 2;
+export const muralHeight = 181 - outerMargin * 2;
 export const sideWidth = 50;
 
 const baseMargin = 2; // inches
@@ -28,6 +31,7 @@ export const marginCenter = {
   bottom: getRes(baseMargin + 16),
 };
 
+// 100 * scaler per foot
 export function getRes(inches) {
   return (inches / 12) * 100 * scaler;
 }
