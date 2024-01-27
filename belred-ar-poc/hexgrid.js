@@ -1,9 +1,36 @@
 // import { Polygon } from "../../lumic/geomerty.js";
-import { data as hexData } from "./hexlist.js";
+import { data as hexData } from "./data/hex_1701113068397.js";
 import { getDistOddr, hexToCartesianOddr, Polygon, vec2, PI, rotateAround } from "./ar-common.js";
 import { sqRand } from "./ar-rand.js";
 import { easeInOutQuad } from "./ar-easing.js";
 import { getAnimCompleteCount, getAnimProgress, isAnimActive, setMillis, startAnim, stepAnimate } from "./ar-anim.js";
+
+const VERTEX_SHADER = `
+varying vec3 vLocalPosition;
+varying vec2 vUv;
+
+void main() {
+    vUv = uv;
+    vLocalPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const FRAGMENT_SHADER = `
+uniform float xMin, xMax, yMin, yMax;
+uniform sampler2D texture;
+varying vec3 vLocalPosition;
+varying vec2 vUv;
+
+void main() {
+    if (vLocalPosition.x < xMin || vLocalPosition.x > xMax || vLocalPosition.y < yMin || vLocalPosition.y > yMax) {
+        discard;
+    } else {
+        vec4 texColor = texture2D(texture, vUv);
+        gl_FragColor = texColor;
+    }
+}
+`;
 
 AFRAME.registerComponent("hexgrid", {
   schema: {
@@ -21,15 +48,11 @@ AFRAME.registerComponent("hexgrid", {
     console.log(w, h);
 
     this.shapes = hexes
-      .filter(function (hex) {
-        const col = hex.c[0];
-        const row = hex.c[1];
-        if (col < -3 || col > 2 || row < -8 || row > 8) {
-          return false;
-        } else {
-          return true;
-        }
-      })
+      // .filter(function (hex) {
+      //   const col = hex.c[0];
+      //   const row = hex.c[1];
+      //   return isAnimableTile(col, row);
+      // })
       .map(function (hex) {
         const col = hex.c[0];
         const row = hex.c[1];
@@ -44,11 +67,21 @@ AFRAME.registerComponent("hexgrid", {
     this.indices = [];
     this.uvs = new Float32Array(7 * this.shapes.length * 2);
 
-    // Create an empty geometry
+    // Create empty geometry, is modified every frame later
     var geometry = new THREE.BufferGeometry();
 
     // Initialize the material, it will be set when texture loads
-    var material = new THREE.MeshBasicMaterial();
+    var material = new THREE.RawShaderMaterial({
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+        uniforms: {
+            texture: { value: null },
+            xMin: { value: -w / 2 },
+            xMax: { value: w / 2 },
+            yMin: { value: -h / 2 },
+            yMax: { value: h / 2 },
+        }
+    });
 
     // Create the mesh and set it to the entity
     this.mesh = new THREE.Mesh(geometry, material);
@@ -61,8 +94,12 @@ AFRAME.registerComponent("hexgrid", {
       // onLoad callback
       function (texture) {
         // Apply the texture to the material
-        material.map = texture;
+        // material.map = texture;
+        material.uniforms.texture.value = texture;
+
         material.needsUpdate = true;
+        material.blending = THREE.AdditiveBlending;
+        material.transparent = true;
       },
       // onProgress callback currently not supported
       undefined,
@@ -95,7 +132,11 @@ AFRAME.registerComponent("hexgrid", {
       const animActive = isAnimActive(dist);
       const animProgress = getAnimProgress(dist);
       const animCompleteCount = getAnimCompleteCount(dist);
-      const animTurns = animCompleteCount + easeInOutQuad(animProgress);
+      let animTurns = animCompleteCount + easeInOutQuad(animProgress);
+
+      if (!isAnimableTile(shape.cOddr.x, shape.cOddr.y)) {
+        animTurns = 0;
+      }
 
       // Push verts as separate numbers in a single array
       for (let j = 0; j < shape.verts.length; j++) {
@@ -142,6 +183,14 @@ AFRAME.registerComponent("hexgrid", {
     this.mesh.geometry.computeBoundingSphere();
   },
 });
+
+function isAnimableTile(col, row) {
+  if (col < -2 || col > 2 || row < -6 || row > 7) {
+    return false;
+  } else {
+    return true;
+  }
+}
 
 function parseHexData(centerOddrArr, centerAxArr, radius, texWidth, texHeight) {
   // Something that can be turned into a mesh with all necessary attributes
