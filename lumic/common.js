@@ -214,4 +214,5 @@ export function sqRand2D(x, y, seed = 0) {
 export const sizes = {
   letter: { w: 850, h: 1100 },
   seatac: { w: 1500, h: 700 },
+  nineTwelve: { w: 900, h: 1200 },
 };

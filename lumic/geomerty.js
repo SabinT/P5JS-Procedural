@@ -61,14 +61,14 @@ function liesBetween(a, b, c) {
 }
 
 /**
- * Returns intersection points of a line and a circle
+ * Returns intersection points of a line and a circle [point 1, point 2], or null
  * @param {vec2} a
  * @param {vec2} b
  * @param {vec2} center
  * @param {Number} r
  * Reference: https://www.bluebill.net/circle_ray_intersection.html
  */
-function intersectLineCircle(a, b, center, r) {
+export function intersectLineCircle(a, b, center, r) {
   const dir = sub2d(b, a);
   dir.normalize();
 
@@ -660,3 +660,144 @@ export class Polygon {
     circle(this.center.x, this.center.y, 2 * r);
   }
 }
+
+// Example usage
+// const paths = [
+//   [{x: 10, y: 10}, {x: 100, y: 10}, {x: 100, y: 100}, {x: 10, y: 100}], // Square
+//   [{x: 120, y: 10}, {x: 210, y: 10}, {x: 210, y: 100}, {x: 120, y: 100}]  // Another square
+// ];
+// exportSVG(paths, 'example.svg', 300, 200);
+export function exportSVG(paths, filename, width, height, offset, scale) {
+  // Start the SVG element
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
+
+  // Iterate over each path
+  paths.forEach(path => {
+      // Start the path element
+      let pathData = ' ';
+
+      // Add each vec2 to the path with scale applied first, then translation
+      let isFirst = true;
+      path.forEach(vec => {
+          // Apply scale first
+          let scaledX = vec.x * scale.x;
+          let scaledY = vec.y * scale.y;
+
+          // Then apply translation
+          let transformedX = scaledX + offset.x;
+          let transformedY = scaledY + offset.y;
+
+          const command = isFirst ? 'M' : 'L';
+          if (isFirst) {
+              isFirst = false;
+          }
+
+          // Format float to 5 digits
+          // pathData += `${transformedX} ${transformedY} `;
+          pathData += `${command} ${transformedX.toFixed(5)} ${transformedY.toFixed(5)} `;
+      });
+
+      // Close the path
+      pathData += 'Z';
+
+      // Add the path element to the SVG content
+      svgContent += `<path d="${pathData}" fill="none" stroke="red" stroke-width="0.05"/>`;
+  });
+
+  // Close the SVG element
+  svgContent += `</svg>`;
+
+  // Create a Blob with the SVG content
+  const blob = new Blob([svgContent], {type: 'image/svg+xml'});
+
+  // Create an URL for the blob
+  const url = URL.createObjectURL(blob);
+
+  // Create a temporary link to trigger the download
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link); // Append to the document
+
+  // Trigger the download
+  link.click();
+
+  // Clean up by removing the temporary link and revoking the blob URL
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+export function exportGroupsToSVG(groups, filename, width, height, offset, scale) {
+  // Start the SVG element
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}in" height="${height}in" viewBox="0 0 ${width} ${height}">`;
+
+  // Iterate over each group
+  groups.forEach(group => {
+    // Start the group element
+    svgContent += '<g>';
+
+    // Iterate over each path within the group
+    group.forEach(path => {
+      // Start the path element
+      let pathData = ' ';
+
+      // Add each vec2 to the path with scale applied first, then translation
+      let isFirst = true;
+      path.forEach(vec => {
+        // Apply scale first
+        let scaledX = vec.x * scale.x;
+        let scaledY = vec.y * scale.y;
+
+        // Then apply translation
+        let transformedX = scaledX + offset.x;
+        let transformedY = scaledY + offset.y;
+
+        const command = isFirst ? 'M' : 'L';
+        if (isFirst) {
+          isFirst = false;
+        }
+
+        // Format float to 5 digits
+        pathData += `${command} ${transformedX.toFixed(5)} ${transformedY.toFixed(5)} `;
+      });
+
+      // Close the path
+      pathData += 'Z';
+
+      // Add the path element to the group
+      svgContent += `<path d="${pathData}" fill="none" stroke="black" stroke-width="0.02"/>`;
+    });
+
+    // Close the group
+    svgContent += '</g>';
+  });
+
+  // Close the SVG element
+  svgContent += '</svg>';
+
+  // Create a Blob with the SVG content
+  const blob = new Blob([svgContent], {type: 'image/svg+xml'});
+
+  // Create an URL for the blob
+  const url = URL.createObjectURL(blob);
+
+  // Create a temporary link to trigger the download
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link); // Append to the document
+
+  // Trigger the download
+  link.click();
+
+  // Clean up by removing the temporary link and revoking the blob URL
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+
+// Example usage with scale applied first, then translation
+const paths = [
+  [{x: 10, y: 10}, {x: 100, y: 10}, {x: 100, y: 100}, {x: 10, y: 100}], // Square
+  [{x: 120, y: 10}, {x: 210, y: 10}, {x: 210, y: 100}, {x: 120, y: 100}]  // Another square
+];
