@@ -13,11 +13,11 @@ const debug = false;
 const nRings = 15;
 const nRingPtsPerUnitArea = 2;
 const ringWidth = 0.8 * hw / nRings;
-const nRifts = 55;
+const nRifts = 35;
 const pEdgeRift = 0.1; // prob that rift ends at the end of outermost ring
-const pStopRift = 0.5; // prob that rift ends at a ring
-const riftStartRange = [3, nRings * 0.5]; // unit = ring
-const riftLenRange = [0.1, nRings]; // unit = ring
+const pStopRift = 0.1; // prob that rift ends at a ring
+const riftStartRange = [1, nRings * 0.5]; // unit = ring
+const riftLenRange = [0.1, nRings ]; // unit = ring
 const nRiftPts = 30;
 // const densityRamp = easeOutQuad;
 const densityRamp = function (t) {
@@ -33,11 +33,21 @@ let rifts = [];
 // input: polar, output: polar
 function distortGlobal(v) {
     let cart = polar2cart(v);
-    let p = scale2d(cart, 0.02);
-    const noiseX = noise(p.x, p.y, 12358) - 0.5;
-    const noiseY = noise(p.x, p.y, 12359) - 0.5;
-    cart = add2d(cart, scale2d(vec2(noiseX, noiseY), 20));
-    return cart2Polar(cart);
+    
+    // Low freq
+    let p = scale2d(cart, 0.005);
+    let noiseX = noise(p.x, p.y, 12358) - 0.5;
+    let noiseY = noise(p.x, p.y, 32) - 0.5;
+    // noiseY contributes to "folding", resulting in variations in brightness
+    let distorted = add2d(v, scale2d(vec2(noiseX * 50, noiseY * 0.25), 1));
+
+    // Ultra high freq to crete "fuzzy" edges, radial only
+    p = scale2d(polar2cart(v), 100);
+    noiseX = noise(p.x, p.y, 12358) - 0.5;
+    // Multiply noiseX by larger values to make more fuzzy
+    distorted = add2d(distorted, scale2d(vec2(noiseX * 15, 0), 1))
+
+    return distorted;
 }
 
 function createRifts() {
