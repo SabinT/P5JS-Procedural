@@ -1,9 +1,9 @@
 import { TAU, polar2cart, line2D, vec2, add2d, scale2d, cart2Polar } from "./lumic/common.js";
 import { easeOutElastic, easeOutQuad, smoothstep } from "./lumic/easing.js";
 
-const w = 1000;
+const w = 2000;
 const hw = w / 2;
-const h = 1000;
+const h = 2000;
 const hh = h / 2;
 
 let g;
