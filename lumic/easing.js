@@ -1,5 +1,18 @@
 // From https://easings.net/
 
+export function clamp01(x) {
+  return Math.min(1, Math.max(0, x));
+}
+
+export function smoothstep(a,b,x) {
+  x = clamp01((x - a) / (b - a));
+   return x * x * (3.0 - 2.0 * x);
+}
+
+export function easeOutQuad(x) {
+  return 1 - (1 - x) * (1 - x);
+}
+
 export function easeInOutQuart(x) {
   return x < 0.5 ? 8 * x * x * x * x : 1 - Math.pow(-2 * x + 2, 4) / 2;
 }
