@@ -1,5 +1,5 @@
 import { distPolar, polar2cart, TAU, vec2 } from "./common.js";
-import { angleDiff, angleNormPi, angleNormTau } from "./geomerty.js";
+import { angleDiff, angleNormPi, angleNormTau, distToLine } from "./geomerty.js";
 import { polarLine, polarLine2d } from "./mandala.js";
 
 /**
@@ -28,6 +28,7 @@ export function conicToPolar2d(R1, R2, s) {
 export function distToAnnularSector(vPolar, r1, r2, theta, debug) {
     const rOuter = Math.max(r1, r2);
     const rInner = Math.min(r1, r2);
+    const vCart = polar2cart(vPolar);
 
     const isInsideRadial = vPolar.x >= rInner && vPolar.x <= rOuter;
     const isInsideAngular = angleNormTau(vPolar.y) <= theta;
@@ -51,9 +52,36 @@ export function distToAnnularSector(vPolar, r1, r2, theta, debug) {
     
     // Calculate arc distance from the sides
     if (isInsideRadial) {
+    // if (vPolar.x >= rInner) {
         const vTheta = angleNormPi(vPolar.y);
-        d = Math.min(d, abs(vTheta) * vr); // dist to starting edge
-        d = Math.min(d, abs(angleDiff(vTheta, theta)) * vr); // dist to ending edge
+
+        // find the closer edge with anglediff
+        const daStart = abs(angleDiff(vTheta, 0));
+        const daEnd = abs(angleDiff(vTheta, theta));
+
+        const isStartCloser = daStart < daEnd;
+
+        let dStartEdge = Infinity;
+        let dEndEdge = Infinity;
+
+        if (isStartCloser) {
+            dStartEdge = distToLine(vCart, polar2cart(A), polar2cart(C));
+        } else {
+            dEndEdge = distToLine(vCart, polar2cart(B), polar2cart(D));
+        }
+        // dStartEdge = distToLine(vCart, polar2cart(A), polar2cart(C));
+        // dEndEdge = distToLine(vCart, polar2cart(B), polar2cart(D));
+        d = Math.min(d, dStartEdge);
+        d = Math.min(d, dEndEdge);
+
+        if (debug) {
+            textAlign(CENTER, TOP);
+            textSize(32);
+            text(`{${dStartEdge.toFixed(2)}, ${dEndEdge.toFixed(2)}}`, vCart.x, vCart.y + 30)
+        }
+
+        // d = Math.min(d, abs(vTheta) * vr); // dist to starting edge
+        // d = Math.min(d, abs(angleDiff(vTheta, theta)) * vr); // dist to ending edge
     }
 
     // Check distance with corner points

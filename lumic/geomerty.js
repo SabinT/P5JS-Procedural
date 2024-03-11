@@ -1,4 +1,4 @@
-import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
+import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d, dot2d } from './common.js';
 import { polarLine } from './mandala.js';
 
 const clipShapes = [];
@@ -230,8 +230,16 @@ export function angleNorm360(angle) {
   return angle;
 }
 
+// Returns the "smaller" angle (in magnitude) between two angles
 export function angleDiff(a, b) {
   return angleNormPi(a - b);
+}
+
+// Distance to line (cartesian)
+export function distToLine(p, l1, l2) {
+  const numerator = Math.abs((l2.y - l1.y) * p.x - (l2.x - l1.x) * p.y + l2.x * l1.y - l2.y * l1.x);
+  const denominator = Math.sqrt(Math.pow(l2.y - l1.y, 2) + Math.pow(l2.x - l1.x, 2));
+  return numerator / denominator;
 }
 
 export function angleNormPi(angle) {

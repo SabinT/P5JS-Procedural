@@ -301,9 +301,9 @@ window.draw = function () {
   fill("white")
   textAlign(CENTER, BOTTOM);
   textSize(24);
-  text(`${r.toFixed(2)}`, vMouseCart.x, vMouseCart.y - r - 10);
-  text(`${(angleNormPi(vMousePolar.y) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 35);
-  text(`${(angleNormTau(vMousePolar.y) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 60);
+  text(`D: ${r.toFixed(2)}`, vMouseCart.x, vMouseCart.y - r - 10);
+  text(`DA (PI): ${(angleNormPi(vMousePolar.y - theta) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 35);
+  text(`DA (TAU): ${(angleNormTau(vMousePolar.y - theta) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 60);
 
   pop();
 };
