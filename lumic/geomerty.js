@@ -230,6 +230,10 @@ export function angleNorm360(angle) {
   return angle;
 }
 
+export function angleDiff(a, b) {
+  return angleNormPi(a - b);
+}
+
 export function angleNormPi(angle) {
   if (angle > PI) {
     return angle - TAU;

@@ -1,14 +1,18 @@
-import { DEG2RAD, TAU, avg, cart2Polar, dist2d, getRandom, lerp, line2D, normalize2d, polar2cart, scale2d, vec2 } from "../lumic/common.js";
+import { DEG2RAD, RAD2DEG, TAU, avg, cart2Polar, dist2d, getRandom, lerp, line2D, normalize2d, polar2cart, scale2d, vec2 } from "../lumic/common.js";
 import { greenTheme, cyberpunkTheme, getColor } from "../lumic/palettes.js";
-import { angleNormPi } from "../lumic/geomerty.js";
+import { angleNormPi, angleNormTau } from "../lumic/geomerty.js";
 import * as m from "../lumic/mandala.js";
+import { createSliderBox } from "../lumic/p5Extensions.js";
+import { conicToPolar2d, distToAnnularSector } from "../lumic/conic.js";
 
 const theme = cyberpunkTheme;
 
 const ppi = 200;
+let R1Inches = 3;
+let R2Inches = 1.5;
 
-const R1 = 3 * ppi;
-const R2 = 1.5 * ppi;
+let R1 = 3 * ppi;
+let R2 = 1.5 * ppi;
 const s = 2 * ppi;
 const { r1, r2, theta } = conicToPolar2d(R1, R2, s);
 
@@ -21,6 +25,10 @@ const debug = false;
 
 let g;
 
+function createUI() {
+  createSliderBox(1, 10, R1Inches, 0, "R1", (v) => { R1Inches = v; R1 = v * ppi; }, 10, 10, 200, 50);
+  createSliderBox(1, 10, R2Inches, 0, "R2", (v) => { R2Inches = v; R2 = v * ppi; }, 10, 70, 200, 50);
+}
 
 function render(g) {
   push();
@@ -48,49 +56,10 @@ function render(g) {
   pop();
 }
 
-/**
- * 
- * @param {*} R1 Bottom radius of the conical frustum
- * @param {*} R2 Top radius of the conical frustum
- * @param {*} s Slant height (along the side) of the conical frustum
- * @returns {r1, r2, theta} A 2D unwrapping of the conical frustum in a polar coordinate system
- *   r1: radius of the outer circle (corresponding to R1)
- *   r2: radius of the inner circle (corresponding to R2)
- *   theta: angle in radians of the thingythang
- */
-function conicToPolar2d(R1, R2, s) {
-  const r1 = R2 * s / (R1 - R2);
-  const r2 = r1 + s;
-  const theta = TAU * R2 / r2;
-  return { r1, r2, theta }
-}
 
-/**
- * Shortest distance from a point vPolar (in polar coords) to an annular sector
- * defined by an inner and outer radius and an angle.
- */
-function distToAnnularSector(vPolar, r1, r2, theta) {
-  const rOuter = Math.max(r1, r2);
-  const rInner = Math.min(r1, r2);
-
-  const vr = vPolar.x;
-  const vTheta = angleNormPi(vPolar.y);
-  theta = angleNormPi(theta);
-
-  let d = Infinity;
-
-  // Check distance with inside/outside rings
-  d = Math.min(d, Math.abs(vr - r1));
-  d = Math.min(d, Math.abs(vr - r2));
-
-  // Calculate arc distance from the sides
-  d = Math.min(d, abs(vTheta) * vr); // dist to starting edge
-  d = Math.min(d, abs(vTheta - theta) * vr); // dist to ending edge
-
-  return d;
-}
 
 window.setup = function () {
+  createUI();
   
   console.log(`w: ${wi}, h: ${hi}`)
   
@@ -312,9 +281,6 @@ window.setup = function () {
 window.draw = function () {
   image(g, 0, 0);
   
-  noFill();
-  stroke("#ffeb51");
-  strokeWeight(2);
 
   push();
   translate(width / 2, height / 2);
@@ -322,9 +288,13 @@ window.draw = function () {
   const vMouseCart = vec2(mouseX - width / 2, mouseY - height / 2);
   const vMousePolar = cart2Polar(vMouseCart);
 
+  
+  const r = distToAnnularSector(vMousePolar, r1, r2, theta, /* debug */ true);
+  
+  noFill();
+  stroke("#ffeb51");
+  strokeWeight(2);
   line2D(vec2(0, 0), vMouseCart);
-
-  const r = distToAnnularSector(vMousePolar, r1, r2, theta);
   circle(vMouseCart.x, vMouseCart.y, 2 * r);
   
   strokeWeight(0);
@@ -332,6 +302,8 @@ window.draw = function () {
   textAlign(CENTER, BOTTOM);
   textSize(24);
   text(`${r.toFixed(2)}`, vMouseCart.x, vMouseCart.y - r - 10);
+  text(`${(angleNormPi(vMousePolar.y) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 35);
+  text(`${(angleNormTau(vMousePolar.y) * RAD2DEG).toFixed(2)}\u00B0`, vMouseCart.x, vMouseCart.y - r - 60);
 
   pop();
 };

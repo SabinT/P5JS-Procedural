@@ -89,6 +89,13 @@ export function polar2cart(v) {
   return vec2(v.x * Math.cos(v.y), v.x * Math.sin(v.y));
 }
 
+export function distPolar(a, b) {
+  // Convert to cart and return distance
+  const ca = polar2cart(a);
+  const cb = polar2cart(b);
+  return dist2d(ca, cb);
+}
+
 export function vertexPolar(p) {
   const c = polar2cart(p);
   vertex(c.x, c.y);
