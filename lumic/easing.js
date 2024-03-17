@@ -9,6 +9,10 @@ export function smoothstep(a,b,x) {
    return x * x * (3.0 - 2.0 * x);
 }
 
+export function easeInQuad(x) {
+  return x * x;
+}
+
 export function easeOutQuad(x) {
   return 1 - (1 - x) * (1 - x);
 }
