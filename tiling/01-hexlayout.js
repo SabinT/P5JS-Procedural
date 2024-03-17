@@ -1,8 +1,7 @@
-import { getUrlParam, PI, TAU, vec2 } from "../lumic/common.js";
+import { PI, vec2 } from "../lumic/common.js";
 import { Polygon } from "../lumic/geomerty.js";
-import { getHexRing, hexToCartesianAxial, hexToCartesianOddr, drawHexOddR, drawHexTile, defaultJoinMask, generateRandomJoinArray } from "../lumic/hex.js";
-import { getColor, vibrantTheme } from "../lumic/palettes.js";
-import { easeInOutQuad, easeOutElastic } from "../lumic/easing.js";
+import { hexToCartesianOddr, drawHexTile, defaultJoinMask, generateRandomJoinArray, STYLES } from "../lumic/hex.js";
+import { easeInOutQuad } from "../lumic/easing.js";
 
 const scaler = 0.75;
 const w = 700 * scaler;
@@ -12,10 +11,10 @@ const hh = h / 2;
 
 let bg;
 
-function makeStyles(color, weight, offset) {
+function makeStyles(color, weight, offset, style = STYLES.LINES) {
     return [
-        { color: color, weight: weight, offset: offset },
-        { color: color, weight: weight, offset: -offset },
+        { color: color, weight: weight, offset: offset, style: style },
+        { color: color, weight: weight, offset: -offset, style: style },
     ];
 }
 
@@ -56,8 +55,8 @@ const palette = palette4;
 const R = w / 8;
 
 const s = {
-    gridHW: 4,
-    gridHH: 8,
+    gridHW: 3,
+    gridHH: 7,
     debugTile: false,
     radius: R * scaler,
     bgColor: palette[1],
@@ -66,13 +65,23 @@ const s = {
 
 const strokeBaseWidth = R / 20 * scaler;
 
-const styles = [
-    { color: palette[2], weight: strokeBaseWidth * 2, offset: 0 },
-    ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * scaler),
-    // ...makeStyles(palette[1], strokeBaseWidth, 12 * scaler),
-    ...makeStyles(palette[2], strokeBaseWidth, 16 * scaler),
-    ...makeStyles(palette[4], strokeBaseWidth, 14 * scaler),
+const styleLines = [
+    { color: palette[2], weight: strokeBaseWidth * 2, offset: 0, style: STYLES.LINES },
+    ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * scaler, STYLES.LINES),
+    // ...makeStyles(palette[1], strokeBaseWidth, 12 * scaler, STYLES.LINES),
+    ...makeStyles(palette[2], strokeBaseWidth, 16 * scaler, STYLES.LINES),
+    ...makeStyles(palette[4], strokeBaseWidth, 14 * scaler, STYLES.LINES),
 ]
+
+const styleCircuits = [
+    { color: palette[2], weight: strokeBaseWidth * 2, offset: 0, style: STYLES.CIRCUITS},
+    ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * scaler, STYLES.CIRCUITS),
+    // ...makeStyles(palette[1], strokeBaseWidth, 12 * scaler),
+    ...makeStyles(palette[2], strokeBaseWidth, 16 * scaler, STYLES.CIRCUITS),
+    ...makeStyles(palette[4], strokeBaseWidth, 14 * scaler, STYLES.CIRCUITS),
+]
+
+const styles = styleLines;
 
 let seed;
 
@@ -213,26 +222,26 @@ function render(g) {
 
     // framerate(30);
 
-    const nf = 15;
+    const nf = 30;
 
     // Figure out which row to animate
     const t = (frameCount % nf) / nf;
     const d = 1 / nf;
     const n = Math.floor(frameCount / nf - waitCount) % (s.gridHH * 2 + 1) - s.gridHH;
 
-    if (previousN != n) {
-        cycleWaitTime = 0;
-        cycleWaitActive = true;
-    }
+    // if (previousN != n) {
+    //     cycleWaitTime = 0;
+    //     cycleWaitActive = true;
+    // }
 
-    if (cycleWaitActive) {
-        cycleWaitTime += deltaTime / 1000;
-        if (cycleWaitTime > 0.5) {
-            cycleWaitActive = false;
-            waitCount += 1;
-        }
-        return;
-    }
+    // if (cycleWaitActive) {
+    //     cycleWaitTime += deltaTime / 1000;
+    //     if (cycleWaitTime > 0.5) {
+    //         cycleWaitActive = false;
+    //         waitCount += 1;
+    //     }
+    //     return;
+    // }
 
     for (let y = -s.gridHH; y <= s.gridHH; y++) {
         for (let x = -s.gridHW; x <= s.gridHW; x++) {

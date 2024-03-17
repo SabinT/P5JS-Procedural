@@ -3,7 +3,6 @@ export const TAU = 6.283185307179586476925286766559;
 export const E = 2.71828182845904523536;
 export const PHI = (1 + Math.sqrt(5)) / 2;
 
-
 export const DEG2RAD = 0.01745329;
 export const RAD2DEG = 57.29578;
 
@@ -20,7 +19,7 @@ export function len2d(p) {
   return mag(p.x, p.y);
 }
 
-export function dot2d (a, b) {
+export function dot2d(a, b) {
   return a.x * b.x + a.y * b.y;
 }
 
@@ -46,6 +45,10 @@ export function cloneVec2(v) {
 
 export function sub2d(a, b) {
   return vec2(a.x - b.x, a.y - b.y);
+}
+
+export function fromTo2d(from, to) {
+  return sub2d(to, from);
 }
 
 export function add2d(a, b) {
@@ -86,6 +89,13 @@ export function polar2cart(v) {
   return vec2(v.x * Math.cos(v.y), v.x * Math.sin(v.y));
 }
 
+export function distPolar(a, b) {
+  // Convert to cart and return distance
+  const ca = polar2cart(a);
+  const cb = polar2cart(b);
+  return dist2d(ca, cb);
+}
+
 export function vertexPolar(p) {
   const c = polar2cart(p);
   vertex(c.x, c.y);
@@ -106,7 +116,9 @@ export function bezierQuadratic2DShape(a, b, c) {
 }
 
 export function line2D(a, b, g) {
-  if (!g) { g = window; }
+  if (!g) {
+    g = window;
+  }
   g.line(a.x, a.y, b.x, b.y);
 }
 
@@ -116,7 +128,9 @@ export function transform(origin, right, p) {
 }
 
 export function ray2D(origin, dir, len, g) {
-  if (!g) { g = window; }
+  if (!g) {
+    g = window;
+  }
   g.line(origin.x, origin.y, origin.x + dir.x * len, origin.y + dir.y * len);
 }
 
@@ -216,3 +230,24 @@ export const sizes = {
   seatac: { w: 1500, h: 700 },
   nineTwelve: { w: 900, h: 1200 },
 };
+
+export function saveJson(data, filename, compact = true) {
+  let serialized;
+
+  if (compact) {
+    serialized = JSON.stringify(data);
+  } else {
+    serialized = JSON.stringify(data, null, 2);
+  }
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(
+    new Blob([serialized], {
+      type: "application/json",
+    })
+  );
+  a.setAttribute("download", filename);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}

@@ -38,6 +38,11 @@ export function cCircle(radius) {
   circle(0, 0, 2 * (radius || rCurrent));
 }
 
+export function polarLine2d(a, b, divisions = null, vertexMode = false, polarBlend = 1) {
+  polarLine(a.x, a.y, b.x, b.y, divisions, vertexMode, polarBlend);
+}
+
+
 export function polarLine(
   r1,
   theta1,

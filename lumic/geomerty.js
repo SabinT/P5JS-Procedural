@@ -1,4 +1,4 @@
-import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d } from './common.js';
+import { sub2d, add2d, scale2d, cart2Polar, len2d, vec2, TAU, lerp, dist2d, rot2d as rot2d, normalize2d, ray2D, PI, RAD2DEG, DEG2RAD, mul2d, dot2d } from './common.js';
 import { polarLine } from './mandala.js';
 
 const clipShapes = [];
@@ -230,6 +230,18 @@ export function angleNorm360(angle) {
   return angle;
 }
 
+// Returns the "smaller" angle (in magnitude) between two angles
+export function angleDiff(a, b) {
+  return angleNormPi(a - b);
+}
+
+// Distance to line (cartesian)
+export function distToLine(p, l1, l2) {
+  const numerator = Math.abs((l2.y - l1.y) * p.x - (l2.x - l1.x) * p.y + l2.x * l1.y - l2.y * l1.x);
+  const denominator = Math.sqrt(Math.pow(l2.y - l1.y, 2) + Math.pow(l2.x - l1.x, 2));
+  return numerator / denominator;
+}
+
 export function angleNormPi(angle) {
   if (angle > PI) {
     return angle - TAU;
@@ -256,10 +268,35 @@ export function signedAngle(from, to) {
   return Math.atan2(to.y, to.x) - Math.atan2(from.y, from.x);
 }
 
+export function move(point, dir, dist) {
+  return add2d(point, scale2d(dir, dist));
+}
+
+export function moveTowards(p0, p1, dist) {
+  const dir = normalize2d(sub2d(p1, p0));
+  return add2d(p0, scale2d(dir, dist));
+}
+
 export function drawPath(path, closed = false) {
   beginShape();
   for (let pt of path) {
     vertex(pt.x, pt.y);
+  }
+
+  if (closed) {
+    endShape(CLOSE);
+  } else {
+    endShape();
+  }
+}
+
+export function drawOffsetPath(path, offsetDir, offsetAmount, closed = false) {
+  // Shift the points by the offset
+  const offset = scale2d(offsetDir, offsetAmount);
+
+  beginShape();
+  for (let pt of path) {
+    vertex(pt.x + offset.x, pt.y + offset.y);
   }
 
   if (closed) {
@@ -297,33 +334,6 @@ export function getTangents(path) {
   tangents.push(tn);
 
   return tangents;
-}
-
-export function drawOffsetPath(path, offset, startTangent, endTangent) {
-  const tangents = getTangents(path);
-
-  if (startTangent) {
-    tangents[0] = startTangent;
-  }
-
-  if (endTangent) {
-    tangents[tangents.length - 1] = endTangent;
-  }
-
-  // Precompute all vertices
-  const offsetVertices = [];
-
-  for (let i = 0; i < path.length - 1; i++) {
-    const p = path[i];
-    const t = tangents[i];
-
-    const right = rot2d(t, PI * 0.5);
-    const v = add2d(p, scale2d(right, offset));
-
-    offsetVertices.push(v);
-  }
-
-  drawPath(offsetVertices);
 }
 
 
@@ -426,6 +436,10 @@ export function getArcPoints(frame, fromAngle, toAngle, r, segments) {
   }
 
   return pts;
+}
+
+export function getArcPoint(frame, angle, r) {
+  return add2d(mul2d(rot2d(frame.right, angle), vec2(r, r)), frame.origin);
 }
 
 export function getOuterTangents(c1, c2, r1, r2, debugDraw = false) {
@@ -608,7 +622,7 @@ export class Polygon {
     );
   }
 
-  draw(g) {
+  draw(g, close = true) {
     if (!g) { g = window; }
 
     g.beginShape();
@@ -617,7 +631,7 @@ export class Polygon {
       const b = this.getPoint((i + 1) % this.sides);
       g.vertex(a.x, a.y);
     }
-    g.endShape(CLOSE);
+    g.endShape(close ? CLOSE : undefined);
   }
 
   drawChiseled(g, inwardOffset, lengthOffset) {

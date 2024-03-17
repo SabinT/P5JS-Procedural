@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="grid-printer.js" type="module"></script>
+
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #111;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .input-group,
+        .button-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h1>Grid Generator</h1>
+
+    <div class="input-group">
+        <!-- ... existing code ... -->
+
+        <div>
+            <label for="aspectRatio">Aspect Ratio:</label>
+            <input type="number" id="aspectRatio" value="1" min="0.1" step="0.1">
+
+            <button class="aspect-ratio-btn" data-ratio="1.2941">Letter</button>
+            <button class="aspect-ratio-btn" data-ratio="1.4142">A4</button>
+            <button class="aspect-ratio-btn" data-ratio="1">Square</button>
+        </div>
+
+        <!-- ... existing code ... -->
+    </div>
+
+    <div class="input-group">
+        <div>
+            <label for="gridSize">Grid Size:</label>
+            <input type="number" id="gridSize" value="10" min="2" max="40" autocomplete="off">
+        </div>
+    </div>
+
+    <div class="button-group">
+        <div>
+            <label for="gridType">Hex Grid</label>
+            <input type="checkbox" id="gridType">
+        </div>
+        <button id="createButton">Create Grid</button>
+        <button id="printButton">Print Grid</button>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,44 @@
+<script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+
+<script type="module" src="hexgrid.js"></script>
+
+<a-scene stats>
+
+    <a-assets>
+        <img id="hextex" src="./images/pattern_1701113068397.png">
+        <img id="margintex" src="./images/margin_1701113068397.png">
+        <img id="bgtex" src="./images/bg_1701113068397.png">
+
+        <!-- <a-asset-item id="sphere-glb" src="filename.glb"></a-asset-item> -->
+    </a-assets>
+
+    <!-- <a-box id="box" position="-1 1 -3" rotation="0 45 0"></a-box>
+    <a-sphere id="sphere" position="1 0 -5" radius="1.25" rotation="0 -90 0"></a-sphere> -->
+    
+    <a-sky color="#000000"></a-sky>
+
+    <a-entity id="mural-pivot" scale="0.1 0.1 0.1">
+        <!-- Textured quads for bg and margin, unlit, transparent material for margin-->
+        <a-entity id="mural-bg" 
+            geometry="primitive: plane; width: 641.66; height: 1491.67" 
+            material="src: #bgtex;" 
+            position="0 0 -10">
+        </a-entity>
+
+        <a-entity id="hex-grid" hexgrid="src1: hextex"
+            position="0 0 -5">
+        </a-entity>
+
+        <a-entity id="margin" 
+            geometry="primitive: plane; width: 641.66; height: 1491.67" 
+            material="src: #margintex; transparent: true;" 
+            position="0 0 0">
+        </a-entity>
+    </a-entity>
+
+    <!-- camera -->
+    <a-entity camera position="0.000 0  100" look-controls wasd-controls></a-entity>
+
+
+</a-scene>
