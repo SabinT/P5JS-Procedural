@@ -32,7 +32,7 @@ let bg;
 
 
 const hexesPerRow = 8;
-const R = 0.5 * (w - marginCenter.left - marginCenter.right) / hexesPerRow;
+const R = 0.5 * (w - marginCenter.left - marginCenter.right) / (hexesPerRow * Math.cos(PI / 6));
 
 
 const strokeBaseWidth = R / 15;
@@ -55,9 +55,11 @@ const s = {
   radius: R,
   bgColor: "#000000",
   bgPatternColor: "#b7fff27a",
-  bgPatternStroke: "#ff0077",
+  bgDodgeColor: "#777777",
+  bgMultilpyColor: "#46464661",
   bgPatternScale: 1.9,
-  bgPatternProb: 0.99,
+  bgPatternProb: 0.95,
+  bgNoiseAlpha: 30,
   marginThickness: 0.25,
   marginColor: "#F2C230",
 };
@@ -119,6 +121,7 @@ window.windowResized = function () {
 window.setup = function () {
   // setSeed(seedLeft);
   setSeed(1712460189692);
+  noiseSeed(60189692);
 
   tileSettings.preventOverlap = true;
   tileSettings.angularJoins = true;
@@ -239,38 +242,68 @@ window.draw = function () {
 
 function renderBg() {
   bg.background(s.bgColor);
-
+  bg.push();
   bg.translate(hw, hh);
-
-  const halfLines = 150;
-  const xSegments = 256;
-  const lineSeparation = s.radius * 0.4;
-
-  const poly6 = new Polygon(vec2(0, 0), s.radius / 2, 6, PI / 2);
-
+  
+  const rPoly = 1.75 * s.radius / 2;
+  
   // draw hexes at half size
   for (let y = -s.gridHH; y <= s.gridHH; y++) {
     for (let x = -s.gridHW; x <= s.gridHW; x++) {
-      if (random() > s.bgPatternProb) {
+      const poly6 = new Polygon(vec2(0, 0), rPoly, 6, PI / 2);
+      const q = hexToCartesianOddr(vec2(x, y), R);
+      
+      // Add extra alpha to hexes inside a circle
+      const dR = q.mag() < R * 4;
+      const isSpecial = dR > 0;
+      
+      if (random() > s.bgPatternProb && !isSpecial) {
         continue;
       }
-
+      
       bg.push();
-      const q = hexToCartesianOddr(vec2(x, y), R);
       bg.translate(q.x, q.y);
       bg.scale(s.bgPatternScale);
+      
+      bg.blendMode(BLEND);
 
       bg.noStroke();
       const patternFill = color(s.bgPatternColor);
-      patternFill.setAlpha(random() * patternFill.levels[3] * 0.5);
+      let alpha = random() * patternFill.levels[3] * 0.5;
+      alpha = 0;
+      alpha += noise(q.x * 0.001, q.y * 0.001) * s.bgNoiseAlpha;
+      alpha += isSpecial * 100 * dR / R;
+      patternFill.setAlpha(alpha);
       bg.fill(patternFill);
+      poly6.draw(bg);
+
+      // bg.blendMode(MULTIPLY);
+
+      alpha *= 0.5;
+      // const mulColor = color(s.bgMultilpyColor);
+      patternFill.setAlpha(alpha);
+      bg.fill(patternFill);
+      poly6.radius -= rPoly * 0.25;
+      poly6.draw(bg);
+
+      alpha *= 0.5;
+      bg.fill(patternFill);
+      poly6.radius -= rPoly * 0.25;
       poly6.draw(bg);
 
       bg.pop();
     }
   }
 
+  // Draw some stupid rectangles to help AR detection
+  bg.rotate(PI / 3);
+  bg.blendMode(DODGE);
+  const panelWidth = s.radius / 2 * 10 + getRes(0.5);
+  bg.fill(s.bgDodgeColor);
+  bg.noStroke();
+  bg.rect(-panelWidth / 2, -h, panelWidth, h * 2);
 
+  bg.pop();
 }
 
 
