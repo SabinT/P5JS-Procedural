@@ -1,30 +1,25 @@
 import { PI, normalize2d, sub2d, vec2 } from "../lumic/common.js";
-import { Polygon, moveTowards, move, drawPath } from "../lumic/geomerty.js";
+import { Polygon, move, drawPath } from "../lumic/geomerty.js";
 import {
-  hexToCartesianOddr,
   drawHexTile,
   defaultJoinMask,
   generateRandomJoinArray,
   STYLES,
   tileSettings,
   exportHexJsonOddr,
+  hexToCartesianOddr,
 } from "../lumic/hex.js";
 import { easeInOutQuad } from "../lumic/easing.js";
 import {
-  sideWidth,
   muralHeight,
-  paletteSide,
   makeStyles,
-  drawMargin,
-  marginDefault,
-  fixedSeed,
-  seedLeft,
   setSeed,
   getSeed,
   centerWidth,
   getRes,
   pxDensity,
   marginCenter,
+  centerCanvas,
 } from "./belred.js";
 
 const w = getRes(centerWidth);
@@ -34,46 +29,58 @@ const hh = h / 2;
 
 let bg;
 
-const palette = paletteSide;
 
-const R = (0.75 * w) / 8;
+const hexesPerRow = 8;
+const R = 0.5 * (w - marginCenter.left - marginCenter.right) / hexesPerRow;
+
+
+const strokeBaseWidth = R / 15;
+// const strokeBaseWidth = R / 20;
+const baseOffset = strokeBaseWidth * 0.25;
+
+
+const palette = [
+  "#F294C0",
+  "#4E1773",
+  "#04BF9D",
+  "#F2C230",
+  "#F25430"
+]
 
 const s = {
-  gridHW: 3,
+  gridHW: hexesPerRow / 2 + 1,
   gridHH: 14,
   debugTile: false,
   radius: R,
-  bgColor: palette[1],
-  bgPatternColor: palette[3],
+  bgColor: "#000000",
+  bgPatternColor: "#b7fff27a",
+  bgPatternStroke: "#ff0077",
+  bgPatternScale: 1.9,
+  bgPatternProb: 0.99
 };
 
-const strokeBaseWidth = R / 20;
-const baseOffset = strokeBaseWidth * 0.25;
-
-const cci = 2;
-const bci = 1;
-const bli = 4;
-
+// makestyles(color, weight, offset, style)
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  {
-    color: palette[cci],
-    weight: strokeBaseWidth * 3,
-    offset: 0,
-    style: STYLES.LINES,
-  },
-  {
-    color: palette[cci],
-    weight: strokeBaseWidth * 1.5,
-    offset: 0,
-    style: STYLES.CIRCUITS,
-  },
-  ...makeStyles(palette[1], strokeBaseWidth, baseOffset * 12),
+  { color: "#F2C230", weight: strokeBaseWidth * 3, offset: 0 },
+  // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
+  ...makeStyles("#F2C230", strokeBaseWidth * 0.4, baseOffset * 6),
+  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
+  // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
+  // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
+  // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
+  // {
+  //   color: palette[cci],
+  //   weight: strokeBaseWidth * 2,
+  //   offset: 0,
+  //   style: STYLES.LINES,
+  // },
+  // ...makeStyles(palette[1], strokeBaseWidth, baseOffset * 12),
 ];
 
 const stylesFinal = [
-  ...makeStyles(palette[4], strokeBaseWidth, baseOffset * 14, STYLES.LINES),
+  // ...makeStyles(palette[4], strokeBaseWidth, baseOffset * 14, STYLES.CIRCUITS),
 ];
 
 const styles = styleCircuits;
@@ -99,15 +106,23 @@ function resetLineDash(g) {
   g.drawingContext.setLineDash([]);
 }
 
-window.setup = function () {
-  setSeed(seedLeft);
+let debug = false;
 
-  tileSettings.noSolos = false;
+window.setup = function () {
+  // setSeed(seedLeft);
+  setSeed(1712460189692)
+
   tileSettings.preventOverlap = true;
-  // tileSettings.circlePattern = true;
-  tileSettings.angularJoins = false;
-  tileSettings.drawPathFunc = drawPathRandomized;
+  tileSettings.angularJoins = true;
   tileSettings.drawEndCaps = false;
+  
+  tileSettings.noSolos = true;
+  tileSettings.noOpposites = true;
+  tileSettings.skipOpposites = true;
+  tileSettings.skipSolos = true;
+  tileSettings.multiPair = false;
+  // tileSettings.circlePattern = true;
+  // tileSettings.drawPathFunc = drawPathRandomized;
 
   strokeJoin(ROUND);
 
@@ -125,7 +140,13 @@ window.setup = function () {
       // hexList.push(hex);
       hexList2D[y][x] = hex;
 
-      let probabilities = [0.2, 0.7, 0.5, 0.5]; // Custom probabilities for each join type
+      /*
+      const JOIN_TYPE_END = 1;
+      const JOIN_TYPE_NEXT = 2;
+      const JOIN_TYPE_SKIP = 4;
+      const JOIN_TYPE_OPPOSITE = 8;
+      */
+      let probabilities = [0.1, 0.7, 0.5, 0]; // Custom probabilities for each join type
       let mask = generateRandomJoinArray(null, /* singleFlag */ false);
       // maskList.push(mask);
       maskList2D[y][x] = mask;
@@ -153,11 +174,14 @@ window.setup = function () {
 
   pixelDensity(pxDensity);
 
-  createCanvas(w, h);
+  const canvas = createCanvas(w, h);
+  centerCanvas(canvas);
+
+  background(s.bgColor);
 
   bg = createGraphics(w, h);
 
-  renderBgSine();
+  renderBg();
 };
 
 function drawMural(saveImages = false) {
@@ -173,7 +197,7 @@ function drawMural(saveImages = false) {
         save("bg_" + getSeed() + ".png");
 
         // Clear bg so the pattern can be saved separately
-        background(palette[bci]);
+        background(s.bgColor);
     }
 
     // Good stuff
@@ -188,7 +212,7 @@ function drawMural(saveImages = false) {
     }
 
     // Margin
-    drawMargin(bg, marginCenter, palette);
+    // drawMargin(bg, marginCenter, palette);
 
     if (saveImages) {
         // Make transparent at the center
@@ -205,8 +229,8 @@ window.draw = function () {
   noLoop();
 };
 
-function renderBgSine() {
-  bg.background(palette[bci]);
+function renderBg() {
+  bg.background(s.bgColor);
 
   bg.translate(hw, hh);
 
@@ -214,32 +238,31 @@ function renderBgSine() {
   const xSegments = 256;
   const lineSeparation = s.radius * 0.4;
 
-  const col = color(palette[bli]);
-  col.setAlpha(255 * 0.5);
-  bg.strokeWeight(strokeBaseWidth * 0.5);
-  bg.fill(s.bgColor);
+  const poly6 = new Polygon(vec2(0, 0), s.radius / 2, 6, PI / 2);
 
-  const sineFunc = (x) => sin(x * PI * 2 * 2.5) * 0.5;
+  // draw hexes at half size
+  for (let y = -s.gridHH; y <= s.gridHH; y++) {
+    for (let x = -s.gridHW; x <= s.gridHW; x++) {
+      if (random() > s.bgPatternProb) {
+        continue;
+      }
 
-  const dx = hw / xSegments;
-  const dy = hh / halfLines + 1;
+      bg.push();
+      const q = hexToCartesianOddr(vec2(x, y), R);
+      bg.translate(q.x, q.y);
+      bg.scale(s.bgPatternScale);
 
-  // Sine-wave like lines
-  for (let i = -halfLines; i <= halfLines; i++) {
-    const baseY = dy * i;
-    for (let j = -xSegments; j <= xSegments; j++) {
-      if (random() > 0.5) continue;
+      bg.noStroke();
+      const patternFill = color(s.bgPatternColor);
+      patternFill.setAlpha(random() * patternFill.levels[3] * 0.5);
+      bg.fill(patternFill);
+      poly6.draw(bg);
 
-      const x1 = dx * j;
-      const x2 = dx * (j + 1);
-
-      const y1 = baseY + sineFunc(j / xSegments) * lineSeparation;
-      const y2 = baseY + sineFunc((j + 1) / xSegments) * lineSeparation;
-
-      bg.stroke(col);
-      bg.line(x1, y1, x2, y2);
+      bg.pop();
     }
   }
+
+
 }
 
 
@@ -280,16 +303,16 @@ function render(g) {
 
       tileSettings.drawPathFunc = drawPath;
 
-      for (let style of styles) {
+      // for (let style of styles) {
         drawHexTile(
           hex.center,
           hex.radius,
           /* tilemask */ mask,
           turns,
-          style,
-          /* debugDraw */ false
+          styles,
+          /* debugDraw */ debug
         );
-      }
+      // }
     }
 
     // previousN = n;

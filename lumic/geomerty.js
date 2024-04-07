@@ -292,7 +292,7 @@ export function drawPath(path, closed = false) {
 
 export function drawOffsetPath(path, offsetDir, offsetAmount, closed = false) {
   // Shift the points by the offset
-  const offset = scale2d(offsetDir, offsetAmount);
+  const offset = scale2d(normalize2d(offsetDir), offsetAmount);
 
   beginShape();
   for (let pt of path) {

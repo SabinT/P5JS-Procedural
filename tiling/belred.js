@@ -9,14 +9,14 @@ export const seedLeft = 1701113068397;
 const outerMargin = 1; // inches
 
 // inches
-export const centerWidth = 79 - outerMargin * 2;
-export const muralHeight = 181 - outerMargin * 2;
+export const centerWidth = 36;
+export const muralHeight = 48;
 export const sideWidth = 50;
 
-const baseMargin = 2; // inches
+const baseMargin = 1; // inches
 
 export const pxDensity = 1;
-const scaler = 1;
+const scaler = 5;
 
 export const marginDefault = {
   top: getRes(baseMargin),
@@ -28,7 +28,7 @@ export const marginDefault = {
 export const marginCenter = {
   ...marginDefault,
   // 16 inches extra margin for info and QR code
-  bottom: getRes(baseMargin + 16),
+  // bottom: getRes(baseMargin + 16),
 };
 
 // 100 * scaler per foot
@@ -52,6 +52,14 @@ export function getResolutionSide() {
   return { w, h, hw, hh };
 }
 
+export const paletteColorful = [
+  "#F294C0",
+  "#4E1773",
+  "#04BF9D",
+  "#F2C230",
+  "#F25430"
+]
+
 export const paletteSide = [
   "#F7489D",
   "#000000",
@@ -67,6 +75,30 @@ export const paletteCenter = [
   "#01ab70",
   "#02c4dd",
 ];
+
+// Center the p5 canvas in window
+export function centerCanvas(canvas) {
+  let container = document.getElementById('canvasContainer');
+  
+  // If the container doesn't exist, create it
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'canvasContainer';
+    document.body.appendChild(container);
+  }
+
+  const elt = canvas.elt;
+
+  const x = (window.innerWidth - canvas.width) / 2;
+  const y = (window.innerHeight - canvas.height) / 2;
+  elt.style.position = 'absolute';
+  elt.style.left = `${x}px`;
+  elt.style.top = `${y}px`;
+
+  // Append the canvas to the container
+  container.appendChild(elt);
+}
+
 
 export function makeStyles(color, weight, offset, style = STYLES.LINES) {
   return [
@@ -142,7 +174,7 @@ export function setSeed(num) {
   }
 
   randomSeed(seed);
-  console.log(seed);
+  console.log("seed: " + seed);
 }
 
 export function getSeed() {
