@@ -107,7 +107,7 @@ export function makeStyles(color, weight, offset, style = STYLES.LINES) {
   ];
 }
 
-export function drawMargin(g, margin, palette) {
+export function drawMargin(g, margin, thickness = 1, strokeColor = 255) {
   push();
 
   translate(-width / 2, -height / 2);
@@ -150,8 +150,8 @@ export function drawMargin(g, margin, palette) {
 
   // Rectangle around the margin
   noFill();
-  stroke(255);
-  strokeWeight(getRes(0.25));
+  stroke(strokeColor);
+  strokeWeight(getRes(thickness));
 
   rect(
     margin.left,

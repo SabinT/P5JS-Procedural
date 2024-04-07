@@ -20,6 +20,7 @@ import {
   pxDensity,
   marginCenter,
   centerCanvas,
+  drawMargin,
 } from "./belred.js";
 
 const w = getRes(centerWidth);
@@ -56,7 +57,9 @@ const s = {
   bgPatternColor: "#b7fff27a",
   bgPatternStroke: "#ff0077",
   bgPatternScale: 1.9,
-  bgPatternProb: 0.99
+  bgPatternProb: 0.99,
+  marginThickness: 0.25,
+  marginColor: "#F2C230",
 };
 
 // makestyles(color, weight, offset, style)
@@ -107,10 +110,15 @@ function resetLineDash(g) {
 }
 
 let debug = false;
+let canvas;
+
+window.windowResized = function () {
+  centerCanvas(canvas);
+}
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712460189692)
+  setSeed(1712460189692);
 
   tileSettings.preventOverlap = true;
   tileSettings.angularJoins = true;
@@ -174,7 +182,7 @@ window.setup = function () {
 
   pixelDensity(pxDensity);
 
-  const canvas = createCanvas(w, h);
+  canvas = createCanvas(w, h);
   centerCanvas(canvas);
 
   background(s.bgColor);
@@ -212,7 +220,7 @@ function drawMural(saveImages = false) {
     }
 
     // Margin
-    // drawMargin(bg, marginCenter, palette);
+    drawMargin(bg, marginCenter, s.marginThickness, s.marginColor);
 
     if (saveImages) {
         // Make transparent at the center
