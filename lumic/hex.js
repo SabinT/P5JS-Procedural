@@ -256,6 +256,16 @@ function getSolosAndPairs(bitmaskArray) {
     }
   }
 
+  // Do the solos thing again, but with multipair
+  // Find solos (anything not paired)
+  if (tileSettings.noSolos) {
+    for (let i = 0; i < bitmaskArray.length; i++) {
+      if (!pairedPoints.has(i) && tileSettings.multiPair) {
+        addPair(i, (i + 2) % 6);
+      }
+    }
+  }
+
   function addPair(index1, index2) {
     // Order the pair (swap if necessary to ensure consistent order)
     if (index1 > index2) {
@@ -266,7 +276,7 @@ function getSolosAndPairs(bitmaskArray) {
 
     const startPaired = pairedPoints.has(index1);
     const endPaired = pairedPoints.has(index2);
-    
+
     const pairKey = `${index1},${index2}`;
     const exactPaired = pairs.has(pairKey);
     // Check if exact pair exists
@@ -275,8 +285,7 @@ function getSolosAndPairs(bitmaskArray) {
     }
 
     // Check if either point is already in a pair
-    if ((!startPaired && !endPaired) || tileSettings.multiPair)
-    {
+    if ((!startPaired && !endPaired) || tileSettings.multiPair) {
       // Ensure pairs are stored in a consistent order
       pairs.add(pairKey);
       // Mark these points as paired
@@ -714,7 +723,7 @@ function drawSoloJoin(p0, t0, styles) {
     let frame = { origin: p0, right: t0 };
     let arcPts = getArcPoints(
       frame,
-    /* fromAngle */ -PI/2,
+    /* fromAngle */ -PI / 2,
     /* toAngle */ PI / 2,
     /* radius */ style.offset,
     /* segments */ 16
