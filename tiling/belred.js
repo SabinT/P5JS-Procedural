@@ -1,6 +1,6 @@
 import { STYLES } from "../lumic/hex.js";
 
-export const fixedSeed = true;
+export const fixedSeed = false;
 export const seedCenter = 1701112842825;
 export const seedRight = 1701113035742;
 export const seedLeft = 1701113068397;

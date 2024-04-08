@@ -61,17 +61,17 @@ const s = {
   bgPatternProb: 0.95,
   bgNoiseAlpha: 20,
   marginThickness: 0.25,
-  marginColor: "#F25430",
+  marginColor: "#ffffff",
 };
 
 // makestyles(color, weight, offset, style)
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#F25430", weight: strokeBaseWidth * 3, offset: 0 },
-  // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
-  ...makeStyles("#F25430", strokeBaseWidth * 0.4, baseOffset * 6),
-  ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 8),
+  { color: "#ffffff", weight: strokeBaseWidth * 3, offset: 0 },
+  // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 4),
+  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 7),
+  // ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
   // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
