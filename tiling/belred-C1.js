@@ -68,13 +68,13 @@ const s = {
 
 const stylesFinal = [
   { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
-  ...makeStyles("#000000", strokeBaseWidth * 2, baseOffset * 15),
+  ...makeStyles("#000000", strokeBaseWidth * 1.25, baseOffset * 15),
 ];
 
 const styles = [
   // { color: "#4b4a4a", weight: strokeBaseWidth * 2, offset: 0 },
-  ...makeStyles("#7b7b7b", strokeBaseWidth * 2, baseOffset * 9),
-  ...makeStyles("#363636", strokeBaseWidth * 2, baseOffset * 18),
+  ...makeStyles("#F294C0", strokeBaseWidth * 2, baseOffset * 9),
+  ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 18),
   // ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 24),
 ];
 
@@ -108,7 +108,7 @@ window.windowResized = function () {
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712460189692);
+  setSeed(1712539405591);
   noiseSeed(60189692);
 
   tileSettings.preventOverlap = false;
@@ -288,7 +288,7 @@ function renderBg() {
   const panelWidth = s.radius / 2 * 16 + getRes(1);
   bg.fill(s.bgDodgeColor);
   bg.noStroke();
-  // bg.circle(0, 0, panelWidth);
+  bg.circle(0, 0, panelWidth);
 
   bg.pop();
 }
