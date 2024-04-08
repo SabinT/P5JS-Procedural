@@ -14,9 +14,10 @@ export const muralHeight = 48;
 export const sideWidth = 50;
 
 const baseMargin = 1; // inches
+const dpi = 300;
+const scaler = 1;
 
 export const pxDensity = 1;
-const scaler = 5;
 
 export const marginDefault = {
   top: getRes(baseMargin),
@@ -33,7 +34,7 @@ export const marginCenter = {
 
 // 100 * scaler per foot
 export function getRes(inches) {
-  return (inches / 12) * 100 * scaler;
+  return inches * dpi * scaler;
 }
 
 export function getResolutionCenter() {

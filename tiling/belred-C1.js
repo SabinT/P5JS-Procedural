@@ -67,7 +67,7 @@ const s = {
 // makestyles(color, weight, offset, style)
 
 const stylesFinal = [
-  { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
+  { color: "#ffffff", weight: strokeBaseWidth * 2.2, offset: 0 },
   ...makeStyles("#000000", strokeBaseWidth * 1.25, baseOffset * 15),
 ];
 
