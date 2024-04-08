@@ -54,7 +54,7 @@ const s = {
   debugTile: false,
   radius: R,
   bgColor: "#000000",
-  bgPatternColor: "#aeaeae",
+  bgPatternColor: "#000000",
   bgDodgeColor: "#a3a3a3",
   bgMultilpyColor: "#aaaaaa",
   bgPatternScale: 1,
@@ -65,33 +65,18 @@ const s = {
 };
 
 // makestyles(color, weight, offset, style)
-const styleCircuits = [
-  // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
-  // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
-  ...makeStyles("#afafaf", strokeBaseWidth * 2, baseOffset * 9),
-  ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 18),
-  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 24),
-  // ...makeStyles("#04BF9D", strokeBaseWidth * 2, baseOffset * 27),
-  // ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 36),
-  // ...makeStyles("#000000", strokeBaseWidth * 2, baseOffset * 12),
-  // ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 18.5),
-  // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
-  // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
-  // {
-  //   color: palette[cci],
-  //   weight: strokeBaseWidth * 2,
-  //   offset: 0,
-  //   style: STYLES.LINES,
-  // },
-  // ...makeStyles(palette[1], strokeBaseWidth, baseOffset * 12),
-];
 
 const stylesFinal = [
-  // ...makeStyles(palette[4], strokeBaseWidth, baseOffset * 14, STYLES.CIRCUITS),
+  { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
+  ...makeStyles("#000000", strokeBaseWidth * 2, baseOffset * 15),
 ];
 
-const styles = styleCircuits;
+const styles = [
+  // { color: "#4b4a4a", weight: strokeBaseWidth * 2, offset: 0 },
+  ...makeStyles("#7b7b7b", strokeBaseWidth * 2, baseOffset * 9),
+  ...makeStyles("#363636", strokeBaseWidth * 2, baseOffset * 18),
+  // ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 24),
+];
 
 let seed;
 
@@ -173,18 +158,18 @@ window.setup = function () {
     }
   }
 
-  // Symmetry in join types
-  for (let y = -s.gridHH; y <= s.gridHH; y++) {
-    for (let x = -s.gridHW; x <= s.gridHW; x++) {
-      maskList2D[y][x] = maskList2D[y][-x];
-      turnList2D[y][x] = turnList2D[y][-x] + 3;
-    }
-  }
+  // // Symmetry in join types
+  // for (let y = -s.gridHH; y <= s.gridHH; y++) {
+  //   for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  //     maskList2D[y][x] = maskList2D[y][-x];
+  //     turnList2D[y][x] = turnList2D[y][-x] + 3;
+  //   }
+  // }
 
-  // Center row of hexagons all have same pattern
-  for (let x = -s.gridHW; x <= s.gridHW; x++) {
-    maskList2D[0][x] = defaultJoinMask;
-  }
+  // // Center row of hexagons all have same pattern
+  // for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  //   maskList2D[0][x] = defaultJoinMask;
+  // }
 
   pixelDensity(pxDensity);
 
@@ -378,16 +363,14 @@ function render(g) {
 
       tileSettings.drawPathFunc = drawPath;
 
-      for (let style of stylesFinal) {
         drawHexTile(
           hex.center,
           hex.radius,
           /* tilemask */ mask,
           turns,
-          style,
+          stylesFinal,
           /* debugDraw */ false
         );
-      }
     }
   }
 
