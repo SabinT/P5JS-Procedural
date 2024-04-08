@@ -120,8 +120,8 @@ window.windowResized = function () {
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712460189692);
-  noiseSeed(60189692);
+  setSeed(1712620145516);
+  noiseSeed(60789906);
 
   tileSettings.preventOverlap = true;
   tileSettings.angularJoins = false;
@@ -129,9 +129,9 @@ window.setup = function () {
   
   tileSettings.noSolos = true;
   tileSettings.noOpposites = true;
-  tileSettings.skipOpposites = true;
+  tileSettings.skipOpposites = false;
   tileSettings.skipSolos = true;
-  tileSettings.multiPair = false;
+  tileSettings.multiPair = true;
   // tileSettings.circlePattern = true;
   // tileSettings.drawPathFunc = drawPathRandomized;
 
