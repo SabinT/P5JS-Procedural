@@ -54,23 +54,23 @@ const s = {
   debugTile: false,
   radius: R,
   bgColor: "#000000",
-  bgPatternColor: "#b7fff27a",
+  bgPatternColor: "#ffffff7a",
   bgDodgeColor: "#777777",
   bgMultilpyColor: "#46464661",
   bgPatternScale: 1.9,
   bgPatternProb: 0.95,
-  bgNoiseAlpha: 30,
+  bgNoiseAlpha: 125,
   marginThickness: 0.25,
-  marginColor: "#F2C230",
+  marginColor: "#ffffff",
 };
 
 // makestyles(color, weight, offset, style)
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#F2C230", weight: strokeBaseWidth * 3, offset: 0 },
+  { color: "#ffffff", weight: strokeBaseWidth * 3, offset: 0 },
   // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
-  ...makeStyles("#F2C230", strokeBaseWidth * 0.4, baseOffset * 6),
+  ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 6),
   ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
@@ -120,7 +120,7 @@ window.windowResized = function () {
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712460189692);
+  setSeed(1712551093143);
   noiseSeed(60189692);
 
   tileSettings.preventOverlap = true;
@@ -245,11 +245,16 @@ function renderBg() {
   bg.push();
   bg.translate(hw, hh);
   
-  const rPoly = 1.75 * s.radius / 2;
+  const rPoly = 1.25 * s.radius / 2;
   
   // draw hexes at half size
-  for (let y = -s.gridHH; y <= s.gridHH; y++) {
-    for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  for (let y = -s.gridHH + 9; y <= s.gridHH - 9 ; y++) {
+    for (let x = -s.gridHW + 2; x <= s.gridHW - 2; x++) {
+      if (((abs(y) % 2)== 1) && (x  > s.gridHW - 3)) {
+        console.log("skip", x, y)
+          continue;
+      }
+
       const poly6 = new Polygon(vec2(0, 0), rPoly, 6, PI / 2);
       const q = hexToCartesianOddr(vec2(x, y), R);
       
@@ -267,12 +272,15 @@ function renderBg() {
       
       bg.blendMode(BLEND);
 
+      // bg.stroke(255);
       bg.noStroke();
       const patternFill = color(s.bgPatternColor);
       let alpha = random() * patternFill.levels[3] * 0.5;
       alpha = 0;
-      alpha += noise(q.x * 0.001, q.y * 0.001) * s.bgNoiseAlpha;
-      alpha += isSpecial * 100 * dR / R;
+      let n = noise(q.x * 0.001, q.y * 0.001);
+      n = n * n * n;
+      alpha += n * s.bgNoiseAlpha;
+      // alpha += isSpecial * 100 * dR / R;
       patternFill.setAlpha(alpha);
       bg.fill(patternFill);
       poly6.draw(bg);
@@ -301,7 +309,7 @@ function renderBg() {
   const panelWidth = s.radius / 2 * 10 + getRes(0.5);
   bg.fill(s.bgDodgeColor);
   bg.noStroke();
-  bg.rect(-panelWidth / 2, -h, panelWidth, h * 2);
+  // bg.rect(-panelWidth / 2, -h, panelWidth, h * 2);
 
   bg.pop();
 }

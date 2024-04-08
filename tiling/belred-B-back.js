@@ -53,26 +53,25 @@ const s = {
   gridHH: 14,
   debugTile: false,
   radius: R,
-  bgColor: "#ffffff",
-  bgPatternColor: "#F25430",
-  // bgPatternColor: "#deb3f2",
-  bgDodgeColor: "#c9c9c9",
+  bgColor: "#000000",
+  bgPatternColor: "#ffffff",
+  bgDodgeColor: "#777777",
   bgMultilpyColor: "#46464661",
   bgPatternScale: 1.9,
   bgPatternProb: 0.95,
-  bgNoiseAlpha: 20,
+  bgNoiseAlpha: 125,
   marginThickness: 0.25,
-  marginColor: "#ffffff",
+  marginColor: "#04BF9D",
 };
 
 // makestyles(color, weight, offset, style)
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#ffffff", weight: strokeBaseWidth * 3, offset: 0 },
-  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 6),
+  { color: "#04BF9D", weight: strokeBaseWidth * 3, offset: 0 },
   // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
-  // ...makeStyles("#F25430", strokeBaseWidth * 0.4, baseOffset * 8),
+  ...makeStyles("#04BF9D", strokeBaseWidth * 0.4, baseOffset * 6),
+  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
   // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
@@ -121,18 +120,18 @@ window.windowResized = function () {
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712460189692);
+  setSeed(1712551093143);
   noiseSeed(60189692);
 
-  tileSettings.preventOverlap = false;
+  tileSettings.preventOverlap = true;
   tileSettings.angularJoins = false;
-  tileSettings.drawEndCaps = true;
+  tileSettings.drawEndCaps = false;
   
-  tileSettings.noSolos = false;
-  tileSettings.noOpposites = false;
+  tileSettings.noSolos = true;
+  tileSettings.noOpposites = true;
   tileSettings.skipOpposites = true;
-  tileSettings.skipSolos = false;
-  tileSettings.multiPair = true;
+  tileSettings.skipSolos = true;
+  tileSettings.multiPair = false;
   // tileSettings.circlePattern = true;
   // tileSettings.drawPathFunc = drawPathRandomized;
 
@@ -246,11 +245,16 @@ function renderBg() {
   bg.push();
   bg.translate(hw, hh);
   
-  const rPoly = 3 * s.radius / 2;
+  const rPoly = 1 * s.radius / 2;
   
   // draw hexes at half size
-  for (let y = -s.gridHH; y <= s.gridHH; y++) {
-    for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  for (let y = -s.gridHH + 9; y <= s.gridHH - 9 ; y++) {
+    for (let x = -s.gridHW + 2; x <= s.gridHW - 2; x++) {
+      if (((abs(y) % 2)== 1) && (x  > s.gridHW - 3)) {
+        console.log("skip", x, y)
+          continue;
+      }
+
       const poly6 = new Polygon(vec2(0, 0), rPoly, 6, PI / 2);
       const q = hexToCartesianOddr(vec2(x, y), R);
       
@@ -268,12 +272,15 @@ function renderBg() {
       
       bg.blendMode(BLEND);
 
+      // bg.stroke(255);
       bg.noStroke();
       const patternFill = color(s.bgPatternColor);
       let alpha = random() * patternFill.levels[3] * 0.5;
       alpha = 0;
-      alpha += noise(q.x * 0.001, q.y * 0.001) * s.bgNoiseAlpha;
-      alpha += isSpecial * 100 * dR / R;
+      let n = noise(q.x * 0.001, q.y * 0.001);
+      n = n * n * n;
+      alpha += n * s.bgNoiseAlpha;
+      // alpha += isSpecial * 100 * dR / R;
       patternFill.setAlpha(alpha);
       bg.fill(patternFill);
       poly6.draw(bg);
@@ -296,12 +303,13 @@ function renderBg() {
     }
   }
 
-  // Draw some stupid circles to help AR detection
+  // Draw some stupid rectangles to help AR detection
+  bg.rotate(PI / 3);
   bg.blendMode(DODGE);
-  const panelWidth = s.radius / 2 * 16 + getRes(1);
+  const panelWidth = s.radius / 2 * 10 + getRes(0.5);
   bg.fill(s.bgDodgeColor);
   bg.noStroke();
-  bg.circle(0, 0, panelWidth);
+  // bg.rect(-panelWidth / 2, -h, panelWidth, h * 2);
 
   bg.pop();
 }
