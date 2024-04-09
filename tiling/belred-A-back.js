@@ -31,7 +31,7 @@ const hh = h / 2;
 let bg;
 
 
-const hexesPerRow = 8;
+const hexesPerRow = 16;
 const R = 0.5 * (w - marginCenter.left - marginCenter.right) / (hexesPerRow * Math.cos(PI / 6));
 
 
@@ -68,10 +68,10 @@ const s = {
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#ffffff", weight: strokeBaseWidth * 3, offset: 0 },
+  { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
   // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
-  ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 6),
-  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
+  // ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 6),
+  // ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
   // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
@@ -242,6 +242,8 @@ window.draw = function () {
 
 function renderBg() {
   bg.background(s.bgColor);
+  return;
+
   bg.push();
   bg.translate(hw, hh);
   
