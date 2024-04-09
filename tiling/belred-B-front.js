@@ -55,7 +55,7 @@ const s = {
   radius: R,
   bgColor: "#000000",
   bgPatternColor: "#deb3f2",
-  bgDodgeColor: "#c9c9c9",
+  bgDodgeColor: "#ffffff",
   bgMultilpyColor: "#46464661",
   bgPatternScale: 1.9,
   bgPatternProb: 0.95,
@@ -70,7 +70,7 @@ const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
   { color: "#ffffff", weight: strokeBaseWidth * 3, offset: 0 },
   // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 4),
-  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 7),
+  ...makeStyles("#000000", strokeBaseWidth * 0.5, baseOffset * 7),
   // ...makeStyles("#ffffff", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
@@ -296,7 +296,7 @@ function renderBg() {
   }
 
   // Draw some stupid circles to help AR detection
-  bg.blendMode(DODGE);
+  bg.blendMode(BLEND);
   const panelWidth = s.radius / 2 * 16 + getRes(1);
   bg.fill(s.bgDodgeColor);
   bg.noStroke();
