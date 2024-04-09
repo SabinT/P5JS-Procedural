@@ -55,7 +55,7 @@ const s = {
   radius: R,
   bgColor: "#000000",
   bgPatternColor: "#deb3f2",
-  bgDodgeColor: "#c9c9c9",
+  bgDodgeColor: "#ffffff",
   bgMultilpyColor: "#46464661",
   bgPatternScale: 1.9,
   bgPatternProb: 0.95,
@@ -121,11 +121,11 @@ window.windowResized = function () {
 window.setup = function () {
   // setSeed(seedLeft);
   setSeed(1712551093143);
-  noiseSeed(60189692);
+  noiseSeed(60789906);
 
   tileSettings.preventOverlap = true;
   tileSettings.angularJoins = true;
-  tileSettings.drawEndCaps = true;
+  tileSettings.drawEndCaps = false;
   
   tileSettings.noSolos = true;
   tileSettings.noOpposites = true;
@@ -297,7 +297,7 @@ function renderBg() {
   }
 
   // Draw some stupid circles to help AR detection
-  bg.blendMode(DODGE);
+  bg.blendMode(BLEND);
   const panelWidth = s.radius / 2 * 16 + getRes(1);
   bg.fill(s.bgDodgeColor);
   bg.noStroke();
