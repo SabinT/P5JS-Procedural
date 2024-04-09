@@ -31,7 +31,7 @@ const hh = h / 2;
 let bg;
 
 
-const hexesPerRow = 8;
+const hexesPerRow = 16;
 const R = 0.5 * (w - marginCenter.left - marginCenter.right) / (hexesPerRow * Math.cos(PI / 6));
 
 
@@ -61,17 +61,17 @@ const s = {
   bgPatternProb: 0.95,
   bgNoiseAlpha: 125,
   marginThickness: 0.25,
-  marginColor: "#04BF9D",
+  marginColor: "#ffffff",
 };
 
 // makestyles(color, weight, offset, style)
 const styleCircuits = [
   // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
   // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#04BF9D", weight: strokeBaseWidth * 3, offset: 0 },
+  { color: "#ffffff", weight: strokeBaseWidth * 2, offset: 0 },
   // ...makeStyles("#ffffff", strokeBaseWidth * 0.2, baseOffset * 4),
-  ...makeStyles("#04BF9D", strokeBaseWidth * 0.4, baseOffset * 6),
-  ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
+  // ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 6),
+  // ...makeStyles("#000000", strokeBaseWidth * 0.4, baseOffset * 8),
   // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
   // ...makeStyles("#4E1773", strokeBaseWidth, baseOffset * 18.5),
   // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
@@ -120,10 +120,10 @@ window.windowResized = function () {
 
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712551093143);
+  setSeed(1712622784340);
   noiseSeed(60189692);
 
-  tileSettings.preventOverlap = true;
+  tileSettings.preventOverlap = false;
   tileSettings.angularJoins = false;
   tileSettings.drawEndCaps = false;
   
@@ -171,17 +171,17 @@ window.setup = function () {
   }
 
   // Symmetry in join types
-  for (let y = -s.gridHH; y <= s.gridHH; y++) {
-    for (let x = -s.gridHW; x <= s.gridHW; x++) {
-      maskList2D[y][x] = maskList2D[y][-x];
-      turnList2D[y][x] = turnList2D[y][-x] + 3;
-    }
-  }
+  // for (let y = -s.gridHH; y <= s.gridHH; y++) {
+  //   for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  //     maskList2D[y][x] = maskList2D[y][-x];
+  //     turnList2D[y][x] = turnList2D[y][-x] + 3;
+  //   }
+  // }
 
-  // Center row of hexagons all have same pattern
-  for (let x = -s.gridHW; x <= s.gridHW; x++) {
-    maskList2D[0][x] = defaultJoinMask;
-  }
+  // // Center row of hexagons all have same pattern
+  // for (let x = -s.gridHW; x <= s.gridHW; x++) {
+  //   maskList2D[0][x] = defaultJoinMask;
+  // }
 
   pixelDensity(pxDensity);
 
@@ -242,6 +242,9 @@ window.draw = function () {
 
 function renderBg() {
   bg.background(s.bgColor);
+
+  return;
+
   bg.push();
   bg.translate(hw, hh);
   

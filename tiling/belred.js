@@ -15,7 +15,7 @@ export const sideWidth = 50;
 
 const baseMargin = 1; // inches
 const dpi = 300;
-const scaler = 0.1;
+const scaler = 1;
 
 export const pxDensity = 1;
 
