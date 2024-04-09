@@ -65,33 +65,17 @@ const s = {
 };
 
 // makestyles(color, weight, offset, style)
-const styleCircuits = [
-  // ...makeStyles(palette[0], strokeBaseWidth * 1.75, 6 * baseOffset, STYLES.CIRCUITS),
-  // ...makeStyles(palette[0], strokeBaseWidth, 16 * baseOffset, STYLES.CIRCUITS),
-  { color: "#000000", weight: strokeBaseWidth * 4, offset: 0 },
-  ...makeStyles("#F294C0", strokeBaseWidth * 2, baseOffset * 12),
-  ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 25),
-  ...makeStyles("#000000", strokeBaseWidth * 0.75, baseOffset * 30),
-  // ...makeStyles("#04BF9D", strokeBaseWidth * 2, baseOffset * 27),
-  // ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 36),
-  // ...makeStyles("#000000", strokeBaseWidth * 2, baseOffset * 12),
-  // ...makeStyles("#ffffff", strokeBaseWidth * 2, baseOffset * 18.5),
-  // ...makeStyles("#F25430", strokeBaseWidth, baseOffset * 14),
-  // ...makeStyles("#000000", strokeBaseWidth * 0.2, baseOffset * 21),
-  // {
-  //   color: palette[cci],
-  //   weight: strokeBaseWidth * 2,
-  //   offset: 0,
-  //   style: STYLES.LINES,
-  // },
-  // ...makeStyles(palette[1], strokeBaseWidth, baseOffset * 12),
-];
-
 const stylesFinal = [
-  // ...makeStyles(palette[4], strokeBaseWidth, baseOffset * 14, STYLES.CIRCUITS),
+  { color: "#ffffff", weight: strokeBaseWidth * 2.2, offset: 0 },
+  // ...makeStyles("#000000", strokeBaseWidth * 1.25, baseOffset * 20),
 ];
 
-const styles = styleCircuits;
+const styles = [
+  // { color: "#4b4a4a", weight: strokeBaseWidth * 2, offset: 0 },
+  ...makeStyles("#000000", strokeBaseWidth * 2.6, baseOffset * 9),
+  ...makeStyles("#F294C0", strokeBaseWidth * 2, baseOffset * 18),
+  // ...makeStyles("#000000", strokeBaseWidth * 1, baseOffset * 24),
+];
 
 let seed;
 
@@ -121,19 +105,35 @@ window.windowResized = function () {
   centerCanvas(canvas);
 }
 
+function makeProbabilities(probs) {
+  const newProbs = [...probs];
+
+  // Normalize the whole array
+  let sum = 0;
+  for (let i = 0; i < probs.length; i++) {
+    sum += probs[i];
+  }
+
+  for (let i = 0; i < probs.length; i++) {
+    newProbs[i] /= sum;
+  }
+
+  return newProbs;
+}
+
 window.setup = function () {
   // setSeed(seedLeft);
-  setSeed(1712473864854);
+  setSeed(1712628948835);
   noiseSeed(60189692);
 
   tileSettings.preventOverlap = false;
   tileSettings.angularJoins = false;
   tileSettings.drawEndCaps = false;
   
-  tileSettings.noSolos = true;
+  tileSettings.noSolos = false;
   tileSettings.noOpposites = true;
   tileSettings.skipOpposites = false;
-  tileSettings.skipSolos = true;
+  tileSettings.skipSolos = false;
   tileSettings.multiPair = true;
   // tileSettings.circlePattern = true;
   // tileSettings.drawPathFunc = drawPathRandomized;
@@ -160,8 +160,16 @@ window.setup = function () {
       const JOIN_TYPE_SKIP = 4;
       const JOIN_TYPE_OPPOSITE = 8;
       */
-      let probabilities = [0.1, 0.7, 0.5, 0]; // Custom probabilities for each join type
-      let mask = generateRandomJoinArray(null, /* singleFlag */ false);
+      
+      // let probabilities = [0.35, 0.3, 0.2, 0]; // Custom probabilities for each join type
+
+      const probabilities = makeProbabilities([
+        random(0.1, 0.9),
+        random(0.1, 0.4),
+        random(0.1, 0.6),
+        0]);
+
+      let mask = generateRandomJoinArray(probabilities, /* singleFlag */ false);
       // maskList.push(mask);
       maskList2D[y][x] = mask;
 
@@ -378,16 +386,14 @@ function render(g) {
 
       tileSettings.drawPathFunc = drawPath;
 
-      for (let style of stylesFinal) {
-        drawHexTile(
-          hex.center,
-          hex.radius,
-          /* tilemask */ mask,
-          turns,
-          style,
-          /* debugDraw */ false
-        );
-      }
+      drawHexTile(
+        hex.center,
+        hex.radius,
+        /* tilemask */ mask,
+        turns,
+        stylesFinal,
+        /* debugDraw */ false
+      );
     }
   }
 
