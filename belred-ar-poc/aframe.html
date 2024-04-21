@@ -1,14 +1,16 @@
 <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script> -->
 
 <script type="module" src="hexgrid.js"></script>
 
 <a-scene stats>
 
     <a-assets>
-        <img id="hextex" src="./images/pattern_1701113068397.png">
-        <img id="margintex" src="./images/margin_1701113068397.png">
-        <img id="bgtex" src="./images/bg_1701113068397.png">
+        <img id="A-pattern" src="./A-data/pattern.png">
+        <img id="C-pattern" src="./C-data/pattern.png">
+
+        <img id="A-margin" src="./A-data/margin.png">
+        <img id="A-bg" src="./A-data/bg.png">
 
         <!-- <a-asset-item id="sphere-glb" src="filename.glb"></a-asset-item> -->
     </a-assets>
@@ -18,27 +20,33 @@
     
     <a-sky color="#000000"></a-sky>
 
-    <a-entity id="mural-pivot" scale="0.1 0.1 0.1">
+    <a-entity id="mural-pivot">
         <!-- Textured quads for bg and margin, unlit, transparent material for margin-->
         <a-entity id="mural-bg" 
-            geometry="primitive: plane; width: 641.66; height: 1491.67" 
-            material="src: #bgtex;" 
-            position="0 0 -10">
+            geometry="primitive: plane; width: 1; height: 1" 
+            material="src: A-bg"
+            size-inches="width: 36; height: 48"
+            position="0 0 -5.001">
         </a-entity>
 
-        <a-entity id="hex-grid" hexgrid="src1: hextex"
-            position="0 0 -5">
-        </a-entity>
+        <!-- <a-entity id="mural-bg" 
+        geometry="primitive: plane; width: 1; height: 1" 
+        material="color: #ac3636; shader: flat"
+        size-inches="width: 36; height: 48"
+        position="0 0 -5.001">
+    </a-entity> -->
 
-        <a-entity id="margin" 
-            geometry="primitive: plane; width: 641.66; height: 1491.67" 
-            material="src: #margintex; transparent: true;" 
+        <a-entity id="A" hexgrid="xim: 3; ylim: 5; widthInches: 36; grayToAlpha: true" position="0 0 -5"></a-entity>
+
+        <!-- <a-entity id="margin" 
+            geometry="primitive: plane; width: 600; height: 800" 
+            material="src: #A-margin; transparent: true;" 
             position="0 0 0">
-        </a-entity>
+        </a-entity> -->
     </a-entity>
 
     <!-- camera -->
-    <a-entity camera position="0.000 0  100" look-controls wasd-controls></a-entity>
+    <a-entity camera position="0.000 0  1" look-controls wasd-controls></a-entity>
 
 
 </a-scene>

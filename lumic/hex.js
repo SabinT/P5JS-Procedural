@@ -10,6 +10,7 @@ import {
   rot2d,
   saveJson,
   line2D,
+  saveString,
 } from "./common.js";
 import {
   Polygon,
@@ -745,7 +746,7 @@ function drawSoloJoin(p0, t0, styles) {
   }
 }
 
-export function exportHexJsonOddr(hexList, width, height, filename) {
+export function exportHexJsonOddr(hexList, width, height, pixelsPerMeter, filename) {
   const hexes = [];
 
   for (const hex of hexList) {
@@ -760,9 +761,15 @@ export function exportHexJsonOddr(hexList, width, height, filename) {
   const data = {
     w: width,
     h: height,
+    pixelsPerMeter: pixelsPerMeter,
     hexes: hexes,
   };
 
-  // stringify and write file
-  saveJson(data, filename);
+  const str = JSON.stringify(data);
+
+  // Turn into JS format (add export const data = ...)
+  const jsStr = `export const data = ${str};`;
+
+  // Write to file
+  saveString(jsStr, `${filename}.js`);
 }

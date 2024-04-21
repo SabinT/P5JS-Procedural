@@ -21,6 +21,7 @@ import {
   marginCenter,
   centerCanvas,
   drawMargin,
+  pixelsPerMeter,
 } from "./belred.js";
 
 const w = getRes(centerWidth);
@@ -198,14 +199,14 @@ window.setup = function () {
 function drawMural(saveImages = false) {
     // Save the whole thing (should already have been rendered once)
     if (saveImages) {
-        save("mural_" + getSeed() + ".png");
+        save("combined-" + getSeed() + ".png");
     }
 
     // Start with BG only
     image(bg, -hw, -hh);
 
     if (saveImages) {
-        save("bg_" + getSeed() + ".png");
+        save("bg-" + getSeed() + ".png");
 
         // Clear bg so the pattern can be saved separately
         background(s.bgColor);
@@ -215,7 +216,7 @@ function drawMural(saveImages = false) {
     render();
     
     if (saveImages) {
-        save("pattern_" + getSeed() + ".png");
+        save("pattern-" + getSeed() + ".png");
 
         // Clear bg for margin only render
         // background(0);
@@ -228,9 +229,9 @@ function drawMural(saveImages = false) {
     if (saveImages) {
         // Make transparent at the center
 
-        save("margin_" + getSeed() + ".png");
+        save("margin-" + getSeed() + ".png");
 
-        exportHexJsonOddr(hexListForExport, width, height, "hex_" + getSeed() + ".json");
+        exportHexJsonOddr(hexListForExport, width, height, pixelsPerMeter, "hex_" + getSeed());
     }
 }
 

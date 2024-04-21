@@ -21,6 +21,7 @@ import {
   marginCenter,
   centerCanvas,
   drawMargin,
+  pixelsPerMeter,
 } from "./belred.js";
 
 const w = getRes(centerWidth);
@@ -184,42 +185,42 @@ window.setup = function () {
 };
 
 function drawMural(saveImages = false) {
-    // Save the whole thing (should already have been rendered once)
-    if (saveImages) {
-        save("mural_" + getSeed() + ".png");
-    }
+  // Save the whole thing (should already have been rendered once)
+  if (saveImages) {
+      save("combined-" + getSeed() + ".png");
+  }
 
-    // Start with BG only
-    image(bg, -hw, -hh);
+  // Start with BG only
+  image(bg, -hw, -hh);
 
-    if (saveImages) {
-        save("bg_" + getSeed() + ".png");
+  if (saveImages) {
+      save("bg-" + getSeed() + ".png");
 
-        // Clear bg so the pattern can be saved separately
-        background(s.bgColor);
-    }
+      // Clear bg so the pattern can be saved separately
+      background(s.bgColor);
+  }
 
-    // Good stuff
-    render();
-    
-    if (saveImages) {
-        save("pattern_" + getSeed() + ".png");
+  // Good stuff
+  render();
+  
+  if (saveImages) {
+      save("pattern-" + getSeed() + ".png");
 
-        // Clear bg for margin only render
-        // background(0);
-        clear();
-    }
+      // Clear bg for margin only render
+      // background(0);
+      clear();
+  }
 
-    // Margin
-    drawMargin(bg, marginCenter, s.marginThickness, s.marginColor);
+  // Margin
+  drawMargin(bg, marginCenter, s.marginThickness, s.marginColor);
 
-    if (saveImages) {
-        // Make transparent at the center
+  if (saveImages) {
+      // Make transparent at the center
 
-        save("margin_" + getSeed() + ".png");
+      save("margin-" + getSeed() + ".png");
 
-        exportHexJsonOddr(hexListForExport, width, height, "hex_" + getSeed() + ".json");
-    }
+      exportHexJsonOddr(hexListForExport, width, height, pixelsPerMeter, "hex_" + getSeed());
+  }
 }
 
 window.draw = function () {

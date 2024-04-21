@@ -19,6 +19,11 @@ const scaler = 0.2;
 
 export const pxDensity = 1;
 
+const inchesToMeters = 0.0254;
+const cwMeters = centerWidth * inchesToMeters;
+const cwPixels = centerWidth * dpi * scaler;
+export const pixelsPerMeter = cwPixels / cwMeters;
+
 export const marginDefault = {
   top: getRes(baseMargin),
   left: getRes(baseMargin),

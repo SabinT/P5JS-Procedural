@@ -251,3 +251,16 @@ export function saveJson(data, filename, compact = true) {
   a.click();
   document.body.removeChild(a);
 }
+
+export function saveString(str, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(
+    new Blob([str], {
+      type: "text/plain",
+    })
+  );
+  a.setAttribute("download", filename);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
