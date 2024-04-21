@@ -90,3 +90,26 @@ export function createSliderBox(min, max, value, step, text, valueChangeHandler,
   document.body.appendChild(container);
   return elt;
 };
+
+// Center the p5 canvas in window
+export function centerCanvas(canvas) {
+  let container = document.getElementById('canvasContainer');
+  
+  // If the container doesn't exist, create it
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'canvasContainer';
+    document.body.appendChild(container);
+  }
+
+  const elt = canvas.elt;
+
+  const x = (window.innerWidth - canvas.width) / 2;
+  const y = (window.innerHeight - canvas.height) / 2;
+  elt.style.position = 'absolute';
+  elt.style.left = `${x}px`;
+  elt.style.top = `${y}px`;
+
+  // Append the canvas to the container
+  container.appendChild(elt);
+}
