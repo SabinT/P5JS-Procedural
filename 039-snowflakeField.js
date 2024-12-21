@@ -4,28 +4,36 @@ import { renderGrid } from "./lumic/grids.js";
 import { cCircle } from "./lumic/mandala.js";
 import { radiatingDendrites, fernlikeStellarDendrites } from "./lumic/snowflake.js";
 
-const gridOptions = {
-  rows: 8,
-  cols: 8,
-  debug: false,
-  margin: 20,
-  scale: 0.8,
-  renderCell: renderCell,
-};
-
-function renderCell(i, j, w, h, gridOptions) {
-  fill("white");
-
-  // Pick a random pattern
-  let patterns = [fernlikeStellarDendrites, radiatingDendrites];
-  let pattern = getRandom(patterns);
-
-  pattern();
-}
-
 function render() {
   clear();
-  renderGrid(gridOptions);
+
+  const patterns = [fernlikeStellarDendrites, radiatingDendrites];
+  
+  const bgGroup = {
+    numParticles: 1000,
+    scaleMinMax: [.05, .25],
+    colMinMax: [5, 50],
+  }
+
+  for (let i = 0; i < bgGroup.numParticles; i++) {
+    let s = lerp(bgGroup.scaleMinMax[0], bgGroup.scaleMinMax[1], Math.random());
+    let col = lerp(bgGroup.colMinMax[0], bgGroup.colMinMax[1], Math.random());
+    
+    push();
+
+    // random position
+    translate(random(width), random() * random() * height);
+    scale(s);
+
+    // draw random pattern
+    let pattern = getRandom(patterns);
+    pattern(col);
+
+    circle(0,0,10)
+
+    pop();
+  }
+
 }
 
 window.setup = function () {
