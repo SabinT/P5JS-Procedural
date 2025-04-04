@@ -1,32 +1,53 @@
+import { sqRand } from "./lumic/common.js";
+import { smoothstep } from "./lumic/easing.js";
+
 let sdfImg;
-let circles = [];
+let heartSdfImg;
 
 // Settings
-const settings = {
+const settingsRibs = {
   maxIterations: 100000,   // Maximum attempts to place a circle
   maxCircles: 1000,        // Maximum number of circles to place
-  minRadius: 2,            // Minimum circle radius
-  maxRadius: 20,           // Maximum circle radius
+  minRadius: 7,            // Minimum circle radius
+  maxRadius: 15,           // Maximum circle radius
   distanceThreshold: 0.95, // Only place circles where the normalized distance is above this value
   minRotationSpeed: -0.05, // Minimum rotation speed (radians per frame)
   maxRotationSpeed: 0.1   // Maximum rotation speed (radians per frame)
 };
 
+const settingsHeart = {
+  maxIterations: 100000,   // Maximum attempts to place a circle
+  maxCircles: 1000,        // Maximum number of circles to place
+  minRadius: 4,            // Minimum circle radius
+  maxRadius: 15,           // Maximum circle radius
+  distanceThreshold: 0.95, // Only place circles where the normalized distance is above this value
+  minRotationSpeed: -0.05, // Minimum rotation speed (radians per frame)
+  maxRotationSpeed: 0.1    // Maximum rotation speed (radians per frame)
+};
+
 window.preload = function() {
   // Load the SDF image (assumes a square PNG)
   sdfImg = loadImage('./ribs_sdf.png');
+  heartSdfImg = loadImage('./heart_sdf.png');
 };
+
+let ribsCircles;
+let heartCircles;
 
 window.setup = function() {
   // Create a canvas with the same dimensions as the image
   createCanvas(sdfImg.width, sdfImg.height);
   // Generate circles once during setup
-  generateCircles();
+  ribsCircles = generateCircles(sdfImg, settingsRibs);
+  let ribCirclesCopy = [...ribsCircles];
+  heartCircles = generateCircles(heartSdfImg, settingsHeart, ribCirclesCopy);
   // Do not call noLoop() since we want animation
 };
 
-function generateCircles() {
+function generateCircles(sdfImg, settings, existingCircles) {
   let iterations = 0;
+  let circles = []
+  let allCircles = existingCircles || [];
   
   while (iterations < settings.maxIterations && circles.length < settings.maxCircles) {
     let x = random(width);
@@ -43,9 +64,9 @@ function generateCircles() {
       
       // Check for overlaps with existing circles
       let overlapping = false;
-      for (let i = 0; i < circles.length; i++) {
-        let d = dist(x, y, circles[i].x, circles[i].y);
-        if (d < newRadius + circles[i].r) {
+      for (let i = 0; i < allCircles.length; i++) {
+        let d = dist(x, y, allCircles[i].x, allCircles[i].y);
+        if (d < newRadius + allCircles[i].r) {
           overlapping = true;
           break;
         }
@@ -59,35 +80,58 @@ function generateCircles() {
         // Also assign an initial angle deterministically (using cosine here)
         let initialAngle = map(cos(idx * 1.7), -1, 1, 0, TWO_PI);
         
-        circles.push({ 
-          x: x, 
-          y: y, 
-          r: newRadius, 
-          angle: initialAngle, 
-          rotationSpeed: rotationSpeed 
-        });
+        const newCircle = {
+          x: x,
+          y: y,
+          r: newRadius,
+          angle: initialAngle,
+          rotationSpeed: rotationSpeed
+        };
+
+        circles.push(newCircle);
+        allCircles.push(newCircle);
       }
     }
     
     iterations++;
   }
+
+  return circles;
 }
 
 window.draw = function() {
   background(0);
+
+  // Draw heart circles with a different color
+  for (let i = 0; i < heartCircles.length; i++) {
+    let circle = heartCircles[i];
+    fill(255, 0, 0); // Red color for heart circles
+    drawHeartCircle(circle);
+  }
   
   // For each circle, update rotation if it's a googley eye and then draw it
-  for (let i = 0; i < circles.length; i++) {
-    let circle = circles[i];
+  for (let i = 0; i < ribsCircles.length; i++) {
+    let circle = ribsCircles[i];
     if (circle.r > 8) {
       circle.angle += circle.rotationSpeed;
     }
-    drawCircle(circle);
+    drawRibCircle(circle);
   }
 };
 
+function drawHeartCircle(circle) {
+  fill("red");
+  stroke("red");
+  
+  let t = millis() / 1000; // Time in seconds
+  let pulseFactor = pulseHeart(t);
+  let adjustedR = circle.r * pulseFactor;
+
+  ellipse(circle.x, circle.y, adjustedR * 2, adjustedR * 2);
+}
+
 // Draws a circle. For circles with radius > 8, draws an animated googley eye.
-function drawCircle(circle) {
+function drawRibCircle(circle) {
   noFill();
   stroke(255);
   
@@ -96,6 +140,27 @@ function drawCircle(circle) {
   } else {
     ellipse(circle.x, circle.y, circle.r * 2, circle.r * 2);
   }
+}
+
+function pulseHeart(t) {
+  // smoothstep(0,.9,sin(x + t * 1) - 0.5)
+  // smoothstep(0,.9,sin(-2.4 + x + t * 1) - 0.5) * 0.4
+  const speed = 7.5;
+  t = t * speed;
+
+  const cycle = t / TAU;
+  const iCycle = floor(cycle);
+
+  let f1 = smoothstep(0,.9,sin(t * 1) - 0.5);
+  let f2 = smoothstep(0,.9,sin(-2.4 + t * 1) - 0.5) * 0.4;
+
+  let f = f1 + f2 ;
+
+  let r = sqRand(iCycle);
+  let randMax = map(r, 0, 1, 2, 5);
+
+  let minMax = [0.5, randMax];
+  return map(f, 0, 1, minMax[0], minMax[1]);
 }
 
 // Draws a googley eye with a rotating iris.
