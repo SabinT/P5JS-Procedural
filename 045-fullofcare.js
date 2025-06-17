@@ -6,7 +6,7 @@ let font;
 
 const w = 1080;
 const h = 1080;
-const fontSize = 14;
+const fontSize = 16;
 const gridX = 64;
 const gridY = 64;
 let cellW = w / gridX;
@@ -100,6 +100,8 @@ class Droplet {
       this.lastHeadRow = yy;
     }
 
+    const rowFrac = this.y - yy;
+
     // 3) draw into pg
     const headColor = pg.color(this.color);
     for (let i = 0; i < this.tail.length; i++) {
@@ -124,8 +126,10 @@ class Droplet {
 
       // alpha ramp: 255→0 from head→tail end
       const alpha = this.tail.length > 1
-        ? map(i, 0, this.tail.length - 1, 255, 0)
-        : 255;
+          ? map(i + rowFrac,      // moving continuously down
+                0, this.tail.length,   // total “distance” from head (0) to just past tail end
+                255, 0)                // head=255 → tail end=0
+          : 255;
 
       let col = pg.color(this.color);
       col.setAlpha(alpha);
@@ -135,7 +139,7 @@ class Droplet {
       pg.textAlign(CENTER, CENTER);
       
       // Some noise to the y
-      const noiseSpeed = 0.001;
+      const noiseSpeed = this.speed * 0.1;
       const noiseScale = 0.005;
       const maxAmplitude = cellH * 0.5;
       const noiseOffset = this.dropletIndex * 123487;
