@@ -20,12 +20,15 @@ const randomSyllables =
   ["क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ", "ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न", "प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श", "ष", "स", "ह", "क्ष", "त्र", "ज्ञ"];
 
 const phrases = [
-  ["म:", "म:", " ", "च", "ट्", "नी", " ", "ट", "मा", "ट", "र", " ",].reverse(),
-  ["प्या", "ज", " ", "अ", "दु", "वा", " ", "ल", "सु", "न", " ", "जी", "रा", " ", "ध", "नि", "या"].reverse(),
-  [" ", "ब", "न्द", "गो", "बी", " ", "ह", "रि", "यो", " ", "प्या", "ज", " ", "टि", "मु", "र", " ", "खु", "र", "सा", "नी"].reverse()
+  ["म:", "म:", " ", "च", "ट्", "नी", " ", "ट", "मा", "ट", "र", " ", "बे", "सा", "र", " "].reverse(),
+  ["प्या", "ज", " ", "अ", "दु", "वा", " ", "ल", "सु", "न", " ", "जी", "रा", " ", "ध", "नि", "या", " "].reverse(),
+  [" ", "ब", "न्दा", "गो", "बी", " ", "ह", "रि", "यो", " ", "प्या", "ज", " ", "टि", "मु", "र", " ", "खु", "र्सा", "नी"].reverse()
 ];
 
 const palette = ["#F2C9E4", "#AC80BF", "#5080BF", "#8FAFD9", "#FFFFFF", "#91E0F2"];
+
+const speedMin = 0.001;
+const speedMax = 0.05;
 
 function randColor() {
   return palette[floor(random(palette.length))];
@@ -49,6 +52,7 @@ class Droplet {
     this.y += this.speed * deltaTime;
     if (this.y >= gridY) {
       this.y -= gridY;
+      this.speed = random(speedMin, speedMax);
     }
     const xx = floor(this.x);
     const yy = floor(this.y);
@@ -127,8 +131,6 @@ window.setup = function () {
 
   const lenMin = 4;
   const lenMax = 8;
-  const speedMin = 0.001;
-  const speedMax = 0.05;
   const nDroplets = 20;
 
   const filledXes = new Set();
