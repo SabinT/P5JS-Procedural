@@ -16,12 +16,12 @@ let g;
 
 let debug = true;
 
-const randomSyllables = 
-["क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ", "ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न", "प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श", "ष", "स", "ह", "क्ष", "त्र", "ज्ञ"];
+const randomSyllables =
+  ["क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ", "ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न", "प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श", "ष", "स", "ह", "क्ष", "त्र", "ज्ञ"];
 
 const phrases = [
   ["म:", "म:", " ", "च", "ट्", "नी", " ", "ट", "मा", "ट", "र", " ",].reverse(),
-  ["प्या", "ज", " ", "अ", "दु", "वा", " ", "ल", "सु", "न", " ", "जी", "रा", " ", "ध", "नि", "या"].reverse(), 
+  ["प्या", "ज", " ", "अ", "दु", "वा", " ", "ल", "सु", "न", " ", "जी", "रा", " ", "ध", "नि", "या"].reverse(),
   [" ", "ब", "न्द", "गो", "बी", " ", "ह", "रि", "यो", " ", "प्या", "ज", " ", "टि", "मु", "र", " ", "खु", "र", "सा", "नी"].reverse()
 ];
 
@@ -32,70 +32,66 @@ function randColor() {
 }
 
 class Droplet {
-  constructor(phrase, x, y, len, speed) {
-    this.phrase = phrase;
-    this.x = x;
-    this.y = y;
-    this.len = len;
-    this.speed = speed;
-    this.repeatCount = 0;
-    this.color = randColor();
+  constructor(phrase, x, y, speed) {
+    this.phrase       = phrase;
+    this.x            = x;
+    this.y            = y;
+    this.speed        = speed;
+    this.tail         = [];           // locked letters
+    this.phraseIndex  = 0;            // next letter to pull from phrase
+    this.lastHeadRow  = floor(this.y);
+    this.maxLen       = gridY;        // you can tune this if you want shorter
+    this.color = randColor()
   }
 
   moveAndRenderTo(pg) {
+    // 1) advance in grid‐space
     this.y += this.speed * deltaTime;
-    if (this.y > gridY) {
+    if (this.y >= gridY) {
       this.y -= gridY;
-      this.repeatCount++;
-      this.color = randColor();
     }
-
     const xx = floor(this.x);
     const yy = floor(this.y);
-    const iRand = floor(millis() / 100);
 
-    for (let i = 0; i < this.len; i++) {
-      let t = map(1 - i / this.len, 0, 1, 0.75, 1);
-      let iSyl, c;
-
-      if (i !== this.len - 1) {
-        iSyl = noise(iRand * 100 + i) * randomSyllables.length;
-        c = randomSyllables[floor(iSyl) % randomSyllables.length];
-      } else {
-        iSyl = (yy + this.repeatCount * 3) % this.phrase.length;
-        c = this.phrase[iSyl];
+    // 2) on each new row entered, grow/shift the tail
+    if (yy !== this.lastHeadRow) {
+      // grab next letter from phrase
+      let c = this.phrase[this.phraseIndex];
+      this.phraseIndex = (this.phraseIndex - 1 + this.phrase.length) % this.phrase.length;
+      // lock it in at front of tail
+      this.tail.unshift(c);
+      // cap tail length
+      if (this.tail.length > this.maxLen) {
+        this.tail.pop();
       }
+      this.lastHeadRow = yy;
+    }
 
-      if (c === " ") {
-        t *= 0.4;
-        c = randomSyllables[floor(iSyl) % randomSyllables.length];
-      }
+    // 3) draw into pg
+    const headColor = pg.color(this.color);
+    for (let i = 0; i < this.tail.length; i++) {
+      const c = this.tail[i];
+      // compute grid cell for this segment
+      const [gx, gy] = wrapPos(xx, yy - i);
+      const { px, py } = gridToPixel(gx, gy);
 
-      let cx = (xx + gridX) % gridX;
-      let cy = (yy - i + gridY) % gridY;
-
-      const { px, py } = gridToPixel(cx, cy);
-
-      // draw the “cell” background
+      // head clears its cell (optional—if you want a black box under it)
       pg.fill(0);
       pg.rectMode(CENTER);
       pg.rect(px, py, cellW, cellH);
 
-      // tint the syllable
+      // alpha ramp: 255→0 from head→tail end
+      const alpha = this.tail.length > 1
+        ? map(i, 0, this.tail.length - 1, 255, 0)
+        : 255;
+
       let col = pg.color(this.color);
-      col.setRed(pg.red(col) * t);
-      col.setGreen(pg.green(col) * t);
-      col.setBlue(pg.blue(col) * t);
+      col.setAlpha(alpha);
       pg.fill(col);
 
-      // draw the text centered in that cell
-      pg.textSize(fontSize - 10 + t * 10);
       pg.textAlign(CENTER, CENTER);
+      pg.textSize(fontSize);
       pg.text(c, px, py);
-
-      // Debug text cx, cy
-      // pg.text(cx + "," + cy, px, py)
-      
     }
   }
 }
@@ -107,11 +103,13 @@ function gridToPixel(x, y) {
   };
 }
 
+function wrapPos(x,y) {
+  return [(x + gridX) % gridX, (y + gridY) % gridY];
+}
+
 let droplets = [];
 
 window.setup = function () {
-  const canvas = createCanvas(w, h);
-
   // font = loadFont("assets/AnonymousPro-Regular.ttf");
 
   createCanvas(windowWidth, windowHeight, WEBGL);
@@ -127,10 +125,10 @@ window.setup = function () {
   pMapper.load("maps/044-map.json");
 
 
-  const lenMin = 1;
-  const lenMax = 4;
+  const lenMin = 4;
+  const lenMax = 8;
   const speedMin = 0.001;
-  const speedMax = 0.02;
+  const speedMax = 0.05;
   const nDroplets = 20;
 
   const filledXes = new Set();
@@ -140,7 +138,7 @@ window.setup = function () {
     const y = floor(random(gridY));
     const len = floor(random(lenMin, lenMax));
     const speed = random(speedMin, speedMax);
-    droplets.push(new Droplet(phrase, x, y, len, speed));
+    droplets.push(new Droplet(phrase, x, y, speed));
     filledXes.add(x);
   }
 
@@ -150,20 +148,25 @@ window.setup = function () {
       const y = floor(random(gridY));
       const len = floor(random(2, 3));
       const speed = random(0.005, speedMax * 0.1);
-      droplets.push(new Droplet(phrase, x, y, len, speed));
+      droplets.push(new Droplet(phrase, x, y, speed));
     }
   }
 };
+
+const FADE_ALPHA = 1;  // tweak between 0–255 for faster/slower fade
 
 window.draw = function () {
   background(0);
 
   quadMap.displaySketch(pg => {
-    pg.clear();
     pg.push();
-    // pg.textFont(font);
+    pg.noStroke();
+    pg.fill(0, FADE_ALPHA);
+    pg.rectMode(CORNER);
+    pg.rect(0, 0, pg.width, pg.height);
+
     pg.textAlign(CENTER, CENTER);
-    pg.background(0, 0, 0, 10);
+    // pg.background(0, 0, 0, 10);
     for (let droplet of droplets) {
       droplet.moveAndRenderTo(pg);
     }
@@ -209,7 +212,7 @@ function loadCalibration() {
 }
 
 function recalcGrid() {
-  cellW = w  / gridX;
+  cellW = w / gridX;
   cellH = h / gridY;
 }
 
