@@ -1,5 +1,6 @@
 import { sqRand } from "./lumic/common.js";
 import { smoothstep } from "./lumic/easing.js";
+import { centerCanvas } from "./lumic/p5Extensions.js";
 
 let sdfImg;
 let heartSdfImg;
@@ -36,7 +37,8 @@ let heartCircles;
 
 window.setup = function() {
   // Create a canvas with the same dimensions as the image
-  createCanvas(sdfImg.width, sdfImg.height);
+  let canvas = createCanvas(sdfImg.width, sdfImg.height);
+  centerCanvas(canvas);
   // Generate circles once during setup
   ribsCircles = generateCircles(sdfImg, settingsRibs);
   let ribCirclesCopy = [...ribsCircles];
@@ -98,6 +100,8 @@ function generateCircles(sdfImg, settings, existingCircles) {
 
   return circles;
 }
+
+window.mouseIsPressed = function() {}
 
 window.draw = function() {
   background(0);
