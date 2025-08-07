@@ -1,6 +1,7 @@
-import { vec2, scale2d, normalize2d } from './common.js';
+import { vec2, scale2d, normalize2d, line2D } from './common.js';
+import { Frame2D } from './frame.js';
 
-export class CubicHermite {
+export class CubicHermite2D {
     constructor(p0,m0,p1,m1) {
         this.p0 = p0;
         this.m0 = m0;
@@ -38,7 +39,13 @@ export class CubicHermite {
         ));
     }
 
-    GetNormal(t) {
+    GetFrame(t) {
+        const position = this.GetPosition(t);
+        const tangent = this.GetTangent(t);
+        return new Frame2D(position, tangent);
+    }
+
+    GetCurvature(t) {
         // Second derivative
         const h00 = 12 * t - 6;
         const h10 = 6 * t - 4;
@@ -51,7 +58,7 @@ export class CubicHermite {
         ));
     }
 
-    GetBinormal(t) {
+    GetNormal(t) {
         // perpendicular to the tangent
         const tangent = this.GetTangent(t);
         return vec2(-tangent.y, tangent.x);
@@ -68,11 +75,12 @@ export class CubicHermite {
 
     Draw(segments = 16) {
         const points = this.GetPoints(segments);
-        beginShape();
-        for (const point of points) {
-            vertex(point.x, point.y);
+        // Draw a line through the points
+        for (let i = 0; i < points.length - 1; i++) {
+            const p0 = points[i];
+            const p1 = points[i + 1];
+            line2D(p0, p1);
         }
-        endShape();
     }
 
     ToJSONString() {
@@ -84,11 +92,22 @@ export class CubicHermite {
         });
     }
 
-    FromJSONString(jsonString) {
+    static FromJSONString(jsonString) {
         const data = JSON.parse(jsonString);
-        this.p0 = vec2(data.p0.x, data.p0.y);
-        this.m0 = vec2(data.m0.x, data.m0.y);
-        this.p1 = vec2(data.p1.x, data.p1.y);
-        this.m1 = vec2(data.m1.x, data.m1.y);
+        return new CubicHermite2D(
+            vec2(data.p0.x, data.p0.y),
+            vec2(data.m0.x, data.m0.y),
+            vec2(data.p1.x, data.p1.y),
+            vec2(data.m1.x, data.m1.y)
+        );
+    }
+
+    static FromObject(obj) {
+        return new CubicHermite2D(
+            vec2(obj.p0.x, obj.p0.y),
+            vec2(obj.m0.x, obj.m0.y),
+            vec2(obj.p1.x, obj.p1.y),
+            vec2(obj.m1.x, obj.m1.y)
+        );
     }
 }

@@ -116,10 +116,19 @@ export function bezierQuadratic2DShape(a, b, c) {
 }
 
 export function line2D(a, b, g) {
-  if (!g) {
-    g = window;
-  }
+  g = g || window;
   g.line(a.x, a.y, b.x, b.y);
+}
+
+export function path2D(pts, g) {
+  g = g || window;
+
+  // line through the points
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i];
+    const p1 = pts[i + 1];
+    g.line(p0.x, p0.y, p1.x, p1.y);
+  }
 }
 
 export function transform(origin, right, p) {

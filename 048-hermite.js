@@ -1,8 +1,8 @@
-import { CubicHermite } from "./lumic/hermite.js";
+import { CubicHermite2D } from "./lumic/hermite.js";
 import { vec2, add2d, sub2d, mul2d, normalize2d, line2D, scale2d } from "./lumic/common.js";
 
-const w = 800;
-const h = 800;
+const w = 1920;
+const h = 1080;
 
 let splines = [];
 let state = 0; // 0 = p0, 1 = m0, 2 = p1, 3 = m1
@@ -56,7 +56,7 @@ window.mouseReleased = function () {
   } else if (state === 3) {
     wipSpline.m1 = sub2d(vec2(mouseX, mouseY), wipSpline.p1);
 
-    const spline = new CubicHermite(wipSpline.p0, wipSpline.m0, wipSpline.p1, wipSpline.m1);
+    const spline = new CubicHermite2D(wipSpline.p0, wipSpline.m0, wipSpline.p1, wipSpline.m1);
     splines.push(spline);
     console.log("Added spline:", spline.ToJSONString());
 
@@ -117,7 +117,7 @@ function drawPickingPreview() {
       ? sub2d(vec2(mouseX, mouseY), p1)
       : sub2d(vec2(mouseX, mouseY), wipSpline.p1);
 
-    const tempSpline = new CubicHermite(p0, m0, p1, m1);
+    const tempSpline = new CubicHermite2D(p0, m0, p1, m1);
 
     previewBuffer.stroke(200, 200, 100);
     previewBuffer.beginShape();
