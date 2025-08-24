@@ -58,7 +58,7 @@ void main () {
     float edge = smoothstep(1.0 - uEdgeSoftness, 1.0, d);
 
     // subtle center highlight
-    float dRidge = abs(vUV.y - 0.0 /* ridgeOffset */) / 0.5;
+    float dRidge = abs(vUV.y - 0.1 /* ridgeOffset */) / 0.5;
     float ridge  = 1.0 - smoothstep(0.0, max(1e-5, uRidgeSoftness), dRidge);
 
     // darken toward shaft ends (tips) using vUV.x
@@ -78,5 +78,6 @@ void main () {
     col *= tipShade;
 
     gl_FragColor = vec4(col, uBaseColor.a);
+    // gl_FragColor = vec4(ridge, ridge, ridge, uBaseColor.a);
 }
 `;

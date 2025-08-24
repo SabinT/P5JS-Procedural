@@ -67,7 +67,7 @@ const params = {
     baseColor: "#bfb09a",
     edgeColor: "#665954",
     edgeSoftness: 0.75,
-    ridgeSoftness: 0.1,
+    ridgeSoftness: 0.44,
     ridgeHighlight: 0.5,
     tipDarken: 0.35,
   }
@@ -237,6 +237,8 @@ class Feather {
     spineShader.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
     spineShader.setUniform('uEdgeSoftness', sParams.edgeSoftness);
     spineShader.setUniform('uTipDarken', sParams.tipDarken);
+    spineShader.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
+    spineShader.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
     spineShader.setUniform('uDebug', debugDrawToggles.spineShader ? 1 : 0);
 
     // Construct a shape with UVs for the spine
