@@ -264,6 +264,12 @@ export function angleNormTau(angle) {
   return angle;
 }
 
+export function angleBetween(fromDir, toDir) {
+  // shortest signed angular difference between two direction vectors
+  const a = Math.atan2(toDir.y, toDir.x) - Math.atan2(fromDir.y, fromDir.x);
+  return angleNormPi(a); // wrap to [-PI, PI]
+}
+
 export function signedAngle(from, to) {
   return Math.atan2(to.y, to.x) - Math.atan2(from.y, from.x);
 }
@@ -275,6 +281,11 @@ export function move(point, dir, dist) {
 export function moveTowards(p0, p1, dist) {
   const dir = normalize2d(sub2d(p1, p0));
   return add2d(p0, scale2d(dir, dist));
+}
+
+export function rotateTowards(dir1, dir2, t) {
+  const angle = angleBetween(dir1, dir2);
+  return rot2d(dir1, angle * t);
 }
 
 export function drawPath(path, closed = false) {

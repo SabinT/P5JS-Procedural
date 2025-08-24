@@ -5,6 +5,11 @@ export class Debug {
     static enabled = false;
     static g = null;
 
+    static log(...args) {
+        if (!Debug.enabled) { return; }
+        console.log(...args);
+    }
+
     static setGraphics(g) {
         this.g = g;
     }
@@ -40,15 +45,11 @@ export class Debug {
 
         g.push();
 
-        // Draw the end points as small circles
-        g.fill(0, 0, 0);
-        g.stroke(180, 180, 180);
         g.circle(hermite.p0.x, hermite.p0.y, 5);
         g.circle(hermite.p1.x, hermite.p1.y, 5);
 
         if (showTangents) {
             // Draw start and end tangents as arrows
-            stroke(200);
             this.drawArrow(hermite.p0, add2d(hermite.p0, hermite.m0));
             this.drawArrow(hermite.p1, add2d(hermite.p1, hermite.m1));
         }
@@ -63,6 +64,26 @@ export class Debug {
         const g = this.g || window;
 
         line2D(p0, p1, g);
+    }
+
+    static drawDashedLine2D(p0, p1, dashLength = 5) {
+        if (!Debug.enabled) { return; }
+        const g = this.g || window;
+
+        const dir = sub2d(p1, p0);
+        const len = len2d(dir);
+        if (len < 0.0001) { return; }
+        const dirNorm = normalize2d(dir);
+        const numDashes = Math.floor(len / dashLength);
+        for (let i = 0; i < numDashes; i += 2) {
+            const dashStart = add2d(p0, scale2d(dirNorm, i * dashLength));
+            const dashEnd = add2d(p0, scale2d(dirNorm, Math.min((i + 1) * dashLength, len)));
+            line2D(dashStart, dashEnd, g);
+        }
+        
+        // Dots at the ends
+        g.circle(p0.x, p0.y, dashLength * 0.5);
+        g.circle(p1.x, p1.y, dashLength * 0.5);
     }
 
     static drawPoint(p, pointSize = 5) {

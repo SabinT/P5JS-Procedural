@@ -1,11 +1,11 @@
 import { BezierCubic } from "./lumic/bezier.js";
 import { Debug } from "./lumic/debug.js";
-import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex } from "./lumic/common.js";
-import { easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
+import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI } from "./lumic/common.js";
+import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
-import { getTangents } from "./lumic/geomerty.js";
+import { getTangents, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
@@ -26,20 +26,26 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = false; // Enable debug drawing
+Debug.enabled = true; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
   vane: true,
   barbs: true,
+  barbTangents: false,
   spineShader: false
+}
+
+// Temporary debug sliders for testing
+const debugSliders = {
+  a: 0.5,
 }
 
 const gui = new dat.GUI();
 
 const params = {
   // cubic hermite spline
-  spineCurve: CubicHermite2D.FromObject({"p0":{"x":297,"y":546},"m0":{"x":176,"y":-122},"p1":{"x":1343,"y":576},"m1":{"x":680,"y":-284}}),
+  spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 100,
   spineBaseWidth: 20,
   spineWidthCurve: (t) => {
@@ -55,8 +61,12 @@ const params = {
   vaneBaseWidth: 100,
   vaneWidthCurve: (t) => {
     return smoothstep(0, 0.04, t)
-         * smoothstep(2, 0.1, t)
-         * smoothstep(1.5, 0.6, t);
+      * smoothstep(2, 0.1, t)
+      * smoothstep(1.5, 0.6, t);
+  },
+  barbTiltStart: 0.3, // 0-1 = 0 to 90 degrees, 0 = perpendicular, 1 = along spine
+  barbTiltCurve: (t) => {
+    return smoothstep(0.75, 1, t);
   },
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
   vaneBreaks: 10,
@@ -72,7 +82,7 @@ const params = {
 };
 
 // Reduced divisions for faster debugging
-let debugParams = { ... params };
+let debugParams = { ...params };
 debugParams.spineDivisions = 20;
 debugParams.nBarbs = 20;
 
@@ -84,10 +94,13 @@ class Feather {
 
   build() {
     this.buildSpine();
+    this.buildVane(); // populates empty barbs with clumping along the vane
+
+    // populates barbs with geometry
     this.buildBarbs();
   }
 
-  buildBarbs() {
+  buildVane() {
     const params = this.params;
 
     // Split vaneBreaks into left/right with some randomness
@@ -107,17 +120,14 @@ class Feather {
       rightVaneBreakStops.push(t);
     }
 
-    if (Debug.enabled) {
-      console.log(`Left vane breaks: ${leftVaneBreaks}, Right vane breaks: ${rightVaneBreaks}`);
-      console.log("Left vane break stops:", leftVaneBreakStops);
-      console.log("Right vane break stops:", rightVaneBreakStops);
-    }
+    Debug.log(`Left vane breaks: ${leftVaneBreaks}, Right vane breaks: ${rightVaneBreaks}`);
+    Debug.log("Left vane break stops:", leftVaneBreakStops);
+    Debug.log("Right vane break stops:", rightVaneBreakStops);
 
     const tBarbStart = params.afterFeatherEnd;
 
     // Get frames along the spine for the barbs
-    this.leftBarbs = [];
-    this.rightBarbs = [];
+    this.barbs = [];
     this.spineFrames = [];
     const barbWidthNormalized = (1 - tBarbStart) / params.nBarbs;
     let iClumpLeft = 0; // Clump index (even)
@@ -135,11 +145,11 @@ class Feather {
 
       const rightFrame = new Frame2D(points[i], tangents[i]);
       const leftFrame = new Frame2D(rightFrame.origin, rightFrame.forward, scale2d(rightFrame.right, -1));
-      
+
       // Barbs are slightly offset from the spine
       rightFrame.translate(scale2d(rightFrame.right, spineWidth / 2));
       leftFrame.translate(scale2d(leftFrame.right, spineWidth / 2));
-      
+
       // Assign a "clump index" to the barb
       // Every time there is a break in the vane, a new clump starts
       const nextVaneBreakStopIndexLeft = lastVaneBreakStopIndexLeft + 1;
@@ -170,6 +180,8 @@ class Feather {
         clumpIndex: iClumpRight,
         barbIndex: iBarb++,
         length: vaneWidth,
+        tAlongSpine: tAlongSpine,
+        tAlongVane: tAlongVane
       };
 
       const leftBarb = {
@@ -177,11 +189,38 @@ class Feather {
         clumpIndex: iClumpLeft,
         barbIndex: iBarb++,
         length: vaneWidth,
+        tAlongSpine: tAlongSpine,
+        tAlongVane: tAlongVane
       };
 
-      this.rightBarbs.push(rightBarb);
-      this.leftBarbs.push(leftBarb);
+      this.barbs.push(rightBarb);
+      this.barbs.push(leftBarb);
     }
+  }
+
+  buildBarbs() {
+    const params = this.params;
+
+    const dtAlongSpine = 0.1; // how much the barbs move along the vane from root to tip
+    
+    this.barbs.forEach(barb => {
+      const rootTangentLength = 0.1 * this.spineLength * (1 - barb.tAlongVane);
+      const tipTangentLength = 0.15 * this.spineLength * (1 - barb.tAlongVane * 0.75);
+      const barbRoot = barb.frame.origin;
+      const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
+
+      // const barbTipRaw = add2d(barbRoot, scale2d(barb.frame.right, barb.length));
+      // const barbTip = add2d(barbTipRaw, scale2d(barb.frame.forward, dtAlongSpine * this.spineLength));
+      // const tipTangent = scale2d(normalize2d(sub2d(barbTip, barbTipRaw)), tipTangentLength);
+
+      const barbTilt = clamp01(params.barbTiltCurve(barb.tAlongVane) + params.barbTiltStart);
+      const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
+      const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length));
+      let tipTangent = scale2d(dirToTip, tipTangentLength);
+      tipTangent = rotateTowards(tipTangent, barb.frame.forward, barb.tAlongVane);
+
+      barb.spline = new CubicHermite2D(barbRoot, rootTangent, barbTip, tipTangent);
+    });
   }
 
   buildSpine() {
@@ -191,6 +230,8 @@ class Feather {
     var { points, tangents } = this.getPointsAndTangentsAlongSpine(0, 1, params.spineDivisions);
 
     this.spine = [];
+    let spineLength = 0;
+    let prevPoint = null;
     for (let i = 0; i < points.length; i++) {
       const tAlongSpine = i / (points.length - 1);
       const spineWidth = params.spineBaseWidth * params.spineWidthCurve(tAlongSpine);
@@ -200,7 +241,16 @@ class Feather {
       }
 
       this.spine.push(spinePt);
+
+      if (prevPoint) {
+        spineLength += dist2d(points[i], prevPoint);
+      }
+      prevPoint = points[i];
     }
+
+    this.spineLength = spineLength;
+
+    Debug.log(`Spine length: ${spineLength}`);
   }
 
   getPointsAndTangentsAlongSpine(tStart, tEnd, nPoints) {
@@ -250,9 +300,9 @@ class Feather {
       const squeeze = smoothstep(0, 0.05, t);
 
       const d = p.width * 0.5 * squeeze;
-      const r = add2d(p.frame.origin, scale2d(p.frame.right,  d));
+      const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
       const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-      vertex(r.x, r.y, 0, u,  0.5);
+      vertex(r.x, r.y, 0, u, 0.5);
       vertex(l.x, l.y, 0, u, -0.5);
     }
     endShape();
@@ -272,26 +322,30 @@ class Feather {
       this.spine.forEach(p => { Debug.drawPoint(p.frame.origin, p.width); });
     }
 
-    if (debugDrawToggles.vane) {
-      for (let i = 0; i < this.leftBarbs.length; i += 1) {
-        const barb = this.leftBarbs[i];
-        this.debugDrawBarb(barb);
+    for (let i = 0; i < this.barbs.length; i += 1) {
+      const barb = this.barbs[i];
+      if (debugDrawToggles.vane) {
+        this.debugDrawBarbRoot(barb);
+
+        // Debug draw angle between spine and barb side
+        const tiltFactor = clamp01(params.barbTiltCurve(barb.tAlongVane) + params.barbTiltStart);
+        const midDir = rotateTowards(barb.frame.right, barb.frame.forward, tiltFactor);
+        Debug.drawArrow(barb.frame.origin, add2d(barb.frame.origin, scale2d(midDir, 50)));
       }
 
-      for (let i = 0; i < this.rightBarbs.length; i += 1) {
-        const barb = this.rightBarbs[i];
+      if (debugDrawToggles.barbs) {
         this.debugDrawBarb(barb);
       }
     }
-    
+
     pop();
   }
 
-  debugDrawBarb(barb) {
+  debugDrawBarbRoot(barb) {
     Debug.drawFrame(barb.frame, /* lineLength: */ 20);
 
     // Visualize each clump with a different color
-    const clumpColor = getRandomColor(barb.clumpIndex + 123749);
+    const clumpColor = getRandomColor(barb.clumpIndex);
     fill(clumpColor);
     noStroke();
     Debug.drawCircle(barb.frame.origin, 5);
@@ -299,7 +353,15 @@ class Feather {
     // Visualize the barb length
     const barbTip = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length));
     stroke(clumpColor);
-    Debug.drawLine2D(barb.frame.origin, barbTip);
+    Debug.drawDashedLine2D(barb.frame.origin, barbTip);
+  }
+
+  debugDrawBarb(barb) {
+    const clumpColor = getRandomColor(barb.clumpIndex);
+
+    stroke(clumpColor);
+
+    Debug.drawHermite2D(barb.spline, /* steps: */ 20, /* showTangents: */ debugDrawToggles.barbTangents);
   }
 }
 
@@ -345,21 +407,26 @@ function getRandomColor(i) {
 function createGui() {
   gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
 
-  const debugFolder = gui.addFolder('Debug Toggles');
+  const debugFolder = gui.addFolder('Debug');
   debugFolder.add(debugDrawToggles, 'spine').name('Draw Spine').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'vane').name('Draw Vane').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
+  debugFolder.add(debugSliders, 'a', 0, 1).step(0.01).name('Debug Slider A').onChange(() => { refresh(); });
 
   const paramsFolder = gui.addFolder('Feather Params');
   paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
+
+  const barbsFolder = gui.addFolder('Barbs');
+  barbsFolder.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
+  barbsFolder.add(params, 'barbTiltStart', 0, 1).step(0.01).onChange(() => { refresh(); });
 
   const shaderFolder = gui.addFolder('Shader');
   shaderFolder.addColor(params.shaderParams, 'baseColor').name('Base Color').onChange(() => { refresh(); });
@@ -379,7 +446,7 @@ function refresh() {
 
 function setupDebugParams() {
   // Copy params to debugParams except for the reduced divisions
-  debugParams = { ...params}
+  debugParams = { ...params }
   debugParams.spineDivisions = 100;
-  debugParams.nBarbs = 40;
+  debugParams.nBarbs = 20;
 }
