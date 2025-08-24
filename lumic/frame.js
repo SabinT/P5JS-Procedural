@@ -9,10 +9,10 @@ export function perpendicular2d (p) {
  * Frame of reference
  */
 export class Frame2D {
-    constructor(origin, forward) {
+    constructor(origin, forward, right) {
         this.origin = origin;
         this.forward = forward;
-        this.right = perpendicular2d(forward);
+        this.right = right || perpendicular2d(forward);
         this.forward.normalize();
         this.right.normalize();
     }
@@ -22,5 +22,9 @@ export class Frame2D {
         var oy = scale2d(this.right, p.x);
         var o = add2d(ox, oy);
         return add2d(this.origin, o);
+    }
+
+    translate(v) {
+        this.origin = add2d(this.origin, v);
     }
 }
