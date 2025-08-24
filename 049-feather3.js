@@ -26,7 +26,7 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = true; // Enable debug drawing
+Debug.enabled = false; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
@@ -48,10 +48,11 @@ const params = {
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 100,
   spineBaseWidth: 20,
+  spineEnd: 0.95,
   spineWidthCurve: (t) => {
     return 1 - easeInQuad(t);
   },
-  nBarbs: 40, // barbs start at the end of the calamus
+  nBarbs: 240, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
   afterFeatherStart: 0.2,
   afterFeatherEnd: 0.3,
@@ -60,13 +61,13 @@ const params = {
   vaneEnd: 0.8,
   vaneBaseWidth: 100,
   vaneWidthCurve: (t) => {
-    return smoothstep(0, 0.04, t)
+    return smoothstep(-0.25, 0.04, t)
       * smoothstep(2, 0.1, t)
       * smoothstep(1.5, 0.6, t);
   },
-  barbTiltStart: 0.3, // 0-1 = 0 to 90 degrees, 0 = perpendicular, 1 = along spine
+  barbTiltStart: 0.41, // 0-1 = 0 to 90 degrees, 0 = perpendicular, 1 = along spine
   barbTiltCurve: (t) => {
-    return smoothstep(0.75, 1, t);
+    return smoothstep(0.8, 1, t);
   },
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
   vaneBreaks: 10,
@@ -203,8 +204,9 @@ class Feather {
 
     const dtAlongSpine = 0.1; // how much the barbs move along the vane from root to tip
     
-    this.barbs.forEach(barb => {
-      const rootTangentLength = 0.1 * this.spineLength * (1 - barb.tAlongVane);
+    for (let i = 0; i < this.barbs.length; i++) {
+      const barb = this.barbs[i];
+      const rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane);
       const tipTangentLength = 0.15 * this.spineLength * (1 - barb.tAlongVane * 0.75);
       const barbRoot = barb.frame.origin;
       const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
@@ -215,19 +217,24 @@ class Feather {
 
       const barbTilt = clamp01(params.barbTiltCurve(barb.tAlongVane) + params.barbTiltStart);
       const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
-      const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length));
-      let tipTangent = scale2d(dirToTip, tipTangentLength);
+
+      // Adjust barb length at extreme tilt
+      const tBarbLengthMultiplier = 1 - smoothstep(0.995, 1, barbTilt);
+
+      const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length * tBarbLengthMultiplier));
+      let tipTangentDir = normalize2d(lerp2d(dirToTip, barb.frame.forward, 0.6));
+      let tipTangent = scale2d(tipTangentDir, tipTangentLength);
       tipTangent = rotateTowards(tipTangent, barb.frame.forward, barb.tAlongVane);
 
       barb.spline = new CubicHermite2D(barbRoot, rootTangent, barbTip, tipTangent);
-    });
+    };
   }
 
   buildSpine() {
     const params = this.params;
 
     // Don't directly use the hermite's frame, build a smoother one from points
-    var { points, tangents } = this.getPointsAndTangentsAlongSpine(0, 1, params.spineDivisions);
+    var { points, tangents } = this.getPointsAndTangentsAlongSpine(0, params.spineEnd, params.spineDivisions);
 
     this.spine = [];
     let spineLength = 0;
@@ -266,6 +273,7 @@ class Feather {
   }
 
   draw() {
+    this.drawBarbs();
     this.drawSpine();
 
     if (Debug.enabled) {
@@ -308,6 +316,20 @@ class Feather {
     endShape();
 
     resetShader();
+
+    pop();
+  }
+
+  drawBarbs() {
+    push();
+
+    stroke(255);
+    for (let i = 0; i < this.barbs.length - 6; i++) {
+      // if (i < 82) { continue; } // TEMPORARY
+
+      const barb = this.barbs[i];
+      barb.spline.Draw();
+    }
 
     pop();
   }
@@ -417,6 +439,8 @@ function createGui() {
 
   const paramsFolder = gui.addFolder('Feather Params');
   paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineEnd', 0.5, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneStart', 0, 1).step(0.01).onChange(() => { refresh(); });
