@@ -43,7 +43,6 @@ const params = {
   spineDivisions: 100,
   spineBaseWidth: 20,
   spineWidthCurve: (t) => {
-    // Example curve: easeInOutQuad
     return 1 - easeInQuad(t);
   },
   nBarbs: 40, // barbs start at the end of the calamus
@@ -55,7 +54,6 @@ const params = {
   vaneEnd: 0.8,
   vaneBaseWidth: 100,
   vaneWidthCurve: (t) => {
-    // Example curve: easeInOutQuad
     return smoothstep(0, 0.04, t)
          * smoothstep(2, 0.1, t)
          * smoothstep(1.5, 0.6, t);
