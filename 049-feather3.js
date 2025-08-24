@@ -1,11 +1,12 @@
 import { BezierCubic } from "./lumic/bezier.js";
 import { Debug } from "./lumic/debug.js";
-import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand } from "./lumic/common.js";
+import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex } from "./lumic/common.js";
 import { easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
 import { getTangents } from "./lumic/geomerty.js";
+import { spineVert, spineFrag } from "./049-feather3-shaders.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
 // Interesting links / related materials:
@@ -25,7 +26,15 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = true; // Enable debug drawing
+Debug.enabled = false; // Enable debug drawing
+
+const debugDrawToggles = {
+  spine: false,
+  vane: true,
+  barbs: true,
+  spineShader: false
+}
+
 const gui = new dat.GUI();
 
 const params = {
@@ -33,7 +42,6 @@ const params = {
   spineCurve: CubicHermite2D.FromObject({"p0":{"x":297,"y":546},"m0":{"x":176,"y":-122},"p1":{"x":1343,"y":576},"m1":{"x":680,"y":-284}}),
   spineDivisions: 100,
   spineBaseWidth: 20,
-  spineBaseColor: "#bfb09aff",
   spineWidthCurve: (t) => {
     // Example curve: easeInOutQuad
     return 1 - easeInQuad(t);
@@ -55,10 +63,18 @@ const params = {
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
   vaneBreaks: 10,
   vaneBreakSymmetry: 0.5, // 0 = left only, 1 = right only, 0.5 = even on both sides
+  shaderParams: {
+    baseColor: "#bfb09a",
+    edgeColor: "#665954",
+    edgeSoftness: 0.75,
+    ridgeSoftness: 0.1,
+    ridgeHighlight: 0.5,
+    tipDarken: 0.35,
+  }
 };
 
 // Reduced divisions for faster debugging
-const debugParams = { ... params };
+let debugParams = { ... params };
 debugParams.spineDivisions = 20;
 debugParams.nBarbs = 20;
 
@@ -210,48 +226,62 @@ class Feather {
   }
 
   drawSpine() {
+    push();
+
+    noStroke();
 
     // Use a shader that draws a gradient based on uv.y
-
-
+    shader(spineShader);
+    const sParams = this.params.shaderParams;
+    spineShader.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
+    spineShader.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
+    spineShader.setUniform('uEdgeSoftness', sParams.edgeSoftness);
+    spineShader.setUniform('uTipDarken', sParams.tipDarken);
+    spineShader.setUniform('uDebug', debugDrawToggles.spineShader ? 1 : 0);
 
     // Construct a shape with UVs for the spine
-    // The shape travels along the right side, then back along the left side to close the loop
-    beginShape();
-    // Right side, uv.y = 0.5
+    // Squeeze the starting tip to a point over a very short distance
+    beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < this.spine.length; i++) {
-      const u = i / (this.spine.length - 1);
+      const t = i / (this.spine.length - 1);
+      const u = t;
       const p = this.spine[i];
-      const edgePoint = add2d(p.frame.origin, scale2d(p.frame.right, p.width / 2));
-      vertex(edgePoint.x, edgePoint.y, 0, u, 0.5);
-    }
 
-    // Left side, traveling back, uv.y = -0.5
-    for (let i = this.spine.length - 1; i >= 0; i--) {
-      const u = i / (this.spine.length - 1);
-      const p = this.spine[i];
-      const edgePoint = add2d(p.frame.origin, scale2d(p.frame.right, -p.width / 2));
-      vertex(edgePoint.x, edgePoint.y, 0, u, -0.5);
+      const squeeze = smoothstep(0, 0.05, t);
+
+      const d = p.width * 0.5 * squeeze;
+      const r = add2d(p.frame.origin, scale2d(p.frame.right,  d));
+      const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
+      vertex(r.x, r.y, 0, u,  0.5);
+      vertex(l.x, l.y, 0, u, -0.5);
     }
-    endShape(CLOSE);
+    endShape();
+
+    resetShader();
+
+    pop();
   }
 
   debugDraw() {
     push();
 
-    Debug.drawHermite2D(this.params.spineCurve, /* steps: */ 100);
+    if (debugDrawToggles.spine) {
+      Debug.drawHermite2D(this.params.spineCurve, /* steps: */ 100);
 
-    noFill();
-    this.spine.forEach(p => { Debug.drawPoint(p.frame.origin, p.width); });
-
-    for (let i = 0; i < this.leftBarbs.length; i += 1) {
-      const barb = this.leftBarbs[i];
-      this.debugDrawBarb(barb);
+      noFill();
+      this.spine.forEach(p => { Debug.drawPoint(p.frame.origin, p.width); });
     }
 
-    for (let i = 0; i < this.rightBarbs.length; i += 1) {
-      const barb = this.rightBarbs[i];
-      this.debugDrawBarb(barb);
+    if (debugDrawToggles.vane) {
+      for (let i = 0; i < this.leftBarbs.length; i += 1) {
+        const barb = this.leftBarbs[i];
+        this.debugDrawBarb(barb);
+      }
+
+      for (let i = 0; i < this.rightBarbs.length; i += 1) {
+        const barb = this.rightBarbs[i];
+        this.debugDrawBarb(barb);
+      }
     }
     
     pop();
@@ -274,19 +304,23 @@ class Feather {
 }
 
 let feather;
+let spineShader;
 
 window.setup = function () {
-  canvas = createCanvas(w, h);
+  canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
   pixelDensity(1);
   createGui();
 
   feather = new Feather(Debug.enabled ? debugParams : params);
   feather.build();
+
+  spineShader = createShader(spineVert, spineFrag);
 };
 
 window.draw = function () {
   centerCanvas(canvas);
+  translate(-hw, -hh);
   background(15);
   noLoop();
 
@@ -309,16 +343,31 @@ function getRandomColor(i) {
 }
 
 function createGui() {
-  gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { redraw(); });
+  gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
 
-  gui.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { redraw(); });
-  gui.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { redraw(); });
-  gui.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { redraw(); });
-  gui.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { redraw(); });
-  gui.add(params, 'vaneStart', 0, 1).step(0.01).onChange(() => { redraw(); });
-  gui.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { redraw(); });
-  gui.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { redraw(); });
-  gui.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { redraw(); });
+  const debugFolder = gui.addFolder('Debug Toggles');
+  debugFolder.add(debugDrawToggles, 'spine').name('Draw Spine').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'vane').name('Draw Vane').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
+
+  const paramsFolder = gui.addFolder('Feather Params');
+  paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneStart', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
+
+  const shaderFolder = gui.addFolder('Shader');
+  shaderFolder.addColor(params.shaderParams, 'baseColor').name('Base Color').onChange(() => { refresh(); });
+  shaderFolder.addColor(params.shaderParams, 'edgeColor').name('Edge Color').onChange(() => { refresh(); });
+  shaderFolder.add(params.shaderParams, 'edgeSoftness', 0, 1).step(0.01).name('Edge Softness').onChange(() => { refresh(); });
+  shaderFolder.add(params.shaderParams, 'ridgeSoftness', 0, 1).step(0.01).name('Ridge Softness').onChange(() => { refresh(); });
+  shaderFolder.add(params.shaderParams, 'ridgeHighlight', 0, 1).step(0.01).name('Ridge Highlight').onChange(() => { refresh(); });
+  shaderFolder.add(params.shaderParams, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
 }
 
 function refresh() {
@@ -330,7 +379,7 @@ function refresh() {
 
 function setupDebugParams() {
   // Copy params to debugParams except for the reduced divisions
-  debugParams = structuredClone(params);
+  debugParams = { ...params}
   debugParams.spineDivisions = 100;
   debugParams.nBarbs = 40;
 }

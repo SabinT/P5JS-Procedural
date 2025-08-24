@@ -273,3 +273,8 @@ export function saveString(str, filename) {
   a.click();
   document.body.removeChild(a);
 }
+
+export function rgba01FromHex(hex) {
+  const c = color(hex);
+  return [red(c)/255, green(c)/255, blue(c)/255, alpha(c)/255];
+}
