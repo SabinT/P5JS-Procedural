@@ -3,112 +3,165 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Sketch</title>
-
+    <title>P5JS Procedural Sketches</title>
     <link rel="stylesheet" type="text/css" href="style.css" />
-
-    <script src="./libraries/dat.gui.min.js"></script>
-    <script src="libraries/p5.min.js"></script>
-    <!-- <script src="libraries/p5.mapper.min.js"></script> -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/p5.capture@1.4.1/dist/p5.capture.umd.min.js"></script> -->
-    <script src="libraries/p5.svg.js"></script>
   </head>
-
-  <body>
-    <!-- <script src="000-shaderTest.js" type="module"></script> -->
-    <!-- <script src="000-starter-grid-SVG.js" type="module"></script> -->
-    <!-- <script src="002-red.js" type="module"></script> -->
-    <!-- <script src="003-blanket.js" type="module"></script> -->
-    <!-- <script src="004-phyllotaxis.js" type="module"></script> -->
-    <!-- <script src="005-mandala.js" type="module"></script> -->
-    <!-- <script src="006-mandalaTestSpiral.js" type="module"></script> -->
-    <!-- <script src="007-mandalaBuilder.js" type="module"></script> -->
-    <!-- <script src="008-mandala-grid.js" type="module"></script> -->
-    <!-- <script src="009-anotherMandala.js" type="module"></script> -->
-    <!-- <script src="010-petalgen.js" type="module"></script> -->
-    <!-- <script src="011-circlePacking.js" type="module"></script> -->
-    <!-- <script src="012-heartCirclesFade.js" type="module"></script> -->
-    <!-- <script src="013-betterCirclePacking.js" type="module"></script> -->
-    <!-- <script src="013-circles-colored.js" type="module"></script> -->
-    <!-- <script src="014-quadTreeTest.js" type="module"></script> -->
-    <!-- <script src="015-scatter.js" type="module"></script> -->
-    <!-- <script src="015-scatter-seatac.js" type="module"></script> -->
-    <!-- <script src="016-lineCircleClip.js" type="module"></script> -->
-    <!-- <script src="017-polyCircle.js" type="module"></script> -->
-    <!-- <script src="018-wasteNot.js" type="module"></script> -->
-    <!-- <script src="018-wasteNot-simple.js" type="module"></script> -->
-    <!-- <script src="019-sacred.js" type="module"></script> -->
-    <!-- <script src="020-spiro.js" type="module"></script> -->
-    <!-- <script src="020-spiro-svg.js" type="module"></script> -->
-    <!-- <script src="021-compPoetry.js" type="module"></script> -->
-    <!-- <script src="022-logo.js" type="module"></script> -->
-    <!-- <script src="023-snake.js" type="module"></script> -->
-    <!-- <script src="024-hexgrid.js" type="module"></script> -->
-    <!-- <script src="025-hexcircles.js" type="module"></script> -->
-    <!-- <script src="026-scc.js" type="module"></script> -->
-    <!-- <script src="027-cobwebMandala.js" type="module"></script> -->
-    <!-- <script src="028-unicode-ascii.js" type="module"></script> -->
-    <!-- <script src="029-crisscrosstrees.js" type="module"></script> -->
-    <!-- <script src="030-tangentsTest.js" type="module"></script> -->
-    <!-- <script src="031-fern.js" type="module"></script> -->
-    <!-- <script src="032-treerings.js" type="module"></script> -->
-    <!-- <script src="033-rasterAnim.js" type="module"></script> -->
-    <!-- <script src="034-devmatrix.js" type="module"></script> -->
-    <!-- <script src="035-feather.js" type="module"></script> -->
-    <!-- <script src="036-circledivide.js" type="module"></script> -->
-    <!-- <script src="037-devmatrix2.js" type="module"></script> -->
-    <!-- <script src="038-snowflakes.js" type="module"></script> -->
-    <!-- <script src="039-snowflakeField.js" type="module"></script> -->
-    <!-- <script src="040-wallThing.js" type="module"></script> -->
-    <!-- <script src="041-linestuff.js" type="module"></script> -->
-    <!-- <script src="042-wrongcircle.js" type="module"></script> -->
-    <!-- <script src="043-googleyribs.js" type="module"></script> -->
-    <!-- <script src="044-devmatrix-mapped.js" type="module"></script> -->
-    <!-- <script src="045-fullofcare.js" type="module"></script> -->
-    <!-- <script src="046-sccjuly2.js" type="module"></script> -->
-    <!-- <script src="047-feather2.js" type="module"></script> -->
-    <!-- <script src="048-hermite.js" type="module"></script> -->
-    <script src="049-feather3.js" type="module"></script>
-
-    <!-- <script src="tiling/01-hexlayout.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-mural-left.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-mural-center.js" type="module"></script> -->
-
-    <!-- <script src="tiling/belred-A-front.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-A-back.js" type="module"></script> -->
-    
-    <!-- <script src="tiling/belred-B-front.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-B-back.js" type="module"></script> -->
-    
-    <!-- <script src="tiling/belred-C-front.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-C-back.js" type="module"></script> -->
-    
-    <!-- <script src="tiling/belred-D-front.js" type="module"></script> -->
-    <!-- <script src="tiling/belred-D-back.js" type="module"></script> -->
-    
-    <!-- <script src="tiling/layersuponlayers.js" type="module"></script> -->
-
-    <!-- <script src="tiling/belred-mural-right.js" type="module"></script> -->
-    <!-- <script src="tiling/baked-hex-poc.js" type="module"></script> -->
-
-    <!-- <script src="projmapping/01-p5mappertest.js" type="module"></script> -->
-    <!-- <script src="projmapping/02-room.js" type="module"></script> -->
-
-    <!-- <script src="textures/01-petal.js" type="module"></script> -->
-    <!-- <script src="textures/01-bg.js" type="module"></script> -->
-    <!-- <script src="textures/02-hextex.js" type="module"></script> -->
-
-    <!-- <script src="mandalas/01-uniform.js" type="module"></script> -->
-
-    <!-- <script src="plot-party/superellipse.js" type="module"></script> -->
-    <!-- <script src="plot-party/butterfly-jumpy.js" type="module"></script> -->
-    <!-- <script src="plot-party/heartcirc.js" type="module"></script> -->
-    <!-- <script src="plot-party/mandala1.js" type="module"></script> -->
-
-    <!-- <script src="genuary-24/01-particles.js" type="module"></script> -->
-
-    <!-- <script src="tests/linecliptest.js" type="module"></script> -->
-    <!-- <script src="conics/conic-lampshade.js" type="module"></script> -->
+  <body class="home">
+    <h1>P5JS Procedural Sketches</h1>
+    <div class="sketch-grid">
+      <a href="001-circles.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">001-circles.js</span>
+      </a>
+      <a href="002-red.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">002-red.js</span>
+      </a>
+      <a href="003-blanket.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">003-blanket.js</span>
+      </a>
+      <a href="004-phyllotaxis.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">004-phyllotaxis.js</span>
+      </a>
+      <a href="005-mandala.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">005-mandala.js</span>
+      </a>
+      <a href="006-mandalaTestSpiral.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">006-mandalaTestSpiral.js</span>
+      </a>
+      <a href="007-mandalaBuilder.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">007-mandalaBuilder.js</span>
+      </a>
+      <a href="008-mandala-grid.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">008-mandala-grid.js</span>
+      </a>
+      <a href="009-anotherMandala.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">009-anotherMandala.js</span>
+      </a>
+      <a href="010-petalgen.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">010-petalgen.js</span>
+      </a>
+      <a href="011-circlePacking.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">011-circlePacking.js</span>
+      </a>
+      <a href="012-heartCirclesFade.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">012-heartCirclesFade.js</span>
+      </a>
+      <a href="013-betterCirclePacking.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">013-betterCirclePacking.js</span>
+      </a>
+      <a href="014-quadTreeTest.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">014-quadTreeTest.js</span>
+      </a>
+      <a href="015-scatter.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">015-scatter.js</span>
+      </a>
+      <a href="015-scatterTangents.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">015-scatterTangents.js</span>
+      </a>
+      <a href="016-lineCircleClip.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">016-lineCircleClip.js</span>
+      </a>
+      <a href="017-polyCircle.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">017-polyCircle.js</span>
+      </a>
+      <a href="018-wasteNot.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">018-wasteNot.js</span>
+      </a>
+      <a href="019-sacred.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">019-sacred.js</span>
+      </a>
+      <a href="020-moire.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">020-moire.js</span>
+      </a>
+      <a href="020-spiro.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">020-spiro.js</span>
+      </a>
+      <a href="021-compPoetry.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">021-compPoetry.js</span>
+      </a>
+      <a href="022-logo.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">022-logo.js</span>
+      </a>
+      <a href="023-snake.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">023-snake.js</span>
+      </a>
+      <a href="024-hexgrid.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">024-hexgrid.js</span>
+      </a>
+      <a href="025-hexcircles.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">025-hexcircles.js</span>
+      </a>
+      <a href="026-scc.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">026-scc.js</span>
+      </a>
+      <a href="027-cobwebMandala.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">027-cobwebMandala.js</span>
+      </a>
+      <a href="028-unicode-ascii.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">028-unicode-ascii.js</span>
+      </a>
+      <a href="029-crisscrosstrees.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">029-crisscrosstrees.js</span>
+      </a>
+      <a href="030-tangentsTest.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">030-tangentsTest.js</span>
+      </a>
+      <a href="031-fern.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">031-fern.js</span>
+      </a>
+      <a href="032-treerings.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">032-treerings.js</span>
+      </a>
+      <a href="033-rasterAnim.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">033-rasterAnim.js</span>
+      </a>
+      <a href="034-devmatrix.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">034-devmatrix.js</span>
+      </a>
+      <a href="035-feather.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">035-feather.js</span>
+      </a>
+      <a href="036-circledivide.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">036-circledivide.js</span>
+      </a>
+      <a href="037-devmatrix2.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">037-devmatrix2.js</span>
+      </a>
+      <a href="038-snowflakes.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">038-snowflakes.js</span>
+      </a>
+      <a href="039-snowflakeField.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">039-snowflakeField.js</span>
+      </a>
+      <a href="040-wallThing.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">040-wallThing.js</span>
+      </a>
+      <a href="041-linestuff.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">041-linestuff.js</span>
+      </a>
+      <a href="042-wrongcircle.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">042-wrongcircle.js</span>
+      </a>
+      <a href="043-googleyribs.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">043-googleyribs.js</span>
+      </a>
+      <a href="044-devmatrix-mapped.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">044-devmatrix-mapped.js</span>
+      </a>
+      <a href="045-fullofcare.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">045-fullofcare.js</span>
+      </a>
+      <a href="046-sccjuly2.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">046-sccjuly2.js</span>
+      </a>
+      <a href="047-feather2.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">047-feather2.js</span>
+      </a>
+      <a href="048-hermite.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">048-hermite.js</span>
+      </a>
+      <a href="049-feather3.html" target="_blank" class="sketch-tile">
+        <span class="sketch-tile-text">049-feather3.js</span>
+      </a>
+    </div>
   </body>
 </html>
