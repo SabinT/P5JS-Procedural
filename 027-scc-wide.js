@@ -128,8 +128,8 @@ function drawHex(p, R, ring) {
 let font;
 let font1;
 window.preload = function () {
-  font = loadFont("assets/fonts/joystix/joystix monospace.otf");
-  font1 = loadFont("assets/fonts/Anonymous_Pro/AnonymousPro-Bold.ttf");
+  font = loadFont("../assets/fonts/joystix/joystix monospace.otf");
+  font1 = loadFont("../assets/fonts/Anonymous_Pro/AnonymousPro-Bold.ttf");
 };
 
 function render(g) {

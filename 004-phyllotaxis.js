@@ -4,7 +4,7 @@
  * http://algorithmicbotany.org/papers/abop/abop-ch4.pdf
  */
 
-import { GOLDEN_ANGLE_RADIANS, polar2cart, sqRand2D } from "./lumic/common.js";
+import { GOLDEN_ANGLE_RADIANS, polar2cart, sqRand2D, vec2 } from "./lumic/common.js";
 
 const color1 = "#fcfbf9";
 const color2 = "#2ce7f8";

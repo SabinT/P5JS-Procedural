@@ -3,8 +3,8 @@ const hexString = "0123456789ABCDEF";
 let font;
 
 window.preload = function () {
-    font = loadFont("assets/fonts/joystix/joystix monospace.otf");
-    // font = loadFont("assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf");
+    font = loadFont("../assets/fonts/joystix/joystix monospace.otf");
+    // font = loadFont("../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf");
 }
 
 window.setup = function () {
