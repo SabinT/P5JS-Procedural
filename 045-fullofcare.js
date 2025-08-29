@@ -166,8 +166,8 @@ function wrapPos(x,y) {
 let droplets = [];
 
 window.setup = function () {
-  // font = loadFont("assets/AnonymousPro-Regular.ttf");
-  font = loadFont("assets/fonts/Anonymous_Pro/AnonymousPro-Bold.ttf");
+  // font = loadFont("../assets/AnonymousPro-Regular.ttf");
+  font = loadFont("../assets/fonts/Anonymous_Pro/AnonymousPro-Bold.ttf");
 
   createCanvas(windowWidth, windowHeight, WEBGL);
   background(0);

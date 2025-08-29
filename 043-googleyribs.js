@@ -28,8 +28,8 @@ const settingsHeart = {
 
 window.preload = function() {
   // Load the SDF image (assumes a square PNG)
-  sdfImg = loadImage('./ribs_sdf.png');
-  heartSdfImg = loadImage('./heart_sdf.png');
+  sdfImg = loadImage('../ribs_sdf.png');
+  heartSdfImg = loadImage('../heart_sdf.png');
 };
 
 let ribsCircles;

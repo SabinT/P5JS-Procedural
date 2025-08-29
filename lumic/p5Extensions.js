@@ -91,6 +91,11 @@ export function createSliderBox(min, max, value, step, text, valueChangeHandler,
   return elt;
 };
 
+export function setCanvasZIndex(canvas, zIndex) {
+  const elt = canvas.elt;
+  elt.style.zIndex = zIndex;
+}
+
 // Center the p5 canvas in window
 export function centerCanvas(canvas) {
   let container = document.getElementById('canvasContainer');

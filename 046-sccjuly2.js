@@ -86,7 +86,7 @@ window.setup = function()
   const canvas = createCanvas(w, h);
   centerCanvas(canvas);
   font = loadFont(
-    "assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf"
+    "../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf"
   );
   textFont(font);
 

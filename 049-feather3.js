@@ -3,7 +3,7 @@ import { Debug } from "./lumic/debug.js";
 import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI } from "./lumic/common.js";
 import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
-import { centerCanvas } from "./lumic/p5Extensions.js";
+import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
 import { getTangents, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
@@ -404,6 +404,7 @@ window.setup = function () {
 
 window.draw = function () {
   centerCanvas(canvas);
+  setCanvasZIndex(canvas, -1); // so gui is on top
   translate(-hw, -hh);
   background(15);
   noLoop();

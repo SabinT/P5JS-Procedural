@@ -368,7 +368,7 @@ export function outerTangentPath(c1, c2, r1, r2, segments = 8, debugDraw = false
 
   // Frames at centers of circles
   const c1c2 = sub2d(c2, c1);
-  const f1 = { origin: c1, right: norm2d(c1c2) };
+  const f1 = { origin: c1, right: normalize2d(c1c2) };
   const f2 = { origin: c2, right: f1.right };
 
   const aLocal = sub2d(a, c1);

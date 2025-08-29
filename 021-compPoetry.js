@@ -211,9 +211,9 @@ let defaultFont;
 let typewriter;
 let typewriterBold;
 window.preload = function () {
-  defaultFont = loadFont("assets/fonts/Anonymous_Pro/AnonymousPro-Regular.ttf");
-  typewriter = loadFont("assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf");
-  typewriterBold = loadFont("assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Bold.ttf");
+  defaultFont = loadFont("../assets/fonts/Anonymous_Pro/AnonymousPro-Regular.ttf");
+  typewriter = loadFont("../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf");
+  typewriterBold = loadFont("../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Bold.ttf");
 };
 
 const numCells1 = 51;

@@ -12,3 +12,50 @@ main {
   display: flex;
   justify-content: center;
 }
+
+/* Home page grid styles */
+body.home {
+  background-color: #333333; /* Dark gray background */
+  font-family: 'Courier New', monospace;
+}
+
+.sketch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sketch-tile {
+  background-color: black;
+  color: white;
+  text-decoration: none;
+  padding: 40px 20px;
+  text-align: center;
+  border: none;
+  border-radius: 4px;
+  transition: opacity 0.3s ease;
+  display: block;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sketch-tile:hover {
+  opacity: 0.8;
+}
+
+.sketch-tile-text {
+  font-size: 14px;
+  word-break: break-all;
+}
+
+h1 {
+  color: white;
+  text-align: center;
+  margin: 40px 0 20px 0;
+  font-family: 'Courier New', monospace;
+}
