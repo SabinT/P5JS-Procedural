@@ -167,34 +167,37 @@ class Feather {
 
       // Assign a "clump index" to the barb
       // Every time there is a break in the vane, a new clump starts
-      const nextVaneBreakStopIndexLeft = lastVaneBreakStopIndexLeft + 1;
-      const nextVaneBreakStopIndexRight = lastVaneBreakStopIndexRight + 1;
+      
+      // Check if we've crossed into a new left clump
+      if (lastVaneBreakStopIndexLeft + 1 < leftVaneBreakStops.length && 
+          tAlongSpine >= leftVaneBreakStops[lastVaneBreakStopIndexLeft + 1]) {
+        lastVaneBreakStopIndexLeft++;
+        iClumpLeft++;
+        
+        if (Debug.enabled) {
+          console.log(`New left clump ${iClumpLeft} at t=${tAlongSpine}`);
+        }
+      }
+
+      // Check if we've crossed into a new right clump
+      if (lastVaneBreakStopIndexRight + 1 < rightVaneBreakStops.length && 
+          tAlongSpine >= rightVaneBreakStops[lastVaneBreakStopIndexRight + 1]) {
+        lastVaneBreakStopIndexRight++;
+        iClumpRight++;
+        
+        if (Debug.enabled) {
+          console.log(`New right clump ${iClumpRight} at t=${tAlongSpine}`);
+        }
+      }
+
+      // Calculate position within current clump (0-1)
       const prevVaneBreakStopLeft = lastVaneBreakStopIndexLeft >= 0 ? leftVaneBreakStops[lastVaneBreakStopIndexLeft] : tBarbStart;
-      const nextVaneBreakStopLeft = nextVaneBreakStopIndexLeft < leftVaneBreakStops.length ? leftVaneBreakStops[nextVaneBreakStopIndexLeft] : 1;
+      const nextVaneBreakStopLeft = lastVaneBreakStopIndexLeft + 1 < leftVaneBreakStops.length ? leftVaneBreakStops[lastVaneBreakStopIndexLeft + 1] : 1;
       const prevVaneBreakStopRight = lastVaneBreakStopIndexRight >= 0 ? rightVaneBreakStops[lastVaneBreakStopIndexRight] : tBarbStart;
-      const nextVaneBreakStopRight = nextVaneBreakStopIndexRight < rightVaneBreakStops.length ? rightVaneBreakStops[nextVaneBreakStopIndexRight] : 1;
-      let tAlongClumpLeft = (tAlongSpine - prevVaneBreakStopLeft) / (nextVaneBreakStopLeft - prevVaneBreakStopLeft);
-      let tAlongClumpRight = (tAlongSpine - prevVaneBreakStopRight) / (nextVaneBreakStopRight - prevVaneBreakStopRight);
-
-      if (nextVaneBreakStopIndexLeft < leftVaneBreakStops.length && tAlongSpine > leftVaneBreakStops[nextVaneBreakStopIndexLeft]) {
-        iClumpLeft = nextVaneBreakStopIndexLeft;
-        lastVaneBreakStopIndexLeft = nextVaneBreakStopIndexLeft;
-        tAlongClumpLeft -= 1;
-
-        if (Debug.enabled) {
-          console.log(`New left clump at t=${tAlongSpine}`);
-        }
-      }
-
-      if (nextVaneBreakStopIndexRight < rightVaneBreakStops.length && tAlongSpine > rightVaneBreakStops[nextVaneBreakStopIndexRight]) {
-        iClumpRight = nextVaneBreakStopIndexRight;
-        lastVaneBreakStopIndexRight = nextVaneBreakStopIndexRight;
-        tAlongClumpRight -= 1;
-
-        if (Debug.enabled) {
-          console.log(`New right clump at t=${tAlongSpine}`);
-        }
-      }
+      const nextVaneBreakStopRight = lastVaneBreakStopIndexRight + 1 < rightVaneBreakStops.length ? rightVaneBreakStops[lastVaneBreakStopIndexRight + 1] : 1;
+      
+      const tAlongClumpLeft = (tAlongSpine - prevVaneBreakStopLeft) / (nextVaneBreakStopLeft - prevVaneBreakStopLeft);
+      const tAlongClumpRight = (tAlongSpine - prevVaneBreakStopRight) / (nextVaneBreakStopRight - prevVaneBreakStopRight);
 
       const vaneWidth = params.vaneBaseWidth * params.vaneWidthCurve(tAlongVane);
 
@@ -221,9 +224,6 @@ class Feather {
       this.barbs.push(rightBarb);
       this.barbs.push(leftBarb);
     }
-
-    // Build tAlongClump for each barb
-    let currentClumpIndex = null;
   }
 
   buildBarbs() {
