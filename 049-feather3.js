@@ -58,7 +58,7 @@ const params = {
   afterFeatherStart: 0.2,
   afterFeatherEnd: 0.3,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
-  vaneEnd: 1,
+  vaneBreakEnd: 1,
   vaneBaseWidth: 100,
   vaneWidthCurve: (t) => {
     return smoothstep(-0.25, 0.04, t)
@@ -106,7 +106,8 @@ class Feather {
   buildVane() {
     const params = this.params;
     const tBarbStart = params.afterFeatherEnd;
-    const tBarbEnd = params.vaneEnd;
+    const tBarbEnd = 1;
+    const tVaneBreakEnd = params.vaneBreakEnd;
 
     // Split vaneBreaks into left/right with some randomness
     // Create stops for the vane breaks
@@ -123,7 +124,7 @@ class Feather {
     if (nLeftVaneBreaks > 0) {
       for (let i = 0; i < nLeftVaneBreaks; i++) {
         const tBreak = i / nLeftVaneBreaks;
-        const t = lerp(tBarbStart, tBarbEnd, tBreak + breakMaxStagger * sqRand(seedLeft + i * 19 + 7));
+        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(seedLeft + i * 19 + 7));
         leftVaneBreakStops.push(t);
       }
     }
@@ -131,7 +132,7 @@ class Feather {
     if (nRightVaneBreaks > 0) {
       for (let i = 0; i < nRightVaneBreaks; i++) {
         const tBreak = i / nRightVaneBreaks;
-        const t = lerp(tBarbStart, tBarbEnd, tBreak + breakMaxStagger * sqRand(seedRight + 325 + i * 19 + 7));
+        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(seedRight + 325 + i * 19 + 7));
         rightVaneBreakStops.push(t);
       }
     }
@@ -569,7 +570,7 @@ function createGui() {
   paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneBreakEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
