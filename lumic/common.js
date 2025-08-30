@@ -278,3 +278,7 @@ export function rgba01FromHex(hex) {
   const c = color(hex);
   return [red(c)/255, green(c)/255, blue(c)/255, alpha(c)/255];
 }
+
+export function repeat(value, interval) {
+  return value - Math.floor(value / interval) * interval;
+}

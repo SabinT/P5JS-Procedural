@@ -1,11 +1,11 @@
 import { BezierCubic } from "./lumic/bezier.js";
 import { Debug } from "./lumic/debug.js";
-import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI } from "./lumic/common.js";
+import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI, dot2d, repeat, rot2d } from "./lumic/common.js";
 import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
-import { getTangents, rotateTowards } from "./lumic/geomerty.js";
+import { drawPath, getTangents, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
@@ -33,12 +33,13 @@ const debugDrawToggles = {
   vane: true,
   barbs: true,
   barbTangents: false,
-  spineShader: false
+  spineShader: false,
+  vanePattern: false,
 }
 
 // Temporary debug sliders for testing
 const debugSliders = {
-  a: 0.5,
+  a: 0.981499,
 }
 
 const gui = new dat.GUI();
@@ -56,9 +57,8 @@ const params = {
   // Afterfeather is the plumaceous part of the feather (fluffy)
   afterFeatherStart: 0.2,
   afterFeatherEnd: 0.3,
-  // Vane is the pennaceous part of the feather (flat, stiff)
-  vaneStart: 0.3,
-  vaneEnd: 0.8,
+  // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
+  vaneEnd: 1,
   vaneBaseWidth: 100,
   vaneWidthCurve: (t) => {
     return smoothstep(-0.25, 0.04, t)
@@ -103,29 +103,41 @@ class Feather {
 
   buildVane() {
     const params = this.params;
+    const tBarbStart = params.afterFeatherEnd;
+    const tBarbEnd = params.vaneEnd;
 
     // Split vaneBreaks into left/right with some randomness
     // Create stops for the vane breaks
     const nVaneBreaks = params.vaneBreaks;
-    const leftVaneBreaks = Math.floor(nVaneBreaks * (1 - params.vaneBreakSymmetry));
-    const rightVaneBreaks = nVaneBreaks - leftVaneBreaks;
+    const nLeftVaneBreaks = Math.floor(nVaneBreaks * (1 - params.vaneBreakSymmetry));
+    const nRightVaneBreaks = nVaneBreaks - nLeftVaneBreaks;
     const leftVaneBreakStops = [];
     const rightVaneBreakStops = [];
 
-    for (let i = 0; i < leftVaneBreaks; i++) {
-      const t = lerp(params.vaneStart, params.vaneEnd, Math.random());
-      leftVaneBreakStops.push(t);
+    const seedLeft = Math.floor(Math.random() * 100000);
+    const seedRight = Math.floor(Math.random() * 100000);
+    const breakMaxStagger = 0.2;
+
+    if (nLeftVaneBreaks > 0) {
+      for (let i = 0; i < nLeftVaneBreaks; i++) {
+        const tBreak = i / nLeftVaneBreaks;
+        const t = lerp(tBarbStart, tBarbEnd, tBreak + breakMaxStagger * sqRand(seedLeft + i * 19 + 7));
+        leftVaneBreakStops.push(t);
+      }
     }
-    for (let i = 0; i < rightVaneBreaks; i++) {
-      const t = lerp(params.vaneStart, params.vaneEnd, Math.random());
-      rightVaneBreakStops.push(t);
+  
+    if (nRightVaneBreaks > 0) {
+      for (let i = 0; i < nRightVaneBreaks; i++) {
+        const tBreak = i / nRightVaneBreaks;
+        const t = lerp(tBarbStart, tBarbEnd, tBreak + breakMaxStagger * sqRand(seedRight + 325 + i * 19 + 7));
+        rightVaneBreakStops.push(t);
+      }
     }
 
-    Debug.log(`Left vane breaks: ${leftVaneBreaks}, Right vane breaks: ${rightVaneBreaks}`);
+    Debug.log(`Left vane breaks: ${nLeftVaneBreaks}, Right vane breaks: ${nRightVaneBreaks}`);
     Debug.log("Left vane break stops:", leftVaneBreakStops);
     Debug.log("Right vane break stops:", rightVaneBreakStops);
 
-    const tBarbStart = params.afterFeatherEnd;
 
     // Get frames along the spine for the barbs
     this.barbs = [];
@@ -323,12 +335,86 @@ class Feather {
   drawBarbs() {
     push();
 
-    stroke(255);
     for (let i = 0; i < this.barbs.length - 6; i++) {
       // if (i < 82) { continue; } // TEMPORARY
-
+      
       const barb = this.barbs[i];
-      barb.spline.Draw();
+      stroke(255);
+      // barb.spline.Draw();
+      
+      // Create an aliasing like effect by drawing dots at specific angles
+      const nPoints = 80;
+      const origPts = barb.spline.GetPoints(nPoints);
+      // const origDirections = getTangents(origPts);
+
+      let origDirections = [];
+      for (let j = 0; j < origPts.length - 1; j++) {
+        const p = origPts[j];
+        const q = origPts[j + 1];
+        const dir = sub2d(q, p);
+        origDirections.push(dir);
+      }
+
+      const clumpRandom = sqRand(barb.clumpIndex);
+      noiseSeed(barb.clumpIndex);
+
+      // Create accumulating noise along the barb
+      const disturbAngle = [];
+      for (let j = 1; j < origDirections.length; j++) {
+        const t = j / (origDirections.length - 1);
+        const angle =  0.1 * (noise(-t * 100, clumpRandom * 100) - 0.5);
+        disturbAngle.push(angle);
+      }
+
+      // Rotate directions cumulatively along the barb
+      let cumulativeRotation = 0;
+      for (let j = 0; j < origDirections.length; j++) {
+        cumulativeRotation += disturbAngle[j];
+        origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
+      }
+
+      // Convert tangents back to points based on the first point
+      let currentPoint = origPts[0];
+      let pts = [];
+      pts.push(currentPoint);
+      for (let j = 1; j < origDirections.length; j++) {
+        const tangent = origDirections[j];
+        currentPoint = add2d(currentPoint, tangent);
+        pts.push(currentPoint);
+      }
+
+      noFill();
+      drawPath(pts);
+
+      if (debugDrawToggles.vanePattern) {
+        for (let j = 1; j < pts.length; j++) {
+          const p = pts[j - 1];
+          const q = pts[j];
+          const dir = normalize2d(sub2d(q, p));
+          const repeatInterval = 0.1;
+          const tVaneRepeat = repeat(barb.tAlongVane, repeatInterval) * 100;
+          const k = smoothstep(0, repeatInterval * 0.1, tVaneRepeat) * smoothstep(1, 1 - 0.1 * repeatInterval, tVaneRepeat);
+          const d1 = abs(dot2d(dir, normalize2d(vec2(1, 1 - k))));
+          const d2 = abs(dot2d(dir, normalize2d(vec2(1, 5 - k))));
+          const d3 = abs(dot2d(dir, normalize2d(vec2(1, 7 - k))));
+          const test = 0.99999;
+
+          if (d1 > debugSliders.a) {
+            stroke(255, 0, 0);
+            circle(p.x, p.y, 0.5);
+          }
+
+          if (d2 > debugSliders.a) {
+            stroke(0, 255, 0);
+            circle(p.x, p.y, 0.5);
+          }
+
+          if (d3 > debugSliders.a) {
+            stroke(0, 0, 255);
+            circle(p.x, p.y, 0.5);
+          }
+        }
+      }
     }
 
     pop();
@@ -393,7 +479,7 @@ let spineShader;
 window.setup = function () {
   canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
-  pixelDensity(1);
+  pixelDensity(2);
   createGui();
 
   feather = new Feather(Debug.enabled ? debugParams : params);
@@ -436,7 +522,8 @@ function createGui() {
   debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
-  debugFolder.add(debugSliders, 'a', 0, 1).step(0.01).name('Debug Slider A').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'vanePattern').name('Vane Pattern').onChange(() => { refresh(); });
+  debugFolder.add(debugSliders, 'a', 0.9, 0.999999).step(0.000001).name('Debug Slider A').onChange(() => { refresh(); });
 
   const paramsFolder = gui.addFolder('Feather Params');
   paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
@@ -444,7 +531,6 @@ function createGui() {
   paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });

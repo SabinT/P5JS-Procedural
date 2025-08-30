@@ -74,13 +74,16 @@ export class CubicHermite2D {
     }
 
     Draw(segments = 16) {
+        push();
         const points = this.GetPoints(segments);
-        // Draw a line through the points
-        for (let i = 0; i < points.length - 1; i++) {
-            const p0 = points[i];
-            const p1 = points[i + 1];
-            line2D(p0, p1);
+        noFill();
+        beginShape();
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            vertex(p.x, p.y);
         }
+        endShape();
+        pop();
     }
 
     ToJSONString() {

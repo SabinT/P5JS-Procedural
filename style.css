@@ -15,7 +15,7 @@ main {
 
 /* Home page grid styles */
 body.home {
-  background-color: #333333; /* Dark gray background */
+  background-color: #131313; /* Dark gray background */
   font-family: 'Courier New', monospace;
 }
 
@@ -29,7 +29,7 @@ body.home {
 }
 
 .sketch-tile {
-  background-color: black;
+  background-color: #090909;
   color: white;
   text-decoration: none;
   padding: 40px 20px;

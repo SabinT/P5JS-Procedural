@@ -288,6 +288,12 @@ export function rotateTowards(dir1, dir2, t) {
   return rot2d(dir1, angle * t);
 }
 
+export function rotateAbout(point, origin, angle) {
+  const p = sub2d(point, origin);
+  const pr = rot2d(p, angle);
+  return add2d(pr, origin);
+}
+
 export function drawPath(path, closed = false) {
   beginShape();
   for (let pt of path) {
