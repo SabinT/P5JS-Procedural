@@ -72,6 +72,8 @@ const params = {
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
   vaneBreaks: 10,
   vaneBreakSymmetry: 0.5, // 0 = left only, 1 = right only, 0.5 = even on both sides
+  vaneNoiseLevelExp: -1.07,
+  vaneNoiseScaleExp: -2,
   shaderParams: {
     baseColor: "#bfb09a",
     edgeColor: "#665954",
@@ -214,7 +216,6 @@ class Feather {
   buildBarbs() {
     const params = this.params;
 
-    const dtAlongSpine = 0.1; // how much the barbs move along the vane from root to tip
     
     for (let i = 0; i < this.barbs.length; i++) {
       const barb = this.barbs[i];
@@ -357,19 +358,23 @@ class Feather {
 
       const clumpRandom = sqRand(barb.clumpIndex);
       noiseSeed(barb.clumpIndex);
+      const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
+      const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
 
       // Create accumulating noise along the barb
       const disturbAngle = [];
       for (let j = 1; j < origDirections.length; j++) {
         const t = j / (origDirections.length - 1);
-        const angle =  0.1 * (noise(-t * 100, clumpRandom * 100) - 0.5);
+        const angle =  nL * (noise(-t * nS, clumpRandom * 100) - 0.5);
         disturbAngle.push(angle);
       }
 
       // Rotate directions cumulatively along the barb
       let cumulativeRotation = 0;
       for (let j = 0; j < origDirections.length; j++) {
-        cumulativeRotation += disturbAngle[j];
+        // Less disturbance at the root
+        const tRoot = smoothstep(0.2, 1, j / (origDirections.length - 1));
+        cumulativeRotation += disturbAngle[j] * tRoot;
         origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
       }
 
@@ -534,6 +539,9 @@ function createGui() {
   paramsFolder.add(params, 'vaneEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneNoiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneNoiseScaleExp', -10, 10).step(0.001).onChange(() => { refresh(); });
 
   const barbsFolder = gui.addFolder('Barbs');
   barbsFolder.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
