@@ -26,7 +26,7 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = false; // Enable debug drawing
+Debug.enabled = true; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
@@ -169,10 +169,17 @@ class Feather {
       // Every time there is a break in the vane, a new clump starts
       const nextVaneBreakStopIndexLeft = lastVaneBreakStopIndexLeft + 1;
       const nextVaneBreakStopIndexRight = lastVaneBreakStopIndexRight + 1;
+      const prevVaneBreakStopLeft = lastVaneBreakStopIndexLeft >= 0 ? leftVaneBreakStops[lastVaneBreakStopIndexLeft] : tBarbStart;
+      const nextVaneBreakStopLeft = nextVaneBreakStopIndexLeft < leftVaneBreakStops.length ? leftVaneBreakStops[nextVaneBreakStopIndexLeft] : 1;
+      const prevVaneBreakStopRight = lastVaneBreakStopIndexRight >= 0 ? rightVaneBreakStops[lastVaneBreakStopIndexRight] : tBarbStart;
+      const nextVaneBreakStopRight = nextVaneBreakStopIndexRight < rightVaneBreakStops.length ? rightVaneBreakStops[nextVaneBreakStopIndexRight] : 1;
+      let tAlongClumpLeft = (tAlongSpine - prevVaneBreakStopLeft) / (nextVaneBreakStopLeft - prevVaneBreakStopLeft);
+      let tAlongClumpRight = (tAlongSpine - prevVaneBreakStopRight) / (nextVaneBreakStopRight - prevVaneBreakStopRight);
 
       if (nextVaneBreakStopIndexLeft < leftVaneBreakStops.length && tAlongSpine > leftVaneBreakStops[nextVaneBreakStopIndexLeft]) {
-        iClumpLeft++;
+        iClumpLeft = nextVaneBreakStopIndexLeft;
         lastVaneBreakStopIndexLeft = nextVaneBreakStopIndexLeft;
+        tAlongClumpLeft -= 1;
 
         if (Debug.enabled) {
           console.log(`New left clump at t=${tAlongSpine}`);
@@ -180,8 +187,9 @@ class Feather {
       }
 
       if (nextVaneBreakStopIndexRight < rightVaneBreakStops.length && tAlongSpine > rightVaneBreakStops[nextVaneBreakStopIndexRight]) {
-        iClumpRight++;
+        iClumpRight = nextVaneBreakStopIndexRight;
         lastVaneBreakStopIndexRight = nextVaneBreakStopIndexRight;
+        tAlongClumpRight -= 1;
 
         if (Debug.enabled) {
           console.log(`New right clump at t=${tAlongSpine}`);
@@ -193,6 +201,7 @@ class Feather {
       const rightBarb = {
         frame: rightFrame,
         clumpIndex: iClumpRight,
+        tAlongClump: tAlongClumpRight,
         barbIndex: iBarb++,
         length: vaneWidth,
         tAlongSpine: tAlongSpine,
@@ -202,6 +211,7 @@ class Feather {
       const leftBarb = {
         frame: leftFrame,
         clumpIndex: iClumpLeft,
+        tAlongClump: tAlongClumpLeft,
         barbIndex: iBarb++,
         length: vaneWidth,
         tAlongSpine: tAlongSpine,
@@ -211,6 +221,9 @@ class Feather {
       this.barbs.push(rightBarb);
       this.barbs.push(leftBarb);
     }
+
+    // Build tAlongClump for each barb
+    let currentClumpIndex = null;
   }
 
   buildBarbs() {
@@ -340,7 +353,9 @@ class Feather {
       // if (i < 82) { continue; } // TEMPORARY
       
       const barb = this.barbs[i];
-      stroke(255);
+      const clumpColor = getRandomColor(barb.clumpIndex);
+      const barbColor = lerpColor(clumpColor, color(255), barb.tAlongClump);
+      stroke(barbColor);
       // barb.spline.Draw();
       
       // Create an aliasing like effect by drawing dots at specific angles
@@ -356,7 +371,7 @@ class Feather {
         origDirections.push(dir);
       }
 
-      const clumpRandom = sqRand(barb.clumpIndex);
+      const clumpRandom = sqRand(barb.clumpIndex * 1234 + 5678);
       noiseSeed(barb.clumpIndex);
       const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
       const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
@@ -467,6 +482,15 @@ class Feather {
     const barbTip = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length));
     stroke(clumpColor);
     Debug.drawDashedLine2D(barb.frame.origin, barbTip);
+
+    // Visualize clump index and tAlongClump
+    noStroke();
+    fill(255);
+    // textAlign(CENTER, CENTER);
+    const info = `c:${barb.clumpIndex}\nt:${barb.tAlongClump.toFixed(2)}`;
+    const textPos = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length + 20));
+    Debug.drawText(info, textPos);
+    // text(info, textPos.x, textPos.y);
   }
 
   debugDrawBarb(barb) {
@@ -481,11 +505,20 @@ class Feather {
 let feather;
 let spineShader;
 
+let font;
+window.preload = function () {
+  font = loadFont("../assets/fonts/Anonymous_Pro/AnonymousPro-Regular.ttf");
+  // font = loadFont("../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Regular.ttf");
+  // font = loadFont("../assets/fonts/elegant_typewriter/ELEGANT TYPEWRITER Bold.ttf");
+};
+
+
 window.setup = function () {
   canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
   pixelDensity(2);
   createGui();
+  textFont(font);
 
   feather = new Feather(Debug.enabled ? debugParams : params);
   feather.build();

@@ -132,8 +132,6 @@ export class Debug {
         const g = this.g || window;
 
         g.push();
-        g.fill(255);
-        g.noStroke();
         g.text(text, pos.x, pos.y);
         g.pop();
     }
