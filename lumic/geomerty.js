@@ -307,6 +307,27 @@ export function drawPath(path, closed = false) {
   }
 }
 
+export function drawPathWithGradient(path, colorStart, colorEnd, closed = false) {
+  push();
+  
+  // Draw individual line segments with gradient colors
+  for (let i = 0; i < path.length - 1; i++) {
+    const t = i / (path.length - 1);
+    const c = lerpColor(colorStart, colorEnd, t);
+    stroke(c);
+    line(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y);
+  }
+  
+  // If closed, draw the closing segment
+  if (closed && path.length > 2) {
+    const c = lerpColor(colorStart, colorEnd, 1);
+    stroke(c);
+    line(path[path.length - 1].x, path[path.length - 1].y, path[0].x, path[0].y);
+  }
+  
+  pop();
+}
+
 export function drawOffsetPath(path, offsetDir, offsetAmount, closed = false) {
   // Shift the points by the offset
   const offset = scale2d(normalize2d(offsetDir), offsetAmount);

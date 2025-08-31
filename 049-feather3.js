@@ -5,7 +5,7 @@ import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, e
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
-import { drawPath, getTangents, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
+import { drawPath, drawPathWithGradient, getTangents, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
@@ -26,7 +26,7 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = true; // Enable debug drawing
+Debug.enabled = false; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
@@ -35,6 +35,7 @@ const debugDrawToggles = {
   barbTangents: false,
   spineShader: false,
   vanePattern: false,
+  colorizeByClump: true,
 }
 
 // Temporary debug sliders for testing
@@ -70,8 +71,8 @@ const params = {
     return smoothstep(0.8, 1, t);
   },
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
-  vaneBreaks: 10,
-  vaneBreakSymmetry: 0.5, // 0 = left only, 1 = right only, 0.5 = even on both sides
+  vaneBreaks: 100,
+  vaneBreakSymmetry: 0.74, // 0 = left only, 1 = right only, 0.5 = even on both sides
   vaneNoiseLevelExp: -1.07,
   vaneNoiseScaleExp: -2,
   shaderParams: {
@@ -100,7 +101,26 @@ class Feather {
     this.buildVane(); // populates empty barbs with clumping along the vane
 
     // populates barbs with geometry
-    this.buildBarbs();
+    this.initBarbs();
+    for (let i = 0; i < this.barbs.length; i++) {
+      this.buildBarb(this.barbs[i]);
+    }
+
+    // Adjust barbs to strengthen clump cohesion
+    for (let i = this.barbs.length - 1; i > 0; i--) {
+      const barb = this.barbs[i];
+      // Note: since left/right barbs are interleaved, get previous of same side by going back 2
+      const previousBarb = (i > 1 ? this.barbs[i - 2] : null);
+      if (previousBarb && previousBarb.clumpIndex === barb.clumpIndex) {
+        // Move previous barb's tip towards this barb's tip slightly
+        for (let j = 0; j < barb.pts.length; j++) {
+          const p = barb.pts[j];
+          const q = previousBarb.pts[j];
+          const mTip = smoothstep(0.6, 1, j / (barb.pts.length - 1));
+          previousBarb.pts[j] = lerp2d(q, p, mTip * 0.75);
+        }
+      }
+    }
   }
 
   buildVane() {
@@ -227,7 +247,7 @@ class Feather {
     }
   }
 
-  buildBarbs() {
+  initBarbs() {
     const params = this.params;
 
     
@@ -285,6 +305,55 @@ class Feather {
     this.spineLength = spineLength;
 
     Debug.log(`Spine length: ${spineLength}`);
+  }
+
+  buildBarb(barb) {
+    const nPoints = 80;
+    const origPts = barb.spline.GetPoints(nPoints);
+    // const origDirections = getTangents(origPts);
+    let origDirections = [];
+    for (let j = 0; j < origPts.length - 1; j++) {
+      const p = origPts[j];
+      const q = origPts[j + 1];
+      const dir = sub2d(q, p);
+      origDirections.push(dir);
+    }
+
+    const clumpRandom = sqRand(barb.clumpIndex * 1234 + 5678);
+    noiseSeed(barb.clumpIndex);
+    const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
+    const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
+
+    // Create accumulating noise along the barb
+    const disturbAngle = [];
+    for (let j = 1; j < origDirections.length; j++) {
+      const t = j / (origDirections.length - 1);
+      const angle = nL * (noise(-t * nS, clumpRandom * 100) - 0.5);
+      disturbAngle.push(angle);
+    }
+
+    // Rotate directions cumulatively along the barb
+    let cumulativeRotation = 0;
+    for (let j = 0; j < origDirections.length; j++) {
+      // Less disturbance at the root and tip
+      const mRoot = smoothstep(0.2, 1, j / (origDirections.length - 1));
+      const mTip = smoothstep(1, 0.8, j / (origDirections.length - 1));
+      cumulativeRotation += disturbAngle[j] * mRoot * mTip;
+      origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
+    }
+
+    // Convert tangents back to points based on the first point
+    let currentPoint = origPts[0];
+    let pts = [];
+    pts.push(currentPoint);
+    for (let j = 1; j < origDirections.length; j++) {
+      const tangent = origDirections[j];
+      currentPoint = add2d(currentPoint, tangent);
+      pts.push(currentPoint);
+    }
+
+    barb.pts = pts;
+    return pts;
   }
 
   getPointsAndTangentsAlongSpine(tStart, tEnd, nPoints) {
@@ -354,60 +423,25 @@ class Feather {
       // if (i < 82) { continue; } // TEMPORARY
       
       const barb = this.barbs[i];
-      const clumpColor = getRandomColor(barb.clumpIndex);
-      const barbColor = lerpColor(clumpColor, color(255), barb.tAlongClump);
-      stroke(barbColor);
       // barb.spline.Draw();
       
-      // Create an aliasing like effect by drawing dots at specific angles
-      const nPoints = 80;
-      const origPts = barb.spline.GetPoints(nPoints);
-      // const origDirections = getTangents(origPts);
-
-      let origDirections = [];
-      for (let j = 0; j < origPts.length - 1; j++) {
-        const p = origPts[j];
-        const q = origPts[j + 1];
-        const dir = sub2d(q, p);
-        origDirections.push(dir);
-      }
-
-      const clumpRandom = sqRand(barb.clumpIndex * 1234 + 5678);
-      noiseSeed(barb.clumpIndex);
-      const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
-      const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
-
-      // Create accumulating noise along the barb
-      const disturbAngle = [];
-      for (let j = 1; j < origDirections.length; j++) {
-        const t = j / (origDirections.length - 1);
-        const angle =  nL * (noise(-t * nS, clumpRandom * 100) - 0.5);
-        disturbAngle.push(angle);
-      }
-
-      // Rotate directions cumulatively along the barb
-      let cumulativeRotation = 0;
-      for (let j = 0; j < origDirections.length; j++) {
-        // Less disturbance at the root
-        const tRoot = smoothstep(0.2, 1, j / (origDirections.length - 1));
-        cumulativeRotation += disturbAngle[j] * tRoot;
-        origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
-      }
-
-      // Convert tangents back to points based on the first point
-      let currentPoint = origPts[0];
-      let pts = [];
-      pts.push(currentPoint);
-      for (let j = 1; j < origDirections.length; j++) {
-        const tangent = origDirections[j];
-        currentPoint = add2d(currentPoint, tangent);
-        pts.push(currentPoint);
-      }
+      const pts = barb.pts;
 
       noFill();
-      drawPath(pts);
+      let barbColor;
+      if (debugDrawToggles.colorizeByClump) {
+        const clumpColor = getRandomColor(barb.clumpIndex);
+        barbColor = lerpColor(clumpColor, color(255), barb.tAlongClump);
+        let barbEndColor = lerpColor(barbColor, color(255), 1);
+        drawPathWithGradient(pts, barbColor, barbEndColor);
+      } else {
+        barbColor = color(200);
+        stroke(barbColor);
+        drawPath(pts);
+      }
 
       if (debugDrawToggles.vanePattern) {
+        // Create an aliasing like effect by drawing dots at specific angles
         for (let j = 1; j < pts.length; j++) {
           const p = pts[j - 1];
           const q = pts[j];
@@ -562,6 +596,7 @@ function createGui() {
   debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'vanePattern').name('Vane Pattern').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'colorizeByClump').name('Colorize By Clump').onChange(() => { refresh(); });
   debugFolder.add(debugSliders, 'a', 0.9, 0.999999).step(0.000001).name('Debug Slider A').onChange(() => { refresh(); });
 
   const paramsFolder = gui.addFolder('Feather Params');
@@ -571,14 +606,14 @@ function createGui() {
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneBreaks', 0, 20).step(1).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'vaneBreaks', 0, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneNoiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'vaneNoiseScaleExp', -10, 10).step(0.001).onChange(() => { refresh(); });
 
   const barbsFolder = gui.addFolder('Barbs');
-  barbsFolder.add(params, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
+  barbsFolder.add(params, 'nBarbs', 1, 500).step(1).onChange(() => { refresh(); });
   barbsFolder.add(params, 'barbTiltStart', 0, 1).step(0.01).onChange(() => { refresh(); });
 
   const shaderFolder = gui.addFolder('Shader');
