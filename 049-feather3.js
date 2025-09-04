@@ -26,16 +26,17 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = false; // Enable debug drawing
+Debug.enabled = true; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
-  vane: true,
-  barbs: true,
+  vane: false,
+  barbs: false,
   barbTangents: false,
+  afterFeather: true,
   spineShader: false,
   vanePattern: false,
-  colorizeByClump: true,
+  colorizeByClump: false,
 }
 
 // Temporary debug sliders for testing
@@ -49,14 +50,14 @@ const params = {
   // cubic hermite spline
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 100,
-  spineBaseWidth: 20,
+  spineBaseWidth: 13,
   spineEnd: 0.95,
   spineWidthCurve: (t) => {
     return 1 - easeInQuad(t);
   },
   nBarbs: 240, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
-  afterFeatherStart: 0.2,
+  afterFeatherStart: 0.19,
   afterFeatherEnd: 0.3,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
   vaneBreakEnd: 1,
@@ -75,6 +76,18 @@ const params = {
   vaneBreakSymmetry: 0.74, // 0 = left only, 1 = right only, 0.5 = even on both sides
   vaneNoiseLevelExp: -1.07,
   vaneNoiseScaleExp: -2,
+  afterFeather : {
+    nBarbs: 23,
+    baseWidth: 50,
+    widthCurve: (t) => {
+      // t = 0-1 along afterfeather
+      return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)
+    },
+    barbTiltCurve: (t) => {
+      return (1 - smoothstep(0.1, 0.9, t)) * 0.25; // never fully tilted
+      // return 0.1
+    }
+  },
   shaderParams: {
     baseColor: "#bfb09a",
     edgeColor: "#665954",
@@ -102,15 +115,15 @@ class Feather {
 
     // populates barbs with geometry
     this.initBarbs();
-    for (let i = 0; i < this.barbs.length; i++) {
-      this.buildBarb(this.barbs[i]);
+    for (let i = 0; i < this.vaneBarbs.length; i++) {
+      this.buildBarb(this.vaneBarbs[i]);
     }
 
     // Adjust barbs to strengthen clump cohesion
-    for (let i = this.barbs.length - 1; i > 0; i--) {
-      const barb = this.barbs[i];
+    for (let i = this.vaneBarbs.length - 1; i > 0; i--) {
+      const barb = this.vaneBarbs[i];
       // Note: since left/right barbs are interleaved, get previous of same side by going back 2
-      const previousBarb = (i > 1 ? this.barbs[i - 2] : null);
+      const previousBarb = (i > 1 ? this.vaneBarbs[i - 2] : null);
       if (previousBarb && previousBarb.clumpIndex === barb.clumpIndex) {
         // Move previous barb's tip towards this barb's tip slightly
         for (let j = 0; j < barb.pts.length; j++) {
@@ -120,6 +133,13 @@ class Feather {
           previousBarb.pts[j] = lerp2d(q, p, mTip * 0.75);
         }
       }
+    }
+
+    this.buildAfterfeather();
+    this.initAfterfeatherBarbs();
+
+    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+      this.buildAfterfeatherBarb(this.afterFeatherBarbs[i]);
     }
   }
 
@@ -163,7 +183,7 @@ class Feather {
 
 
     // Get frames along the spine for the barbs
-    this.barbs = [];
+    this.vaneBarbs = [];
     this.spineFrames = [];
     const barbWidthNormalized = (1 - tBarbStart) / params.nBarbs;
     let iClumpLeft = 0; // Clump index (even)
@@ -242,8 +262,54 @@ class Feather {
         tAlongVane: tAlongVane
       };
 
-      this.barbs.push(rightBarb);
-      this.barbs.push(leftBarb);
+      this.vaneBarbs.push(rightBarb);
+      this.vaneBarbs.push(leftBarb);
+    }
+  }
+
+  buildAfterfeather() {
+    const params = this.params.afterFeather;
+    const tSpineStart = this.params.afterFeatherStart;
+    const tSpineEnd = this.params.afterFeatherEnd;
+
+    this.afterFeatherBarbs = [];
+
+    // Find root points
+    let rootPoints = [];
+    for (let i = 0; i < params.nBarbs; i++) {
+      const t = i / (params.nBarbs - 1);
+      const tAlongSpine = lerp(tSpineStart, tSpineEnd, t);
+      // Sample the spine spline
+      const rootPoint = this.params.spineCurve.GetPosition(tAlongSpine);
+      rootPoints.push(rootPoint);
+    }
+
+    // Find tangents
+    const tangents = getTangents(rootPoints);
+
+    for (let i = 0; i < rootPoints.length; i++) {
+      const t = i / (rootPoints.length - 1);
+      const tAlongSpine = lerp(tSpineStart, tSpineEnd, t);
+
+      // Find the frame
+      const spineWidth = this.params.spineBaseWidth * this.params.spineWidthCurve(tAlongSpine);
+      let frameRight = new Frame2D(rootPoints[i], tangents[i]);
+      let frameLeft = new Frame2D(frameRight.origin, frameRight.forward, scale2d(frameRight.right, -1));
+      frameRight.translate(scale2d(frameRight.right, spineWidth / 2));
+      frameLeft.translate(scale2d(frameLeft.right, spineWidth / 2));
+
+      const barbLength = params.baseWidth * params.widthCurve(t);
+
+      this.afterFeatherBarbs.push({
+         frame: frameRight,
+          length: barbLength,
+          tAlongAfterfeather: t
+      });
+      this.afterFeatherBarbs.push({ 
+        frame: frameLeft,
+        length: barbLength,
+        tAlongAfterfeather: t
+      });
     }
   }
 
@@ -251,9 +317,9 @@ class Feather {
     const params = this.params;
 
     
-    for (let i = 0; i < this.barbs.length; i++) {
-      const barb = this.barbs[i];
-      const rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane);
+    for (let i = 0; i < this.vaneBarbs.length; i++) {
+      const barb = this.vaneBarbs[i];
+      const rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane); // TODO bad magic number
       const tipTangentLength = 0.15 * this.spineLength * (1 - barb.tAlongVane * 0.75);
       const barbRoot = barb.frame.origin;
       const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
@@ -275,6 +341,23 @@ class Feather {
 
       barb.spline = new CubicHermite2D(barbRoot, rootTangent, barbTip, tipTangent);
     };
+  }
+
+  initAfterfeatherBarbs() {
+    // Create the splines for the afterfeather barbs
+    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+      const barb = this.afterFeatherBarbs[i];
+      const barbRoot = barb.frame.origin;
+      const rootTangentLength = 0.05 * this.spineLength; // TODO bad magic number
+      const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
+
+      const barbTilt = clamp01(this.params.afterFeather.barbTiltCurve(barb.tAlongAfterfeather) + this.params.barbTiltStart);
+      const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
+      const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length));
+      const tipTangent = scale2d(dirToTip, 0.02 * this.spineLength);
+      barb.spline = new CubicHermite2D(barbRoot, rootTangent, barbTip, tipTangent);
+      barb.index = i;
+    }
   }
 
   buildSpine() {
@@ -356,6 +439,52 @@ class Feather {
     return pts;
   }
 
+  buildAfterfeatherBarb(barb) {
+    const nPoints = 30;
+    
+    const barbRandom = sqRand(barb.index * 1234 + 8423);
+    noiseSeed(barb.index);
+    const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
+    const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
+
+    const origPts = barb.spline.GetPoints(nPoints);
+    let origDirections = [];
+    for (let j = 0; j < origPts.length - 1; j++) {
+      const p = origPts[j];
+      const q = origPts[j + 1];
+      const dir = sub2d(q, p);
+      origDirections.push(dir);
+    }
+
+    // Create accumulating noise along the barb
+    const disturbAngle = [];
+    for (let j = 1; j < origDirections.length; j++) {
+      const t = j / (origDirections.length - 1);
+      const angle = nL * (noise(-t * nS, barbRandom * 100) - 0.5);
+      disturbAngle.push(angle);
+    }
+
+    // Rotate directions cumulatively along the barb
+    let cumulativeRotation = 0;
+    for (let j = 0; j < origDirections.length; j++) {
+      // No need to taper disturbance at the tip for afterfeather
+      cumulativeRotation += disturbAngle[j];
+      origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
+    }
+
+    // Convert tangents back to points based on the first point
+    let currentPoint = origPts[0];
+    let pts = [];
+    pts.push(currentPoint);
+    for (let j = 1; j < origDirections.length; j++) {
+      const tangent = origDirections[j];
+      currentPoint = add2d(currentPoint, tangent);
+      pts.push(currentPoint);
+    }
+
+    barb.pts = pts;
+  }
+
   getPointsAndTangentsAlongSpine(tStart, tEnd, nPoints) {
     const params = this.params;
     let points = [];
@@ -370,6 +499,7 @@ class Feather {
 
   draw() {
     this.drawBarbs();
+    this.drawAfterfeather();
     this.drawSpine();
 
     if (Debug.enabled) {
@@ -419,10 +549,10 @@ class Feather {
   drawBarbs() {
     push();
 
-    for (let i = 0; i < this.barbs.length - 6; i++) {
+    for (let i = 0; i < this.vaneBarbs.length - 6; i++) {
       // if (i < 82) { continue; } // TEMPORARY
       
-      const barb = this.barbs[i];
+      const barb = this.vaneBarbs[i];
       // barb.spline.Draw();
       
       const pts = barb.pts;
@@ -475,6 +605,21 @@ class Feather {
     pop();
   }
 
+  drawAfterfeather() {
+    push();
+
+    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+      const barb = this.afterFeatherBarbs[i];
+      const pts = barb.pts;
+
+      noFill();
+      stroke(200);
+      drawPath(pts);
+    }
+
+    pop();
+  }
+
   debugDraw() {
     push();
 
@@ -485,8 +630,8 @@ class Feather {
       this.spine.forEach(p => { Debug.drawPoint(p.frame.origin, p.width); });
     }
 
-    for (let i = 0; i < this.barbs.length; i += 1) {
-      const barb = this.barbs[i];
+    for (let i = 0; i < this.vaneBarbs.length; i += 1) {
+      const barb = this.vaneBarbs[i];
       if (debugDrawToggles.vane) {
         this.debugDrawBarbRoot(barb);
 
@@ -498,6 +643,23 @@ class Feather {
 
       if (debugDrawToggles.barbs) {
         this.debugDrawBarb(barb);
+      }
+    }
+
+    // Debug draw afterfeather barbs
+    if (debugDrawToggles.afterFeather) {
+      for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+        const barb = this.afterFeatherBarbs[i];
+        // Debug.drawFrame(barb.frame, /* lineLength: */ 10);
+
+        // Visualize the barb length
+        const barbTip = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length));
+        stroke("cyan");
+        // Debug.drawDashedLine2D(barb.frame.origin, barbTip);
+
+        // Draw the barb spline
+        stroke(200);
+        Debug.drawHermite2D(barb.spline, /* steps: */ 10, /* showTangents: */ true);
       }
     }
 
@@ -598,6 +760,7 @@ function createGui() {
   debugFolder.add(debugDrawToggles, 'vanePattern').name('Vane Pattern').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'colorizeByClump').name('Colorize By Clump').onChange(() => { refresh(); });
   debugFolder.add(debugSliders, 'a', 0.9, 0.999999).step(0.000001).name('Debug Slider A').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'afterFeather').name('Draw Afterfeather').onChange(() => { refresh(); });
 
   const paramsFolder = gui.addFolder('Feather Params');
   paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
@@ -615,6 +778,10 @@ function createGui() {
   const barbsFolder = gui.addFolder('Barbs');
   barbsFolder.add(params, 'nBarbs', 1, 500).step(1).onChange(() => { refresh(); });
   barbsFolder.add(params, 'barbTiltStart', 0, 1).step(0.01).onChange(() => { refresh(); });
+
+  const afterFeatherFolder = gui.addFolder('Afterfeather');
+  afterFeatherFolder.add(params.afterFeather, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'baseWidth', 10, 200).step(1).onChange(() => { refresh(); });
 
   const shaderFolder = gui.addFolder('Shader');
   shaderFolder.addColor(params.shaderParams, 'baseColor').name('Base Color').onChange(() => { refresh(); });
