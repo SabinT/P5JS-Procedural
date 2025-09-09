@@ -1,6 +1,6 @@
 import { BezierCubic } from "./lumic/bezier.js";
 import { Debug } from "./lumic/debug.js";
-import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI, dot2d, repeat, rot2d } from "./lumic/common.js";
+import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI, dot2d, repeat, rot2d, mixSeed, remap } from "./lumic/common.js";
 import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
@@ -26,7 +26,7 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = true; // Enable debug drawing
+Debug.enabled = false; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
@@ -47,6 +47,7 @@ const debugSliders = {
 const gui = new dat.GUI();
 
 const params = {
+  randomSeed: 123456789,
   // cubic hermite spline
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 100,
@@ -72,13 +73,19 @@ const params = {
     return smoothstep(0.8, 1, t);
   },
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
-  vaneBreaks: 100,
+  vaneBreaks: 30,
   vaneBreakSymmetry: 0.74, // 0 = left only, 1 = right only, 0.5 = even on both sides
   vaneNoiseLevelExp: -1.07,
   vaneNoiseScaleExp: -2,
+  clumpCohesionStart: 0.8,
+  clumpCohesionEnd: 1.0,
+  clumpNoiseLevel: 0.13,
+  clumpNoiseScaleExp: 2.814,
+  barbInnerNoiseLevel: 0.184,
+  barbInnerNoiseScaleExp: 0.459,
   afterFeather : {
-    nBarbs: 23,
-    baseWidth: 50,
+    nBarbs: 34,
+    baseWidth: 37,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
       return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)
@@ -120,6 +127,17 @@ class Feather {
     }
 
     // Adjust barbs to strengthen clump cohesion
+    this.adjustClumpCohesion();
+
+    this.buildAfterfeather();
+    this.initAfterfeatherBarbs();
+
+    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+      this.buildAfterfeatherBarb(this.afterFeatherBarbs[i]);
+    }
+  }
+
+  adjustClumpCohesion() {
     for (let i = this.vaneBarbs.length - 1; i > 0; i--) {
       const barb = this.vaneBarbs[i];
       // Note: since left/right barbs are interleaved, get previous of same side by going back 2
@@ -133,13 +151,6 @@ class Feather {
           previousBarb.pts[j] = lerp2d(q, p, mTip * 0.75);
         }
       }
-    }
-
-    this.buildAfterfeather();
-    this.initAfterfeatherBarbs();
-
-    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
-      this.buildAfterfeatherBarb(this.afterFeatherBarbs[i]);
     }
   }
 
@@ -157,14 +168,14 @@ class Feather {
     const leftVaneBreakStops = [];
     const rightVaneBreakStops = [];
 
-    const seedLeft = Math.floor(Math.random() * 100000);
-    const seedRight = Math.floor(Math.random() * 100000);
+    const seedLeft  = mixSeed(params.randomSeed, 0xA5);
+    const seedRight = mixSeed(params.randomSeed, 0xC3);
     const breakMaxStagger = 0.2;
 
     if (nLeftVaneBreaks > 0) {
       for (let i = 0; i < nLeftVaneBreaks; i++) {
         const tBreak = i / nLeftVaneBreaks;
-        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(seedLeft + i * 19 + 7));
+        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(i, seedLeft));
         leftVaneBreakStops.push(t);
       }
     }
@@ -172,10 +183,13 @@ class Feather {
     if (nRightVaneBreaks > 0) {
       for (let i = 0; i < nRightVaneBreaks; i++) {
         const tBreak = i / nRightVaneBreaks;
-        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(seedRight + 325 + i * 19 + 7));
+        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(i, seedRight));
         rightVaneBreakStops.push(t);
       }
     }
+
+    leftVaneBreakStops.sort((a, b) => a - b);
+    rightVaneBreakStops.sort((a, b) => a - b);
 
     Debug.log(`Left vane breaks: ${nLeftVaneBreaks}, Right vane breaks: ${nRightVaneBreaks}`);
     Debug.log("Left vane break stops:", leftVaneBreakStops);
@@ -416,8 +430,9 @@ class Feather {
       origDirections.push(dir);
     }
 
-    const clumpRandom = sqRand(barb.clumpIndex * 1234 + 5678);
-    noiseSeed(barb.clumpIndex);
+    const clumpSeed = mixSeed(params.randomSeed, barb.clumpIndex);
+    const clumpRandom = sqRand(clumpSeed);
+    noiseSeed(clumpSeed);
     const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
     const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
 
@@ -435,18 +450,38 @@ class Feather {
       // Less disturbance at the root and tip
       const mRoot = smoothstep(0.2, 1, j / (origDirections.length - 1));
       const mTip = smoothstep(1, 0.8, j / (origDirections.length - 1));
-      cumulativeRotation += disturbAngle[j] * mRoot * mTip;
+      cumulativeRotation += disturbAngle[j]; // * mRoot * mTip;
       origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
     }
+    
+    const x = barb.tAlongClump;
+    // let tEasing = 1 - (1 - x)* (1-x);
+    // tEasing = clamp01(tEasing * 1.5 + 0.2);
+    // let tOriginal = smoothstep(-0, 0.8, x);
+    let tOriginal = easeOutQuad(x);
+    tOriginal = remap(0, 1, params.clumpCohesionStart, params.clumpCohesionEnd, tOriginal);
 
     // Convert tangents back to points based on the first point
     let currentPoint = origPts[0];
+
     let pts = [];
     pts.push(currentPoint);
     for (let j = 1; j < origDirections.length; j++) {
       const tangent = origDirections[j];
-      currentPoint = add2d(currentPoint, tangent);
-      pts.push(currentPoint);
+      // Apply noisy rotation
+      let finalPt = add2d(currentPoint, tangent);
+      pts.push(finalPt);
+    }
+    
+    // Interpolate between original and disturbed points based on easing
+    // Add some noise to the interpolation factor
+    const clumpNoiseScale = Math.pow(10, this.params.clumpNoiseScaleExp);
+    tOriginal += (noise(tOriginal * clumpNoiseScale) - 0.5) * params.clumpNoiseLevel;
+    for (let j = 0; j < pts.length; j++) {
+      const t = j / (origDirections.length - 1);
+      // Additional noise within barb
+      const tAdjusted = tOriginal + (noise(t * Math.pow(10, params.barbInnerNoiseScaleExp) + barb.tAlongClump * clumpNoiseScale) - 0.5) * params.barbInnerNoiseLevel;
+      pts[j] = lerp2d(pts[j], origPts[j], tAdjusted);
     }
 
     barb.pts = pts;
@@ -456,8 +491,9 @@ class Feather {
   buildAfterfeatherBarb(barb) {
     const nPoints = 30;
     
-    const barbRandom = sqRand(barb.index * 1234 + 8423);
-    noiseSeed(barb.index);
+    const afSeed = mixSeed(params.randomSeed, 0xAF00 + barb.index);
+    const barbRandom = sqRand(afSeed);
+    noiseSeed(afSeed);
     const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
     const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
 
@@ -574,7 +610,7 @@ class Feather {
       noFill();
       let barbColor;
       if (debugDrawToggles.colorizeByClump) {
-        const clumpColor = getRandomColor(barb.clumpIndex);
+        const clumpColor = getClumpColor(barb.clumpIndex);
         barbColor = lerpColor(clumpColor, color(255), barb.tAlongClump);
         let barbEndColor = lerpColor(barbColor, color(255), 1);
         drawPathWithGradient(pts, barbColor, barbEndColor);
@@ -684,7 +720,7 @@ class Feather {
     Debug.drawFrame(barb.frame, /* lineLength: */ 20);
 
     // Visualize each clump with a different color
-    const clumpColor = getRandomColor(barb.clumpIndex);
+    const clumpColor = getClumpColor(barb.clumpIndex);
     fill(clumpColor);
     noStroke();
     Debug.drawCircle(barb.frame.origin, 5);
@@ -705,7 +741,7 @@ class Feather {
   }
 
   debugDrawBarb(barb) {
-    const clumpColor = getRandomColor(barb.clumpIndex);
+    const clumpColor = getClumpColor(barb.clumpIndex);
 
     stroke(clumpColor);
 
@@ -755,9 +791,9 @@ window.keyTyped = function () {
   }
 };
 
-function getRandomColor(i) {
+function getClumpColor(i) {
   // Deterministic random color, random hue
-  const rand = sqRand(i);
+  const rand = sqRand(i, params.randomSeed);
   colorMode(HSB);
   const c = color(rand * 360, 100, 100);
   colorMode(RGB);
@@ -766,6 +802,15 @@ function getRandomColor(i) {
 
 function createGui() {
   gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
+  gui.add(params, 'randomSeed', 0, 2147483647).step(1).name('Random Seed').onFinishChange(() => { refresh(); });
+  const seedUi = {
+    RerollSeed: () => {
+      // change the seed once, everything else follows
+      params.randomSeed = (Math.random() * 2147483647) | 0;
+      refresh();
+    }
+  };
+  gui.add(seedUi, 'RerollSeed').name('🎲 Reseed');
 
   const debugFolder = gui.addFolder('Debug');
   debugFolder.add(debugDrawToggles, 'spine').name('Draw Spine').onChange(() => { refresh(); });
@@ -784,12 +829,20 @@ function createGui() {
   paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneBreakEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneBreaks', 0, 100).step(1).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneNoiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'vaneNoiseScaleExp', -10, 10).step(0.001).onChange(() => { refresh(); });
+
+  const clumpingFolder = gui.addFolder('Clumping');
+  clumpingFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreaks', 0, 100).step(1).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreakEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneNoiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneNoiseScaleExp', -2, 4).step(0.001).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpCohesionStart', -2, 2).step(0.01).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpCohesionEnd', -2, 2).step(0.01).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpNoiseLevel', 0, 2).step(0.001).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpNoiseScaleExp', 2, 3).step(0.001).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'barbInnerNoiseLevel', 0, 1).step(0.001).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'barbInnerNoiseScaleExp', 0, 3).step(0.001).onChange(() => { refresh(); });
 
   const barbsFolder = gui.addFolder('Barbs');
   barbsFolder.add(params, 'nBarbs', 1, 500).step(1).onChange(() => { refresh(); });

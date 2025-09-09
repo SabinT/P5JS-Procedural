@@ -234,6 +234,15 @@ export function sqRand2D(x, y, seed = 0) {
   return sqRand(x + Math.imul(SQRAND_PRIME, y), seed);
 }
 
+// Mix two 32-bit ints into a new deterministic 32-bit int
+export function mixSeed(a, b) {
+  let h = (a | 0) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 16), 2246822507);
+  h ^= (b | 0);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^ (h >>> 16)) >>> 0; // unsigned
+}
+
 export const sizes = {
   letter: { w: 850, h: 1100 },
   seatac: { w: 1500, h: 700 },
