@@ -33,6 +33,7 @@ const debugDrawToggles = {
   vane: false,
   barbs: false,
   barbTangents: false,
+  barbMesh: false,
   afterFeather: true,
   spineShader: false,
   vanePattern: false,
@@ -596,6 +597,26 @@ class Feather {
     pop();
   }
 
+  drawBarbMesh(barb) {
+    push();
+
+    // TODO draw a barb mesh (simiilar to spine mesh)
+    // Make a triangle strip with proper uvs
+    // uv.y = 0 at root, (n) at tip (to repeat a texture)
+    // uv.x goes from -0.5 to 0.5 acrosss the width
+    // The width of the mesh should be a fraction (configurrable) of the gap between this barb and the next (or preious, if last barb)
+    // The width should taper to another fraction at the tip
+
+    const uvRepeat = 20;
+    const barbMeshWidthBaseFactor = 0.75;
+    const barbMeshWidthTipFactor = 0.1;
+
+    // TODO draw the triangle strip
+    // Calculate tangents/side directions from barb points
+    // and calculate offse points to lefft/right
+    pop();
+  }
+
   drawBarbs() {
     push();
 
@@ -604,6 +625,11 @@ class Feather {
       
       const barb = this.vaneBarbs[i];
       // barb.spline.Draw();
+
+      if (debugDrawToggles.barbMesh) {
+        drawBarbMesh(barb);
+        continue;
+      }
       
       const pts = barb.pts;
 
@@ -817,6 +843,7 @@ function createGui() {
   debugFolder.add(debugDrawToggles, 'vane').name('Draw Vane').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'barbMesh').name('Draw Barb Mesh').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'vanePattern').name('Vane Pattern').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'colorizeByClump').name('Colorize By Clump').onChange(() => { refresh(); });
