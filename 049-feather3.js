@@ -34,7 +34,7 @@ const debugDrawToggles = {
   vane: false,
   barbs: false,
   barbTangents: false,
-  barbMesh: false,
+  barbMesh: true,
   afterFeather: true,
   spineShader: false,
   vanePattern: false,
@@ -85,7 +85,7 @@ const params = {
   clumpNoiseScaleExp: 2.814,
   barbInnerNoiseLevel: 0.184,
   barbInnerNoiseScaleExp: 0.459,
-  afterFeather : {
+  afterFeather: {
     nBarbs: 34,
     baseWidth: 37,
     widthCurve: (t) => {
@@ -170,7 +170,7 @@ class Feather {
     const leftVaneBreakStops = [];
     const rightVaneBreakStops = [];
 
-    const seedLeft  = mixSeed(params.randomSeed, 0xA5);
+    const seedLeft = mixSeed(params.randomSeed, 0xA5);
     const seedRight = mixSeed(params.randomSeed, 0xC3);
     const breakMaxStagger = 0.2;
 
@@ -181,7 +181,7 @@ class Feather {
         leftVaneBreakStops.push(t);
       }
     }
-  
+
     if (nRightVaneBreaks > 0) {
       for (let i = 0; i < nRightVaneBreaks; i++) {
         const tBreak = i / nRightVaneBreaks;
@@ -224,7 +224,7 @@ class Feather {
 
       // Assign a "clump index" to the barb
       // Every time there is a break in the vane, a new clump starts
-      
+
       // --- LEFT: advance until we're in the correct clump ---
       while (
         lastVaneBreakStopIndexLeft + 1 < leftVaneBreakStops.length &&
@@ -267,7 +267,7 @@ class Feather {
         return v < 0 ? 0 : v > 1 ? 1 : v;
       };
 
-      const tAlongClumpLeft  = safeFrac(tAlongSpine, prevLeft,  nextLeft);
+      const tAlongClumpLeft = safeFrac(tAlongSpine, prevLeft, nextLeft);
       const tAlongClumpRight = safeFrac(tAlongSpine, prevRight, nextRight);
 
       const vaneWidth = params.vaneBaseWidth * params.vaneWidthCurve(tAlongVane);
@@ -331,11 +331,11 @@ class Feather {
       const barbLength = params.baseWidth * params.widthCurve(t);
 
       this.afterFeatherBarbs.push({
-         frame: frameRight,
-          length: barbLength,
-          tAlongAfterfeather: t
+        frame: frameRight,
+        length: barbLength,
+        tAlongAfterfeather: t
       });
-      this.afterFeatherBarbs.push({ 
+      this.afterFeatherBarbs.push({
         frame: frameLeft,
         length: barbLength,
         tAlongAfterfeather: t
@@ -346,7 +346,7 @@ class Feather {
   initBarbs() {
     const params = this.params;
 
-    
+
     for (let i = 0; i < this.vaneBarbs.length; i++) {
       const barb = this.vaneBarbs[i];
       const rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane); // TODO bad magic number
@@ -455,7 +455,7 @@ class Feather {
       cumulativeRotation += disturbAngle[j]; // * mRoot * mTip;
       origDirections[j] = rot2d(origDirections[j], cumulativeRotation);
     }
-    
+
     const x = barb.tAlongClump;
     // let tEasing = 1 - (1 - x)* (1-x);
     // tEasing = clamp01(tEasing * 1.5 + 0.2);
@@ -474,7 +474,7 @@ class Feather {
       let finalPt = add2d(currentPoint, tangent);
       pts.push(finalPt);
     }
-    
+
     // Interpolate between original and disturbed points based on easing
     // Add some noise to the interpolation factor
     const clumpNoiseScale = Math.pow(10, this.params.clumpNoiseScaleExp);
@@ -492,7 +492,7 @@ class Feather {
 
   buildAfterfeatherBarb(barb) {
     const nPoints = 30;
-    
+
     const afSeed = mixSeed(params.randomSeed, 0xAF00 + barb.index);
     const barbRandom = sqRand(afSeed);
     noiseSeed(afSeed);
@@ -608,8 +608,9 @@ class Feather {
 
     const points = barb.pts;
     const clumpColor = getClumpColor(barb.clumpIndex);
-    const barbMeshWidthBaseFactor = 0.75;
+    const barbMeshWidthBaseFactor = 1.5;
     const barbMeshWidthTipFactor = 0.1;
+    const uvYRepeat = 20;
 
     // Estimate gap to neighbouring barb on the same side to derive mesh width
     let neighbour = null;
@@ -634,16 +635,17 @@ class Feather {
     noStroke();
     fill(clumpColor);
 
-    // const colorVec = rgba01FromColor(clumpColor);
+    const colorVec = rgba01FromColor(clumpColor);
 
-    // shader(barbMeshShader);
-    // barbMeshShader.setUniform('uColor', colorVec);
+    shader(barbMeshShader);
+    barbMeshShader.setUniform('uColor', colorVec);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
       const last = points.length - 1;
 
+      // Better tangent calculation using central differences
       let tangent;
       if (last === 0) {
         tangent = vec2(1, 0);
@@ -652,9 +654,8 @@ class Feather {
       } else if (i === last) {
         tangent = sub2d(points[last], points[last - 1]);
       } else {
-        const forward = sub2d(points[i + 1], points[i]);
-        const backward = sub2d(points[i], points[i - 1]);
-        tangent = add2d(forward, backward);
+        // Central difference for smoother tangents
+        tangent = sub2d(points[i + 1], points[i - 1]);
       }
 
       if ((tangent.x === 0 && tangent.y === 0) && i > 0) {
@@ -666,21 +667,32 @@ class Feather {
         dir = vec2(1, 0);
       }
 
-      const normal = vec2(-dir.y, dir.x);
+      // Ensure normal points in consistent direction
+      let normal = vec2(-dir.y, dir.x);
+
+      // If we have barb frame info, make sure normal points in right direction
+      if (barb.frame && barb.frame.right) {
+        const dot = normal.x * barb.frame.right.x + normal.y * barb.frame.right.y;
+        if (dot < 0) {
+          normal = vec2(-normal.x, -normal.y);
+        }
+      }
+
       const t = last > 0 ? i / last : 0;
       const widthFactor = lerp(barbMeshWidthBaseFactor, barbMeshWidthTipFactor, t);
       const halfWidth = 0.5 * meshGap * widthFactor;
 
       const offset = scale2d(normal, halfWidth);
-      const left = add2d(p, offset);
-      const right = add2d(p, scale2d(normal, -halfWidth));
+      const right = add2d(p, offset);
+      const left = add2d(p, scale2d(offset, -1));
 
-      vertex(left.x, left.y, 0, 0.0, t);
-      vertex(right.x, right.y, 0, 1.0, t);
+      // Consistent vertex order: right first, then left (like spine)
+      vertex(right.x, right.y, 0, 0.5, t * uvYRepeat);   // U=0.5 for right edge
+      vertex(left.x, left.y, 0, -0.5, t * uvYRepeat);    // U=-0.5 for left edge
     }
     endShape();
 
-    // resetShader();
+    resetShader();
 
     pop();
   }
@@ -690,7 +702,7 @@ class Feather {
 
     for (let i = 0; i < this.vaneBarbs.length - 6; i++) {
       // if (i < 82) { continue; } // TEMPORARY
-      
+
       const barb = this.vaneBarbs[i];
       // barb.spline.Draw();
 
@@ -698,7 +710,7 @@ class Feather {
         this.drawBarbMesh(barb, i);
         continue;
       }
-      
+
       const pts = barb.pts;
 
       noFill();
