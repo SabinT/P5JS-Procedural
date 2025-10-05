@@ -7,6 +7,7 @@ import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
 import { drawPath, drawPathWithGradient, getTangents, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
+import { barbVert, barbFrag } from "./049-feather3-barb-shader.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
 // Interesting links / related materials:
@@ -600,7 +601,7 @@ class Feather {
   drawBarbMesh(barb, index) {
     push();
 
-    if (!barb || !barb.pts || barb.pts.length < 2) {
+    if (!barbMeshShader || !barb || !barb.pts || barb.pts.length < 2) {
       pop();
       return;
     }
@@ -632,6 +633,11 @@ class Feather {
 
     noStroke();
     fill(clumpColor);
+
+    // const colorVec = rgba01FromColor(clumpColor);
+
+    // shader(barbMeshShader);
+    // barbMeshShader.setUniform('uColor', colorVec);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -669,10 +675,12 @@ class Feather {
       const left = add2d(p, offset);
       const right = add2d(p, scale2d(normal, -halfWidth));
 
-      vertex(left.x, left.y);
-      vertex(right.x, right.y);
+      vertex(left.x, left.y, 0, 0.0, t);
+      vertex(right.x, right.y, 0, 1.0, t);
     }
     endShape();
+
+    // resetShader();
 
     pop();
   }
@@ -837,6 +845,7 @@ class Feather {
 
 let feather;
 let spineShader;
+let barbMeshShader;
 
 let font;
 window.preload = function () {
@@ -859,6 +868,7 @@ window.setup = function () {
   feather.build();
 
   spineShader = createShader(spineVert, spineFrag);
+  barbMeshShader = createShader(barbVert, barbFrag);
 };
 
 window.draw = function () {
@@ -876,6 +886,19 @@ window.keyTyped = function () {
     save();
   }
 };
+
+function rgba01FromColor(col) {
+  if (!col) {
+    return [1, 1, 1, 1];
+  }
+
+  const levels = col.levels || [];
+  const r = (levels[0] ?? 255) / 255;
+  const g = (levels[1] ?? 255) / 255;
+  const b = (levels[2] ?? 255) / 255;
+  const a = (levels[3] ?? 255) / 255;
+  return [r, g, b, a];
+}
 
 function getClumpColor(i) {
   // Deterministic random color, random hue
