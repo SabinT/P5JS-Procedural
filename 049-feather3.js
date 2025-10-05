@@ -597,23 +597,83 @@ class Feather {
     pop();
   }
 
-  drawBarbMesh(barb) {
+  drawBarbMesh(barb, index) {
     push();
 
-    // TODO draw a barb mesh (simiilar to spine mesh)
-    // Make a triangle strip with proper uvs
-    // uv.y = 0 at root, (n) at tip (to repeat a texture)
-    // uv.x goes from -0.5 to 0.5 acrosss the width
-    // The width of the mesh should be a fraction (configurrable) of the gap between this barb and the next (or preious, if last barb)
-    // The width should taper to another fraction at the tip
+    if (!barb || !barb.pts || barb.pts.length < 2) {
+      pop();
+      return;
+    }
 
-    const uvRepeat = 20;
+    const points = barb.pts;
+    const clumpColor = getClumpColor(barb.clumpIndex);
     const barbMeshWidthBaseFactor = 0.75;
     const barbMeshWidthTipFactor = 0.1;
 
-    // TODO draw the triangle strip
-    // Calculate tangents/side directions from barb points
-    // and calculate offse points to lefft/right
+    // Estimate gap to neighbouring barb on the same side to derive mesh width
+    let neighbour = null;
+    if (index === undefined) {
+      index = this.vaneBarbs.indexOf(barb);
+    }
+    if (index !== -1) {
+      let neighbourIndex = index + 2;
+      if (neighbourIndex >= this.vaneBarbs.length) {
+        neighbourIndex = index - 2;
+      }
+      if (neighbourIndex >= 0 && neighbourIndex < this.vaneBarbs.length) {
+        neighbour = this.vaneBarbs[neighbourIndex];
+      }
+    }
+
+    let meshGap = neighbour ? dist2d(barb.frame.origin, neighbour.frame.origin) : barb.length * 0.2;
+    if (!Number.isFinite(meshGap) || meshGap <= 0) {
+      meshGap = barb.length * 0.2;
+    }
+
+    noStroke();
+    fill(clumpColor);
+
+    beginShape(TRIANGLE_STRIP);
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const last = points.length - 1;
+
+      let tangent;
+      if (last === 0) {
+        tangent = vec2(1, 0);
+      } else if (i === 0) {
+        tangent = sub2d(points[1], points[0]);
+      } else if (i === last) {
+        tangent = sub2d(points[last], points[last - 1]);
+      } else {
+        const forward = sub2d(points[i + 1], points[i]);
+        const backward = sub2d(points[i], points[i - 1]);
+        tangent = add2d(forward, backward);
+      }
+
+      if ((tangent.x === 0 && tangent.y === 0) && i > 0) {
+        tangent = sub2d(points[i], points[i - 1]);
+      }
+
+      let dir = normalize2d(tangent);
+      if (!Number.isFinite(dir.x) || !Number.isFinite(dir.y)) {
+        dir = vec2(1, 0);
+      }
+
+      const normal = vec2(-dir.y, dir.x);
+      const t = last > 0 ? i / last : 0;
+      const widthFactor = lerp(barbMeshWidthBaseFactor, barbMeshWidthTipFactor, t);
+      const halfWidth = 0.5 * meshGap * widthFactor;
+
+      const offset = scale2d(normal, halfWidth);
+      const left = add2d(p, offset);
+      const right = add2d(p, scale2d(normal, -halfWidth));
+
+      vertex(left.x, left.y);
+      vertex(right.x, right.y);
+    }
+    endShape();
+
     pop();
   }
 
@@ -627,7 +687,7 @@ class Feather {
       // barb.spline.Draw();
 
       if (debugDrawToggles.barbMesh) {
-        drawBarbMesh(barb);
+        this.drawBarbMesh(barb, i);
         continue;
       }
       
