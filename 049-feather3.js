@@ -58,7 +58,7 @@ const params = {
   spineWidthCurve: (t) => {
     return 1 - easeInQuad(t);
   },
-  nBarbs: 240, // barbs start at the end of the calamus
+  nBarbs: 400, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
   afterFeatherStart: 0.19,
   afterFeatherEnd: 0.3,
@@ -86,7 +86,7 @@ const params = {
   barbInnerNoiseLevel: 0.184,
   barbInnerNoiseScaleExp: 0.459,
   afterFeather: {
-    nBarbs: 34,
+    nBarbs: 0,
     baseWidth: 37,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
@@ -104,6 +104,16 @@ const params = {
     ridgeSoftness: 0.44,
     ridgeHighlight: 0.5,
     tipDarken: 0.35,
+  },
+  barbuleParams: {
+    barbColor: "#cacacaff",
+    barbMeshBaseWidth: 3.13,
+    barbMeshTipWidth: 0.0,
+    nBarbulesPerBarb: 82,
+    barbSpineWidth: 0.1,
+    barbSpineHardness: 0.6,
+    barbuleWidthNorm: 0.03,
+    barbuleHardness: 0.77,
   }
 };
 
@@ -600,6 +610,7 @@ class Feather {
 
   drawBarbMesh(barb, index) {
     push();
+    blendMode(ADD);
 
     if (!barbMeshShader || !barb || !barb.pts || barb.pts.length < 2) {
       pop();
@@ -607,10 +618,10 @@ class Feather {
     }
 
     const points = barb.pts;
-    const clumpColor = getClumpColor(barb.clumpIndex);
-    const barbMeshWidthBaseFactor = 1.5;
-    const barbMeshWidthTipFactor = 0.1;
-    const uvYRepeat = 20;
+    // const clumpColor = getClumpColor(barb.clumpIndex);
+    const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
+    const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
+    const uvYRepeat = params.barbuleParams.nBarbulesPerBarb;
 
     // Estimate gap to neighbouring barb on the same side to derive mesh width
     let neighbour = null;
@@ -632,13 +643,19 @@ class Feather {
       meshGap = barb.length * 0.2;
     }
 
-    noStroke();
-    fill(clumpColor);
+    // const colorVec = rgba01FromColor(color("gray"));
+    const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
 
-    const colorVec = rgba01FromColor(clumpColor);
+    // Enable TRUE additive blending for shaders
+    drawingContext.enable(drawingContext.BLEND);
+    drawingContext.blendFunc(drawingContext.ONE, drawingContext.ONE);
 
     shader(barbMeshShader);
     barbMeshShader.setUniform('uColor', colorVec);
+    barbMeshShader.setUniform('uBarbSpineWidth', this.params.barbuleParams.barbSpineWidth);
+    barbMeshShader.setUniform('uBarbSpineHardness', this.params.barbuleParams.barbSpineHardness);
+    barbMeshShader.setUniform('uBarbuleWidthNorm', this.params.barbuleParams.barbuleWidthNorm);
+    barbMeshShader.setUniform('uBarbuleHardness', this.params.barbuleParams.barbuleHardness);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -692,6 +709,8 @@ class Feather {
     }
     endShape();
 
+    drawingContext.blendFunc(drawingContext.SRC_ALPHA, drawingContext.ONE_MINUS_SRC_ALPHA);
+
     resetShader();
 
     pop();
@@ -699,6 +718,7 @@ class Feather {
 
   drawBarbs() {
     push();
+    blendMode(ADD);
 
     for (let i = 0; i < this.vaneBarbs.length - 6; i++) {
       // if (i < 82) { continue; } // TEMPORARY
@@ -981,6 +1001,15 @@ function createGui() {
   shaderFolder.add(params.shaderParams, 'ridgeSoftness', 0, 1).step(0.01).name('Ridge Softness').onChange(() => { refresh(); });
   shaderFolder.add(params.shaderParams, 'ridgeHighlight', 0, 1).step(0.01).name('Ridge Highlight').onChange(() => { refresh(); });
   shaderFolder.add(params.shaderParams, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
+
+  const barbulesFolder = gui.addFolder('Barbules');
+  barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('Barb Mesh Base Width').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('Barb Mesh Tip Width').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('Number of Barbules').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('Barb Spine Width').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('Barb Spine Hardness').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('Barbule Width').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('Barbule Hardness').onChange(() => { refresh(); });
 }
 
 function refresh() {
@@ -994,7 +1023,8 @@ function setupDebugParams() {
   // Copy params to debugParams except for the reduced divisions
   debugParams = { ...params }
   debugParams.spineDivisions = 100;
-  debugParams.nBarbs = 20;
+  debugParams.nBarbs = 40;
   debugParams.afterFeather = { ...params.afterFeather };
   debugParams.afterFeather.nBarbs = 10;
+  debugParams.barbuleParams = { ...params.barbuleParams };
 }
