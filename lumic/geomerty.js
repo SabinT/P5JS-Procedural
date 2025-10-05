@@ -148,8 +148,6 @@ export function resample2(path, desiredDistanceRange) {
       // currentDesiredDistance = Math.min(currentDesiredDistance - adjustmentFactor, desiredDistanceRange.x);
 
       currentDesiredDistance = lerp(desiredDistanceRange.y, desiredDistanceRange.x, accumDist / totalLength);
-      console.log(currentDesiredDistance, desiredDistanceRange.x, desiredDistanceRange.y, accumDist, totalLength);
-
       remainingDistance = currentDesiredDistance;
     } else {
       accumDist += (segmentLength - positionInCurrentSegment);
@@ -206,6 +204,64 @@ export function resample(path, desiredDistanceMinMax) {
   }
 
   return resampled;
+}
+
+export function resamplePathUniform(path, targetCount = null) {
+  // Return an empty array for empty input
+  if (!path || path.length === 0) return [];
+
+  const m = path.length;
+  const n = targetCount === null ? m : Math.max(1, Math.floor(targetCount));
+
+  // If only one point requested or available, return the first point (as vec2)
+  if (n <= 1) return [vec2(path[0].x, path[0].y)];
+
+  // Build cumulative length array
+  const cum = new Array(m);
+  cum[0] = 0;
+  for (let i = 1; i < m; i++) {
+    cum[i] = cum[i - 1] + dist2d(path[i - 1], path[i]);
+  }
+  const total = cum[m - 1];
+
+  // If total length is zero (all points coincident), return copies of the first point
+  if (total === 0) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(vec2(path[0].x, path[0].y));
+    return out;
+  }
+
+  const out = [];
+  // For each desired sample index, compute target distance along path and interpolate
+  let segIndex = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1); // ranges 0..1
+    const targetDist = t * total;
+
+    // advance segIndex until cum[segIndex] <= targetDist <= cum[segIndex+1]
+    while (segIndex < m - 2 && cum[segIndex + 1] < targetDist) {
+      segIndex++;
+    }
+
+    const segStart = path[segIndex];
+    const segEnd = path[segIndex + 1];
+    const segLen = cum[segIndex + 1] - cum[segIndex];
+
+    let p;
+    if (segLen <= Number.EPSILON) {
+      // Degenerate segment: use segEnd
+      p = vec2(segEnd.x, segEnd.y);
+    } else {
+      const localT = (targetDist - cum[segIndex]) / segLen;
+      const x = lerp(segStart.x, segEnd.x, localT);
+      const y = lerp(segStart.y, segEnd.y, localT);
+      p = vec2(x, y);
+    }
+
+    out.push(p);
+  }
+
+  return out;
 }
 
 export function angleNorm180(angle) {

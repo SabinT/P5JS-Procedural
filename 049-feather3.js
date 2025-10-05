@@ -1,11 +1,11 @@
 import { BezierCubic } from "./lumic/bezier.js";
 import { Debug } from "./lumic/debug.js";
-import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI, dot2d, repeat, rot2d, mixSeed, remap } from "./lumic/common.js";
+import { vec2, lerp, normalize2d, add2d, line2D, mul2d, scale2d, lerp2d, sub2d, dist2d, sqRand, rgba01FromHex, PI, dot2d, repeat, rot2d, mixSeed, remap, path2D } from "./lumic/common.js";
 import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad, smoothstep } from "./lumic/easing.js";
 import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
-import { drawPath, drawPathWithGradient, getTangents, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
+import { drawPath, drawPathWithGradient, getTangents, resamplePathUniform, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFrag } from "./049-feather3-shaders.js";
 import { barbVert, barbFrag } from "./049-feather3-barb-shader.js";
 // import * as dat from 'libraries/dat.gui.min.js';
@@ -77,7 +77,7 @@ const params = {
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
   vaneBreaks: 30,
   vaneBreakSymmetry: 0.74, // 0 = left only, 1 = right only, 0.5 = even on both sides
-  vaneNoiseLevelExp: -1.07,
+  vaneNoiseLevelExp: -2,
   vaneNoiseScaleExp: -2,
   clumpCohesionStart: 0.8,
   clumpCohesionEnd: 1.0,
@@ -106,14 +106,14 @@ const params = {
     tipDarken: 0.35,
   },
   barbuleParams: {
-    barbColor: "#cacacaff",
-    barbMeshBaseWidth: 3.13,
-    barbMeshTipWidth: 0.0,
-    nBarbulesPerBarb: 82,
+    barbColor: "#cacaca",
+    barbMeshBaseWidth: 2,
+    barbMeshTipWidth: 0.95,
+    nBarbulesPerBarb: 40,
     barbSpineWidth: 0.1,
-    barbSpineHardness: 0.6,
-    barbuleWidthNorm: 0.03,
-    barbuleHardness: 0.77,
+    barbSpineHardness: 0.35,
+    barbuleWidthNorm: 0.3,
+    barbuleHardness: 0.4,
   }
 };
 
@@ -621,11 +621,13 @@ class Feather {
       return;
     }
 
-    const points = barb.pts;
+    const origPts = barb.pts;
+    const points = resamplePathUniform(origPts);
+
     // const clumpColor = getClumpColor(barb.clumpIndex);
     const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
     const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
-    const uvYRepeat = params.barbuleParams.nBarbulesPerBarb;
+    // const uvYRepeat = params.barbuleParams.nBarbulesPerBarb;
 
     // Estimate gap to neighbouring barb on the same side to derive mesh width
     let neighbour = null;
@@ -659,6 +661,7 @@ class Feather {
     barbMeshShader.setUniform('uBarbSpineHardness', this.params.barbuleParams.barbSpineHardness);
     barbMeshShader.setUniform('uBarbuleWidthNorm', this.params.barbuleParams.barbuleWidthNorm);
     barbMeshShader.setUniform('uBarbuleHardness', this.params.barbuleParams.barbuleHardness);
+    barbMeshShader.setUniform('uBarbuleCount', this.params.barbuleParams.nBarbulesPerBarb);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -707,8 +710,8 @@ class Feather {
       const left = add2d(p, scale2d(offset, -1));
 
       // Consistent vertex order: right first, then left (like spine)
-      vertex(right.x, right.y, 0, 0.5, t * uvYRepeat);   // U=0.5 for right edge
-      vertex(left.x, left.y, 0, -0.5, t * uvYRepeat);    // U=-0.5 for left edge
+      vertex(right.x, right.y, 0, 0.5, t);   // U=0.5 for right edge
+      vertex(left.x, left.y, 0, -0.5, t);    // U=-0.5 for left edge
     }
     endShape();
 
@@ -1018,13 +1021,14 @@ function createGui() {
   shaderFolder.add(params.shaderParams, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
 
   const barbulesFolder = gui.addFolder('Barbules');
-  barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('Barb Mesh Base Width').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('Barb Mesh Tip Width').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('Number of Barbules').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('Barb Spine Width').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('Barb Spine Hardness').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('Barbule Width').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('Barbule Hardness').onChange(() => { refresh(); });
+  barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('barbMeshBaseWidth').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('barbMeshTipWidth').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('nBarbulesPerBarb').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
 }
 
 function refresh() {

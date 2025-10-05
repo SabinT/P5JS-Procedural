@@ -25,6 +25,7 @@ uniform float uBarbSpineWidth;
 uniform float uBarbSpineHardness;
 uniform float uBarbuleWidthNorm;
 uniform float uBarbuleHardness;
+uniform float uBarbuleCount;
 
 // https://iquilezles.org/articles/distfunctions2d/
 float sdTriangle( in vec2 p, in vec2 p0, in vec2 p1, in vec2 p2 )
@@ -41,25 +42,62 @@ float sdTriangle( in vec2 p, in vec2 p0, in vec2 p1, in vec2 p2 )
     return -sqrt(d.x)*sign(d.y);
 }
 
+float barbuleIntensity(vec2 uv, float gap, float thickness, float hardness, float tilt)
+{
+    // Symmetry + gentle bend
+    uv.x = abs(uv.x);
+    // uv.y += pow(uv.x, 1.5);
+    uv.y -= pow(smoothstep(0.0, 0.5, uv.x), 0.75);
+
+    // Diagonal coordinate in uv units; period = gap along uv.y
+    float s = uv.y + tilt * uv.x;
+
+    // Local position inside the stripe cell [0,1)
+    float cell = fract(s / gap);
+
+    // Distance from the centerline in uv units
+    float dist = abs(cell - 0.5) * gap;
+
+    // Half-width in uv units; clamp so it can't exceed the cell
+    float w = 0.5 * clamp(thickness, 0.0, gap);
+
+    float feather = w * (1.0 - hardness);
+    float intensity = 1.0 - smoothstep(w - feather, w, dist);
+    
+    return intensity;
+}
+
 void main () {
     // X-Centered uv
     vec2 uv = vUV;
 
-    // Repeat y in the 0-1 range
-    uv.y = fract(uv.y);
-    
+    float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
+
+    // Repeat uv.y based on barbule count
+    uv.y *= float(uBarbuleCount / 5.0); // divide by 5 because gap is 0.2
+
     float tspine = smoothstep(-uBarbSpineWidth, -uBarbSpineWidth * uBarbSpineHardness, uv.x) * 
-                   smoothstep(uBarbSpineWidth, uBarbSpineWidth * uBarbSpineHardness, uv.x);
-    
-    uv.x = abs(uv.x);
-    
-    float tBarbule = 1.0 - sdTriangle(uv, 
-                                      vec2(0.0, 0.15 - uBarbuleWidthNorm * 0.5), 
-                                      vec2(0.0, 0.15 + uBarbuleWidthNorm * 0.5), 
-                                      vec2(0.4, 0.9));
-    tBarbule = smoothstep(uBarbuleHardness, 1.0, tBarbule);
+                smoothstep(uBarbSpineWidth, uBarbSpineWidth * uBarbSpineHardness, uv.x);
+
+    // ---- Params (uv.y-based for spacing/width) ----
+    float gap          = 0.2;
+    float tilt         = 0.4;  // dimensionless, just to add some tilt to the barbules
+
+    float thickness = gap * uBarbuleWidthNorm;
+    float tBarbule = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, tilt);
+
+    float tBarbuleNoise = barbuleIntensity(uv, gap , thickness * 0.1, uBarbuleHardness, tilt);
 
     float t = max(tspine, tBarbule);
+    t = max(t, tBarbuleNoise * 0.5);
+
+
+    // Fade towards the sides
+    float falloffStart = 0.30 * (1.0 - tCloseToTop);
+    float falloffEnd   = 0.450 * (1.0 - tCloseToTop);
+    float fade = smoothstep(falloffEnd, falloffStart, abs(uv.x));
+
+    t *= fade;
 
     // Set final color, alpha based on t
     vec4 finalColor = uColor * t;
