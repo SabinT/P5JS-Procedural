@@ -1,8 +1,5 @@
 export const barbVert = `
-#ifdef GL_ES
 precision mediump float;
-precision mediump int;
-#endif
 
 attribute vec3 aPosition;
 attribute vec2 aTexCoord;
@@ -19,10 +16,7 @@ void main () {
 `;
 
 export const barbFrag = `
-#ifdef GL_ES
 precision mediump float;
-precision mediump int;
-#endif
 
 varying vec2 vUV;
 
@@ -67,6 +61,10 @@ void main () {
 
     float t = max(tspine, tBarbule);
 
-    gl_FragColor = uColor * t;
+    // Set final color, alpha based on t
+    vec4 finalColor = uColor * t;
+    finalColor.a = t;
+
+    gl_FragColor = finalColor;
 }
 `;

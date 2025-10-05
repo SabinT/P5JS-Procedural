@@ -571,6 +571,8 @@ class Feather {
 
   drawSpine() {
     push();
+    blendMode(ADD);
+    enableAdditiveBlending();
 
     noStroke();
 
@@ -604,6 +606,7 @@ class Feather {
     endShape();
 
     resetShader();
+    resetToAlphaBlending();
 
     pop();
   }
@@ -611,6 +614,7 @@ class Feather {
   drawBarbMesh(barb, index) {
     push();
     blendMode(ADD);
+    noStroke();
 
     if (!barbMeshShader || !barb || !barb.pts || barb.pts.length < 2) {
       pop();
@@ -647,8 +651,7 @@ class Feather {
     const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
 
     // Enable TRUE additive blending for shaders
-    drawingContext.enable(drawingContext.BLEND);
-    drawingContext.blendFunc(drawingContext.ONE, drawingContext.ONE);
+    enableAdditiveBlending();
 
     shader(barbMeshShader);
     barbMeshShader.setUniform('uColor', colorVec);
@@ -709,7 +712,7 @@ class Feather {
     }
     endShape();
 
-    drawingContext.blendFunc(drawingContext.SRC_ALPHA, drawingContext.ONE_MINUS_SRC_ALPHA);
+    resetToAlphaBlending();
 
     resetShader();
 
@@ -783,6 +786,8 @@ class Feather {
 
   drawAfterfeather() {
     push();
+    enableAdditiveBlending();
+    blendMode(ADD);
 
     for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
       const barb = this.afterFeatherBarbs[i];
@@ -793,6 +798,7 @@ class Feather {
       drawPath(pts);
     }
 
+    resetToAlphaBlending();
     pop();
   }
 
@@ -890,7 +896,7 @@ window.preload = function () {
 window.setup = function () {
   canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
-  pixelDensity(2);
+  pixelDensity(4);
   createGui();
   textFont(font);
 
@@ -918,6 +924,15 @@ window.keyTyped = function () {
     save();
   }
 };
+
+function resetToAlphaBlending() {
+  drawingContext.blendFunc(drawingContext.SRC_ALPHA, drawingContext.ONE_MINUS_SRC_ALPHA);
+}
+
+function enableAdditiveBlending() {
+  drawingContext.enable(drawingContext.BLEND);
+  drawingContext.blendFunc(drawingContext.ONE, drawingContext.ONE);
+}
 
 function rgba01FromColor(col) {
   if (!col) {
