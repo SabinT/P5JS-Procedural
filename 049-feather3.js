@@ -109,10 +109,10 @@ const params = {
     barbColor: "#cacaca",
     barbMeshBaseWidth: 2,
     barbMeshTipWidth: 0.95,
-    nBarbulesPerBarb: 40,
+    nBarbulesPerBarb: 100,
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.3,
+    barbuleWidthNorm: 0.57,
     barbuleHardness: 0.4,
   }
 };
@@ -899,7 +899,7 @@ window.preload = function () {
 window.setup = function () {
   canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
-  pixelDensity(4);
+  pixelDensity(8);
   createGui();
   textFont(font);
 
@@ -907,6 +907,9 @@ window.setup = function () {
 
   feather = new Feather(Debug.enabled ? debugParams : params);
   feather.build();
+
+  // Needed to enable fwidth
+  drawingContext.getExtension('OES_standard_derivatives');
 
   spineShader = createShader(spineVert, spineFrag);
   barbMeshShader = createShader(barbVert, barbFrag);
