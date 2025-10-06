@@ -35,7 +35,16 @@ uniform float uTipDarken;         // 0..1
 
 uniform int uDebug; // 0 or 1
 
-// quick remap helper
+// pastel palette
+vec3 getPaletteColor(float n)
+{
+    if (n < 0.2)  return vec3(0xF2,0xA0,0xD5)/255.0; // #F2A0D5
+    else if (n < 0.4) return vec3(0xF2,0x79,0xDE)/255.0; // #F279DE
+    else if (n < 0.6) return vec3(0x88,0x6F,0xBF)/255.0; // #886FBF
+    else if (n < 0.8) return vec3(0x05,0xC7,0xF2)/255.0; // #05C7F2
+    else              return vec3(0x05,0xDB,0xF2)/255.0; // #05DBF2
+}
+
 float remap(float x, float a, float b, float c, float d){
     return clamp((x - a) / max(1e-5, (b - a)), 0.0, 1.0) * (d - c) + c;
 }
@@ -57,30 +66,35 @@ void main () {
     // soften edge blend
     float edge = smoothstep(0.95 - uEdgeSoftness, 0.95, d);
 
-    // subtle center highlight
+    // subtle center highlight (ridge)
     float dRidge = abs(vUV.y - 0.1 /* ridgeOffset */) / 0.5;
     float ridge  = 1.0 - smoothstep(0.0, max(1e-5, uRidgeSoftness), dRidge);
 
-    // darken toward shaft ends (tips) using vUV.x
-    float tip = max( remap(vUV.x, 0.0, 0.15, 1.0, 0.0),
-                remap(vUV.x, 0.85, 1.0, 0.0, 1.0) );
+    // darken toward shaft ends (tips)
+    float tip = max(remap(vUV.x, 0.0, 0.15, 1.0, 0.0),
+                    remap(vUV.x, 0.85, 1.0, 0.0, 1.0));
     float tipShade = mix(1.0, 1.0 - uTipDarken, tip);
 
+    // ----------- Base gradients -----------
     vec3 col = uBaseColor.rgb;
+    col += ridge * uRidgeHighlight;     // highlight center
+    col = mix(col, uEdgeColor.rgb, edge); // edge fade
+    col *= tipShade;                      // tip darken
 
-    // Add ridge highlight
-    col += ridge * uRidgeHighlight;
+    // ----------- Add pastel noise -----------
+    // base hash noise (different scale along spine)
+    float n = fract(sin(dot(vUV * vec2(47.13, 119.83), vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 noiseColor = getPaletteColor(n);
 
-    // Blend to edge color
-    col = mix(col, uEdgeColor.rgb, edge);
+    // fade noise toward edges and tips
+    float noiseStrength = 0.5;
+    float noiseFade = (1.0 - edge) * (1.0 - tip) * (0.5 + 0.5 * ridge);
+    col = mix(col, noiseColor, noiseFade * noiseStrength);
 
-    // Darken toward tips
-    col *= tipShade;
-
+    // alpha
     float alpha = 1.0 - edge;
     alpha = smoothstep(0.0, 0.2, alpha);
 
     gl_FragColor = vec4(col, alpha);
-    // gl_FragColor = vec4(ridge, ridge, ridge, uBaseColor.a);
 }
 `;

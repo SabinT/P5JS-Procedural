@@ -16,9 +16,8 @@ void main () {
 `;
 
 export const barbFrag = `
-precision highp float;
-
 #extension GL_OES_standard_derivatives : enable
+precision highp float;
 
 varying vec2 vUV;
 
@@ -28,6 +27,7 @@ uniform float uBarbSpineHardness;
 uniform float uBarbuleWidthNorm;
 uniform float uBarbuleHardness;
 uniform float uBarbuleCount;
+uniform float uBarbIndex;
 
 // =========================================================
 // Barbule intensity helper
@@ -36,7 +36,6 @@ float barbuleIntensity(vec2 uv, float gap, float thickness, float hardness, floa
 {
     uv.x = abs(uv.x);
     uv.y -= pow(smoothstep(0.0, 0.5, uv.x), 0.75);
-
     if (uv.y < 0.0) { return 0.0; }
 
     float s = uv.y + tilt * uv.x;
@@ -63,10 +62,7 @@ vec4 shadeBarbule(vec2 uv)
     float thickness = gap * uBarbuleWidthNorm;
 
     float tBarbule = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, tilt);
-    float tBarbuleNoise = barbuleIntensity(uv, gap * 0.01, thickness * 0.01, uBarbuleHardness, tilt);
-
     float t = max(tspine, tBarbule);
-    t = max(t, tBarbuleNoise * 0.3);
 
     float falloffStart = 0.30 * (1.0 - tCloseToTop);
     float falloffEnd   = 0.450 * (1.0 - tCloseToTop);
@@ -80,14 +76,49 @@ vec4 shadeBarbule(vec2 uv)
 }
 
 // =========================================================
+// Noise shading using fixed pastel palette
+// =========================================================
+vec3 getPaletteColor(float n)
+{
+    // pick one of 5 colors based on noise value
+    if (n < 0.2)  return vec3(0xF2,0xA0,0xD5)/255.0; // #F2A0D5
+    else if (n < 0.4) return vec3(0xF2,0x79,0xDE)/255.0; // #F279DE
+    else if (n < 0.6) return vec3(0x88,0x6F,0xBF)/255.0; // #886FBF
+    else if (n < 0.8) return vec3(0x05,0xC7,0xF2)/255.0; // #05C7F2
+    else              return vec3(0x05,0xDB,0xF2)/255.0; // #05DBF2
+}
+
+vec4 shadeNoise(vec2 uv)
+{
+    float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
+    uv.y *= (float(uBarbuleCount)) / 50.0;
+
+    float gap = 0.2;
+    float tilt = 0.2;
+    float thickness = gap * 0.8;
+    float tNoiseBase = barbuleIntensity(uv, gap, thickness, 0.5, tilt);
+
+    float n = fract(sin(dot(uv * 43.17, vec2(12.9898,78.233))) * 43758.5453);
+    vec3 chosenColor = getPaletteColor(n);
+
+    float falloffStart = 0.35 * (1.0 - tCloseToTop);
+    float falloffEnd   = 0.5  * (1.0 - tCloseToTop);
+    float fade = smoothstep(falloffEnd, falloffStart, abs(uv.x));
+
+    float t = tNoiseBase * fade * (1.0 - 0.3 * tCloseToTop);
+    return vec4(chosenColor * t, t);
+}
+
+
+// =========================================================
 // Supersampling with a fibonacci lattice
 // =========================================================
 void main()
 {
     const int SAMPLES = 16;
     const float INV_SAMPLES = 1.0 / float(SAMPLES);
-    const float PHI = 1.61803398875;             // golden ratio
-    const float GOLDEN_ANGLE = 2.0 * 3.14159265 / (PHI * PHI); // ~137.5°
+    const float PHI = 1.61803398875;
+    const float GOLDEN_ANGLE = 2.0 * 3.14159265 / (PHI * PHI);
 
     vec4 accum = vec4(0.0);
     vec2 pixel = vec2(fwidth(vUV.x), fwidth(vUV.y));
@@ -95,16 +126,21 @@ void main()
     for (int i = 0; i < SAMPLES; ++i)
     {
         float fi = float(i) + 0.5;
-        float r = sqrt(fi * INV_SAMPLES) - 0.5;  // roughly -0.5..0.5 range
+        float r = sqrt(fi * INV_SAMPLES) - 0.5;
         float a = fi * GOLDEN_ANGLE;
-
         vec2 offset = r * vec2(cos(a), sin(a));
-        vec2 sampleUV = vUV + offset * pixel * 1.5; // 1.5 scales sampling radius
+        vec2 sampleUV = vUV + offset * pixel * 1.5;
         accum += shadeBarbule(sampleUV);
     }
 
-    gl_FragColor = accum * INV_SAMPLES;
-}
+    vec4 finalColor = accum * INV_SAMPLES;
 
+    // Add noise layer (single evaluation for speed)
+    vec4 noiseColor = shadeNoise(vUV);
+    finalColor = mix(finalColor, finalColor * noiseColor, 0.6);
+
+    //gl_FragColor = noiseColor;
+    gl_FragColor = finalColor;
+}
 `;
 

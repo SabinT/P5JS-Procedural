@@ -170,7 +170,7 @@ class Feather {
   buildVane() {
     const params = this.params;
     const tBarbStart = params.afterFeatherEnd;
-    const tBarbEnd = 1;
+    const tBarbEnd = 1.01;
     const tVaneBreakEnd = params.vaneBreakEnd;
 
     // Split vaneBreaks into left/right with some randomness
@@ -188,7 +188,9 @@ class Feather {
     if (nLeftVaneBreaks > 0) {
       for (let i = 0; i < nLeftVaneBreaks; i++) {
         const tBreak = i / nLeftVaneBreaks;
-        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(i, seedLeft));
+        // Clamp the randomized stop so it never exceeds the end
+        const t01 = clamp01(tBreak + breakMaxStagger * sqRand(i, seedLeft));
+        const t = lerp(tBarbStart, tVaneBreakEnd, t01);
         leftVaneBreakStops.push(t);
       }
     }
@@ -196,7 +198,8 @@ class Feather {
     if (nRightVaneBreaks > 0) {
       for (let i = 0; i < nRightVaneBreaks; i++) {
         const tBreak = i / nRightVaneBreaks;
-        const t = lerp(tBarbStart, tVaneBreakEnd, tBreak + breakMaxStagger * sqRand(i, seedRight));
+        const t01 = clamp01(tBreak + breakMaxStagger * sqRand(i, seedRight));
+        const t = lerp(tBarbStart, tVaneBreakEnd, t01);
         rightVaneBreakStops.push(t);
       }
     }
@@ -219,18 +222,27 @@ class Feather {
     let lastVaneBreakStopIndexRight = -1;
     let iBarb = 0;
 
-    const { points, tangents } = this.getPointsAndTangentsAlongSpine(tBarbStart, 1, params.nBarbs);
+    let { points, tangents } = this.getPointsAndTangentsAlongSpine(tBarbStart, 1, params.nBarbs);
+    // points = resamplePathUniform(points);
+    // tangents = getTangents(points);
+
+    const skipAfterSpinePosition = 0.943;
 
     for (let i = 0; i < points.length; i++) {
       const tAlongSpine = tBarbStart + i * barbWidthNormalized;
       const tAlongVane = i / (points.length - 1);
+
+      if (tAlongSpine > skipAfterSpinePosition) {
+        continue;
+      }
+
       const spineWidth = params.spineBaseWidth * params.spineWidthCurve(tAlongSpine);
 
       const rightFrame = new Frame2D(points[i], tangents[i]);
       const leftFrame = new Frame2D(rightFrame.origin, rightFrame.forward, scale2d(rightFrame.right, -1));
 
       // Barbs are slightly offset from the spine
-      const digIntoSpine = 0.6;
+      const digIntoSpine = 0.2 + tAlongVane * 0.8;
       const spineHalfWidth = spineWidth / 2;
       rightFrame.translate(scale2d(rightFrame.right, spineHalfWidth * (1 - digIntoSpine)));
       leftFrame.translate(scale2d(leftFrame.right, spineHalfWidth * (1 - digIntoSpine)));
@@ -285,7 +297,15 @@ class Feather {
       const tAlongClumpLeft = safeFrac(tAlongSpine, prevLeft, nextLeft);
       const tAlongClumpRight = safeFrac(tAlongSpine, prevRight, nextRight);
 
-      const vaneWidth = params.vaneBaseWidth * params.vaneWidthCurve(tAlongVane);
+      let tVaneWidth = clamp01(params.vaneWidthCurve(tAlongVane));
+      tVaneWidth = remap(0, 1, 0.1, 1, tVaneWidth);
+      const vaneWidth = params.vaneBaseWidth * tVaneWidth;
+
+      const barbTilt = clamp01(params.barbTiltCurve(tAlongVane) + params.barbTiltStart);
+
+      // if (barbTilt >= 0.99995) {
+      //   continue;
+      // }
 
       const rightBarb = {
         frame: rightFrame,
@@ -294,7 +314,8 @@ class Feather {
         barbIndex: iBarb++,
         length: vaneWidth,
         tAlongSpine: tAlongSpine,
-        tAlongVane: tAlongVane
+        tAlongVane: tAlongVane,
+        barbTilt: barbTilt,
       };
 
       const leftBarb = {
@@ -304,7 +325,8 @@ class Feather {
         barbIndex: iBarb++,
         length: vaneWidth,
         tAlongSpine: tAlongSpine,
-        tAlongVane: tAlongVane
+        tAlongVane: tAlongVane,
+        barbTilt: barbTilt,
       };
 
       this.vaneBarbs.push(rightBarb);
@@ -364,24 +386,34 @@ class Feather {
 
     for (let i = 0; i < this.vaneBarbs.length; i++) {
       const barb = this.vaneBarbs[i];
-      const rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane); // TODO bad magic number
-      const tipTangentLength = 0.15 * this.spineLength * (1 - barb.tAlongVane * 0.75);
       const barbRoot = barb.frame.origin;
-      const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
-
-      // const barbTipRaw = add2d(barbRoot, scale2d(barb.frame.right, barb.length));
-      // const barbTip = add2d(barbTipRaw, scale2d(barb.frame.forward, dtAlongSpine * this.spineLength));
-      // const tipTangent = scale2d(normalize2d(sub2d(barbTip, barbTipRaw)), tipTangentLength);
-
-      const barbTilt = clamp01(params.barbTiltCurve(barb.tAlongVane) + params.barbTiltStart);
-      const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
-
+      
       // Adjust barb length at extreme tilt
-      const tBarbLengthMultiplier = 1 - smoothstep(0.995, 1, barbTilt);
+      const barbTilt = barb.barbTilt;
+      const tBarbLengthMultiplier = 1 - smoothstep(0.9, 1.25, barbTilt);
+      const MIN_BARB_LEN = 0.002 * this.spineLength;
+      const effectiveLen = Math.max(MIN_BARB_LEN, barb.length * tBarbLengthMultiplier);
+      
+      const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
+      const barbTip = add2d(barbRoot, scale2d(dirToTip, effectiveLen));
 
-      const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length * tBarbLengthMultiplier));
+      let rootTangentLength = 0.05 * this.spineLength * (1 - barb.tAlongVane); // TODO bad magic number
+      let tipTangentLength = 0.15 * this.spineLength * (1 - barb.tAlongVane * 0.75);
+
+      // Ensure tangent lengths are never more than half of root to tip
+      // const distRootToTip = dist2d(barbRoot, barbTip);
+      // if (rootTangentLength > distRootToTip * 0.2) {
+      //   rootTangentLength = distRootToTip * 0.2;
+      // }
+
+      // if (tipTangentLength > distRootToTip * 0.2) {
+      //   tipTangentLength = distRootToTip * 0.2;
+      // }
+
+      const rootTangent = scale2d(barb.frame.forward, rootTangentLength * tBarbLengthMultiplier);
+
       let tipTangentDir = normalize2d(lerp2d(dirToTip, barb.frame.forward, 0.6));
-      let tipTangent = scale2d(tipTangentDir, tipTangentLength);
+      let tipTangent = scale2d(tipTangentDir, tipTangentLength * tBarbLengthMultiplier);
       tipTangent = rotateTowards(tipTangent, barb.frame.forward, barb.tAlongVane);
 
       barb.spline = new CubicHermite2D(barbRoot, rootTangent, barbTip, tipTangent);
@@ -565,6 +597,19 @@ class Feather {
     return { points, tangents };
   }
 
+  getPointsAndTangentsAlongSpineUniform(tStart, tEnd, nPoints) {
+    const params = this.params;
+    // Oversample in parameter space, then resample to uniform arc-length
+    const oversample = Math.max(16, nPoints * 4);
+    const hi = [];
+    for (let t = tStart; t <= tEnd; t += (tEnd - tStart) / oversample) {
+      hi.push(params.spineCurve.GetPosition(t));
+    }
+    const points = resamplePathUniform(hi, nPoints + 1);
+    const tangents = getTangents(points);
+    return { points, tangents };
+  }
+
   draw() {
     this.drawBarbs();
     this.drawAfterfeather();
@@ -660,7 +705,7 @@ class Feather {
     // const colorVec = rgba01FromColor(color("gray"));
     const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
 
-    // Enable TRUE additive blending for shaders
+    // Enable additive blending for shaders
     enableAdditiveBlending();
 
     shader(barbMeshShader);
@@ -670,6 +715,7 @@ class Feather {
     barbMeshShader.setUniform('uBarbuleWidthNorm', this.params.barbuleParams.barbuleWidthNorm);
     barbMeshShader.setUniform('uBarbuleHardness', this.params.barbuleParams.barbuleHardness);
     barbMeshShader.setUniform('uBarbuleCount', this.params.barbuleParams.nBarbulesPerBarb);
+    barbMeshShader.setUniform('uBarbIndex', index);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -740,7 +786,7 @@ class Feather {
       const barb = this.vaneBarbs[i];
       // barb.spline.Draw();
 
-      if (debugDrawToggles.barbMesh) {
+      if (!Debug.enabled) {
         this.drawBarbMesh(barb, i);
         continue;
       }

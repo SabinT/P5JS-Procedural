@@ -46,7 +46,7 @@ export class Debug {
         g.push();
 
         g.circle(hermite.p0.x, hermite.p0.y, 5);
-        g.circle(hermite.p1.x, hermite.p1.y, 5);
+        g.circle(hermite.p1.x, hermite.p1.y, 2.5);
 
         if (showTangents) {
             // Draw start and end tangents as arrows
