@@ -55,7 +55,7 @@ void main () {
     d = clamp(d, 0.0, 1.0);
 
     // soften edge blend
-    float edge = smoothstep(1.0 - uEdgeSoftness, 1.0, d);
+    float edge = smoothstep(0.95 - uEdgeSoftness, 0.95, d);
 
     // subtle center highlight
     float dRidge = abs(vUV.y - 0.1 /* ridgeOffset */) / 0.5;
@@ -77,7 +77,10 @@ void main () {
     // Darken toward tips
     col *= tipShade;
 
-    gl_FragColor = vec4(col, uBaseColor.a);
+    float alpha = 1.0 - edge;
+    alpha = smoothstep(0.0, 0.2, alpha);
+
+    gl_FragColor = vec4(col, alpha);
     // gl_FragColor = vec4(ridge, ridge, ridge, uBaseColor.a);
 }
 `;

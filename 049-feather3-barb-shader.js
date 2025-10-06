@@ -37,6 +37,8 @@ float barbuleIntensity(vec2 uv, float gap, float thickness, float hardness, floa
     uv.x = abs(uv.x);
     uv.y -= pow(smoothstep(0.0, 0.5, uv.x), 0.75);
 
+    if (uv.y < 0.0) { return 0.0; }
+
     float s = uv.y + tilt * uv.x;
     float cell = fract(s / gap);
     float dist = abs(cell - 0.5) * gap;
@@ -57,14 +59,14 @@ vec4 shadeBarbule(vec2 uv)
                    smoothstep(uBarbSpineWidth,  uBarbSpineWidth * uBarbSpineHardness, uv.x);
 
     float gap = 0.2;
-    float tilt = 0.4;
+    float tilt = 0.2;
     float thickness = gap * uBarbuleWidthNorm;
 
     float tBarbule = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, tilt);
-    float tBarbuleNoise = barbuleIntensity(uv, gap, thickness * 0.1, uBarbuleHardness, tilt);
+    float tBarbuleNoise = barbuleIntensity(uv, gap * 0.01, thickness * 0.01, uBarbuleHardness, tilt);
 
     float t = max(tspine, tBarbule);
-    t = max(t, tBarbuleNoise * 0.5);
+    t = max(t, tBarbuleNoise * 0.3);
 
     float falloffStart = 0.30 * (1.0 - tCloseToTop);
     float falloffEnd   = 0.450 * (1.0 - tCloseToTop);
@@ -78,32 +80,31 @@ vec4 shadeBarbule(vec2 uv)
 }
 
 // =========================================================
-// 8× rotated-grid supersampling wrapper
+// Supersampling with a fibonacci lattice
 // =========================================================
 void main()
 {
-    // Rotated grid sample pattern (more isotropic than 4x grid)
-    vec2 offsets[8];
-    offsets[0] = vec2(-0.375, -0.125);
-    offsets[1] = vec2(-0.125, -0.375);
-    offsets[2] = vec2( 0.125, -0.375);
-    offsets[3] = vec2( 0.375, -0.125);
-    offsets[4] = vec2( 0.375,  0.125);
-    offsets[5] = vec2( 0.125,  0.375);
-    offsets[6] = vec2(-0.125,  0.375);
-    offsets[7] = vec2(-0.375,  0.125);
+    const int SAMPLES = 16;
+    const float INV_SAMPLES = 1.0 / float(SAMPLES);
+    const float PHI = 1.61803398875;             // golden ratio
+    const float GOLDEN_ANGLE = 2.0 * 3.14159265 / (PHI * PHI); // ~137.5°
 
     vec4 accum = vec4(0.0);
-    const float INV_SAMPLES = 1.0 / 8.0;
     vec2 pixel = vec2(fwidth(vUV.x), fwidth(vUV.y));
 
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < SAMPLES; ++i)
     {
-        vec2 sampleUV = vUV + offsets[i] * pixel;
+        float fi = float(i) + 0.5;
+        float r = sqrt(fi * INV_SAMPLES) - 0.5;  // roughly -0.5..0.5 range
+        float a = fi * GOLDEN_ANGLE;
+
+        vec2 offset = r * vec2(cos(a), sin(a));
+        vec2 sampleUV = vUV + offset * pixel * 1.5; // 1.5 scales sampling radius
         accum += shadeBarbule(sampleUV);
     }
 
     gl_FragColor = accum * INV_SAMPLES;
 }
+
 `;
 

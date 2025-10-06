@@ -52,7 +52,7 @@ const params = {
   randomSeed: 123456789,
   // cubic hermite spline
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
-  spineDivisions: 100,
+  spineDivisions: 200,
   spineBaseWidth: 13,
   spineEnd: 0.95,
   spineWidthCurve: (t) => {
@@ -98,14 +98,15 @@ const params = {
     }
   },
   shaderParams: {
-    baseColor: "#bfb09a",
-    edgeColor: "#665954",
-    edgeSoftness: 0.75,
-    ridgeSoftness: 0.44,
-    ridgeHighlight: 0.5,
-    tipDarken: 0.35,
+    baseColor: "#c5c2c2",
+    edgeColor: "#a8a6a6",
+    edgeSoftness: 0.27,
+    ridgeSoftness: 0.38,
+    ridgeHighlight: 0.27,
+    tipDarken: 0.85,
   },
   barbuleParams: {
+    nBarbDivisions: 160,
     barbColor: "#cacaca",
     barbMeshBaseWidth: 2,
     barbMeshTipWidth: 0.95,
@@ -229,8 +230,12 @@ class Feather {
       const leftFrame = new Frame2D(rightFrame.origin, rightFrame.forward, scale2d(rightFrame.right, -1));
 
       // Barbs are slightly offset from the spine
-      rightFrame.translate(scale2d(rightFrame.right, spineWidth / 2));
-      leftFrame.translate(scale2d(leftFrame.right, spineWidth / 2));
+      const digIntoSpine = 0.6;
+      const spineHalfWidth = spineWidth / 2;
+      rightFrame.translate(scale2d(rightFrame.right, spineHalfWidth * (1 - digIntoSpine)));
+      leftFrame.translate(scale2d(leftFrame.right, spineHalfWidth * (1 - digIntoSpine)));
+      // rightFrame.translate(scale2d(rightFrame.right, spineWidth / 2));
+      // leftFrame.translate(scale2d(leftFrame.right, spineWidth / 2));
 
       // Assign a "clump index" to the barb
       // Every time there is a break in the vane, a new clump starts
@@ -405,6 +410,7 @@ class Feather {
 
     // Don't directly use the hermite's frame, build a smoother one from points
     var { points, tangents } = this.getPointsAndTangentsAlongSpine(0, params.spineEnd, params.spineDivisions);
+    // points = resamplePathUniform(points);
 
     this.spine = [];
     let spineLength = 0;
@@ -431,7 +437,7 @@ class Feather {
   }
 
   buildBarb(barb) {
-    const nPoints = 80;
+    const nPoints = params.barbuleParams.nBarbDivisions;
     const origPts = barb.spline.GetPoints(nPoints);
     // const origDirections = getTangents(origPts);
     let origDirections = [];
@@ -571,8 +577,10 @@ class Feather {
 
   drawSpine() {
     push();
-    blendMode(ADD);
-    enableAdditiveBlending();
+    blendMode(BLEND);
+    resetToAlphaBlending();
+    // blendMode(ADD);
+    // enableAdditiveBlending();
 
     noStroke();
 
@@ -927,12 +935,27 @@ window.draw = function () {
 
 window.keyTyped = function () {
   if (key === "s") {
-    save();
+    save("feather.png");
   }
 };
 
-function resetToAlphaBlending() {
-  drawingContext.blendFunc(drawingContext.SRC_ALPHA, drawingContext.ONE_MINUS_SRC_ALPHA);
+function resetToAlphaBlending(gl = drawingContext)
+{
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+
+    const isPMA = gl.getContextAttributes()?.premultipliedAlpha === true;
+
+    if (isPMA)
+    {
+        // Premultiplied alpha canvas/textures
+        gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
+    else
+    {
+        // Straight (unpremultiplied) alpha
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
 }
 
 function enableAdditiveBlending() {
@@ -1025,9 +1048,10 @@ function createGui() {
 
   const barbulesFolder = gui.addFolder('Barbules');
   barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'nBarbDivisions', 1, 200).step(1).name('nBarbDivisions').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('nBarbulesPerBarb').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('barbMeshBaseWidth').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('barbMeshTipWidth').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('nBarbulesPerBarb').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
