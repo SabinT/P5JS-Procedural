@@ -120,6 +120,30 @@ const params = {
     barbuleHardness: 0.4,
     offsetUvAlongLength: 0.0,
     renderType: 0,
+  },
+  barbMeshPass1: {
+    barbColor: "#cacaca",
+    barbSpineWidth: 0.1,
+    barbSpineHardness: 0.35,
+    barbuleWidthNorm: 0.57,
+    barbuleHardness: 0.4,
+    barbulePatternRepeat: 1,
+    barbulePatternTilt: 0.2,
+    barbulePatternSeparation: 0.2,
+    offsetUvAlongLength: 0.0,
+    renderType: 0,
+  },
+  barbMeshPass2: {
+    barbColor: "#cacaca",
+    barbSpineWidth: 0.1,
+    barbSpineHardness: 0.35,
+    barbuleWidthNorm: 0.57,
+    barbuleHardness: 0.4,
+    barbulePatternRepeat: 1,
+    barbulePatternTilt: 0.2,
+    barbulePatternSeparation: 0.2,
+    offsetUvAlongLength: 0.0,
+    renderType: 1,
   }
 };
 
@@ -127,6 +151,20 @@ const params = {
 let debugParams = { ...params };
 debugParams.spineDivisions = 20;
 debugParams.nBarbs = 20;
+
+function setBarbPatternShader(shader, params) {
+  const colorVec = rgba01FromHex(params.barbColor);
+  shader.setUniform('uColor', colorVec);
+  shader.setUniform('uBarbSpineWidth', params.barbSpineWidth);
+  shader.setUniform('uBarbSpineHardness', params.barbSpineHardness);
+  shader.setUniform('uBarbuleWidthNorm', params.barbuleWidthNorm);
+  shader.setUniform('uBarbuleHardness', params.barbuleHardness);
+  shader.setUniform('uBarbulePatternRepeat', params.barbulePatternRepeat);
+  shader.setUniform('uPatternTilt', params.barbulePatternTilt);
+  shader.setUniform('uBarbulePatternSeparation', params.barbulePatternSeparation);
+  shader.setUniform('uOffsetUvAlongLength', params.offsetUvAlongLength);
+  shader.setUniform('uRenderType', params.renderType);
+}
 
 class Feather {
   constructor(params) {
@@ -714,17 +752,8 @@ class Feather {
     enableAdditiveBlending();
 
     shader(barbMeshShader);
-    barbMeshShader.setUniform('uColor', colorVec);
-    barbMeshShader.setUniform('uBarbSpineWidth', this.params.barbuleParams.barbSpineWidth);
-    barbMeshShader.setUniform('uBarbSpineHardness', this.params.barbuleParams.barbSpineHardness);
-    barbMeshShader.setUniform('uBarbuleWidthNorm', this.params.barbuleParams.barbuleWidthNorm);
-    barbMeshShader.setUniform('uBarbuleHardness', this.params.barbuleParams.barbuleHardness);
-    barbMeshShader.setUniform('uBarbulePatternRepeat', this.params.barbuleParams.barbulePatternRepeat);
-    barbMeshShader.setUniform('uPatternTilt', this.params.barbuleParams.barbulePatternTilt);
-    barbMeshShader.setUniform('uBarbulePatternSeparation', this.params.barbuleParams.barbulePatternSeparation);
+    setBarbPatternShader(barbMeshShader, this.params.barbMeshPass1);
     barbMeshShader.setUniform('uBarbIndex', index);
-    barbMeshShader.setUniform('uOffsetUvAlongLength', this.params.barbuleParams.offsetUvAlongLength);
-    barbMeshShader.setUniform('uRenderType', this.params.barbuleParams.renderType);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -1115,6 +1144,30 @@ function createGui() {
   barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
+
+  const barbMeshPass1Folder = gui.addFolder('Barb Mesh Pass 1');
+  barbMeshPass1Folder.addColor(params.barbMeshPass1, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
+  barbMeshPass1Folder.add(params.barbMeshPass1, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
+
+  const barbMeshPass2Folder = gui.addFolder('Barb Mesh Pass 2');
+  barbMeshPass2Folder.addColor(params.barbMeshPass2, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
+  barbMeshPass2Folder.add(params.barbMeshPass2, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
 }
 
 function refresh() {
@@ -1132,4 +1185,6 @@ function setupDebugParams() {
   debugParams.afterFeather = { ...params.afterFeather };
   debugParams.afterFeather.nBarbs = 10;
   debugParams.barbuleParams = { ...params.barbuleParams };
+  debugParams.barbMeshPass1 = { ...params.barbMeshPass1 };
+  debugParams.barbMeshPass2 = { ...params.barbMeshPass2 };
 }
