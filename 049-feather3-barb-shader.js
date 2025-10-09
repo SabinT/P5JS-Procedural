@@ -78,10 +78,18 @@ vec4 shadeBarbule(vec2 uv)
     return col;
 }
 
+float bulge1D(float x, float c, float hw, float bulgeAmount)
+{
+    float sigma = hw * 0.5;
+    float dx = x - c;
+    float w = exp(-0.5 * (dx * dx) / (sigma * sigma));
+    return x + bulgeAmount * w;
+}
+
 // =========================================================
 // Noise shading using fixed pastel palette
 // =========================================================
-vec3 getPaletteColor(float n)
+vec3 getPaletteColor1(float n)
 {
     // pick one of 5 colors based on noise value
     if (n < 0.2)  return vec3(0xF2,0xA0,0xD5)/255.0; // #F2A0D5
@@ -91,15 +99,55 @@ vec3 getPaletteColor(float n)
     else              return vec3(0x05,0xDB,0xF2)/255.0; // #05DBF2
 }
 
+vec3 getPaletteColor2(float n)
+{
+    // pick one of 5 colors based on noise value
+    if (n < 0.2)      return vec3(0xA6,0x53,0x71)/255.0; // #A65371
+    else if (n < 0.4) return vec3(0xA6,0x3C,0x81)/255.0; // #A63C81
+    else if (n < 0.6) return vec3(0x14,0xD9,0xB5)/255.0; // #14D9B5
+    else if (n < 0.8) return vec3(0xBF,0x81,0x4B)/255.0; // #BF814B
+    else              return vec3(0x0D,0x0D,0x0D)/255.0; // #0D0D0D
+}
+
+vec3 getPaletteColor3(float n)
+{
+    // pick one of 5 colors based on noise value
+    if (n < 0.2)      return vec3(0x05,0x6C,0xF2)/255.0; // #056CF2
+    else if (n < 0.4) return vec3(0x05,0x83,0xF2)/255.0; // #0583F2
+    else if (n < 0.6) return vec3(0x81,0xBF,0x24)/255.0; // #81BF24
+    else if (n < 0.8) return vec3(0xF2,0x5C,0x05)/255.0; // #F25C05
+    else              return vec3(0xF2,0xF2,0xF2)/255.0; // #F2F2F2
+}
+
+
+vec3 getPaletteColor(float n)
+{
+    return getPaletteColor3(n);
+}
+
 vec4 shadeNoise(vec2 uv)
 {
+    vec2 origUv = uv;
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
     uv.y *= float(uBarbulePatternRepeat);
 
     float thickness = uBarbulePatternSeparation * uBarbuleWidthNorm;
     float tNoiseBase = barbuleIntensity(uv, uBarbulePatternSeparation, thickness, uBarbuleHardness, uPatternTilt);
 
+    // Use fwidth to find direction of uv change
+    vec2 dUV = fwidth(origUv);
+    // angle
+    float angle = atan(dUV.y, dUV.x);
+    float angleNorm = (angle) / (2.0 * 3.14159265);
+
     float n = fract(sin(dot(uv * 43.17, vec2(12.9898,78.233))) * 43758.5453);
+    float bulgeCenter = mod(origUv.y + angleNorm, 1.0);
+    float bulgeWidth = 0.25;
+    float bulgeAmount = 0.5;
+    n = bulge1D(n, origUv.y * 0.5, bulgeWidth, bulgeAmount);
+    // n += smoothstep(0.0, 1.0, angleNorm);
+    n = mod(n, 1.0);
+    // n = clamp(0.0, 1.0, n);
     vec3 chosenColor = getPaletteColor(n);
 
     float falloffStart = 0.35 * (1.0 - tCloseToTop);
