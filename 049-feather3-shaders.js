@@ -81,15 +81,15 @@ void main () {
     col = mix(col, uEdgeColor.rgb, edge); // edge fade
     col *= tipShade;                      // tip darken
 
-    // ----------- Add pastel noise -----------
+    // // ----------- Add pastel noise -----------
     // base hash noise (different scale along spine)
-    float n = fract(sin(dot(vUV * vec2(47.13, 119.83), vec2(12.9898, 78.233))) * 43758.5453);
-    vec3 noiseColor = getPaletteColor(n);
+    // float n = fract(sin(dot(vUV * vec2(47.13, 119.83), vec2(12.9898, 78.233))) * 43758.5453);
+    // vec3 noiseColor = getPaletteColor(n);
 
-    // fade noise toward edges and tips
-    float noiseStrength = 0.5;
-    float noiseFade = (1.0 - edge) * (1.0 - tip) * (0.5 + 0.5 * ridge);
-    col = mix(col, noiseColor, noiseFade * noiseStrength);
+    // // fade noise toward edges and tips
+    // float noiseStrength = 0.5;
+    // float noiseFade = (1.0 - edge) * (1.0 - tip) * (0.5 + 0.5 * ridge);
+    // col = mix(col, noiseColor, noiseFade * noiseStrength);
 
     // alpha
     float alpha = 1.0 - edge;

@@ -27,8 +27,12 @@ uniform float uBarbSpineHardness;
 uniform float uBarbuleWidthNorm;
 uniform float uBarbuleHardness;
 uniform float uBarbulePatternRepeat;
+uniform float uPatternTilt;
 uniform float uBarbulePatternSeparation;
 uniform float uBarbIndex;
+uniform float uBarbuleCount;
+uniform float uOffsetUvAlongLength;
+uniform int uRenderType; // 0 = solid, 1 = noisy color pattern
 
 // =========================================================
 // Barbule intensity helper
@@ -53,16 +57,14 @@ float barbuleIntensity(vec2 uv, float gap, float thickness, float hardness, floa
 vec4 shadeBarbule(vec2 uv)
 {
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
-    uv.y *= float(uBarbulePatternRepeat / 5.0);
+    uv.y *= uBarbulePatternRepeat;
 
     float tspine = smoothstep(-uBarbSpineWidth, -uBarbSpineWidth * uBarbSpineHardness, uv.x) *
                    smoothstep(uBarbSpineWidth,  uBarbSpineWidth * uBarbSpineHardness, uv.x);
 
-    float gap = 0.2;
-    float tilt = 0.2;
-    float thickness = gap * uBarbuleWidthNorm;
+    float thickness = uBarbulePatternSeparation * uBarbuleWidthNorm;
 
-    float tBarbule = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, tilt);
+    float tBarbule = barbuleIntensity(uv, uBarbulePatternSeparation, thickness, uBarbuleHardness, uPatternTilt);
     float t = max(tspine, tBarbule);
 
     float falloffStart = 0.30 * (1.0 - tCloseToTop);
@@ -92,12 +94,11 @@ vec3 getPaletteColor(float n)
 vec4 shadeNoise(vec2 uv)
 {
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
-    uv.y *= (float(uBarbulePatternRepeat)) / 50.0;
+    uv.y *= float(uBarbulePatternRepeat);
 
     float gap = 0.2;
-    float tilt = 0.2;
     float thickness = gap * 0.8;
-    float tNoiseBase = barbuleIntensity(uv, gap, thickness, 0.5, tilt);
+    float tNoiseBase = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, uPatternTilt);
 
     float n = fract(sin(dot(uv * 43.17, vec2(12.9898,78.233))) * 43758.5453);
     vec3 chosenColor = getPaletteColor(n);
@@ -116,32 +117,34 @@ vec4 shadeNoise(vec2 uv)
 // =========================================================
 void main()
 {
-    const int SAMPLES = 16;
-    const float INV_SAMPLES = 1.0 / float(SAMPLES);
-    const float PHI = 1.61803398875;
-    const float GOLDEN_ANGLE = 2.0 * 3.14159265 / (PHI * PHI);
+    vec4 finalColor;
+    if (uRenderType == 0) {
+        const int SAMPLES = 16;
+        const float INV_SAMPLES = 1.0 / float(SAMPLES);
+        const float PHI = 1.61803398875;
+        const float GOLDEN_ANGLE = 2.0 * 3.14159265 / (PHI * PHI);
 
-    vec4 accum = vec4(0.0);
-    vec2 pixel = vec2(fwidth(vUV.x), fwidth(vUV.y));
+        vec4 accum = vec4(0.0);
+        vec2 pixel = vec2(fwidth(vUV.x), fwidth(vUV.y));
 
-    for (int i = 0; i < SAMPLES; ++i)
-    {
-        float fi = float(i) + 0.5;
-        float r = sqrt(fi * INV_SAMPLES) - 0.5;
-        float a = fi * GOLDEN_ANGLE;
-        vec2 offset = r * vec2(cos(a), sin(a));
-        vec2 sampleUV = vUV + offset * pixel * 1.5;
-        accum += shadeBarbule(sampleUV);
+        for (int i = 0; i < SAMPLES; ++i)
+        {
+            float fi = float(i) + 0.5;
+            float r = sqrt(fi * INV_SAMPLES) - 0.5;
+            float a = fi * GOLDEN_ANGLE;
+            vec2 offset = r * vec2(cos(a), sin(a));
+            vec2 sampleUV = vUV + offset * pixel * 1.5;
+            accum += shadeBarbule(sampleUV);
+        }
+
+        finalColor = accum * INV_SAMPLES;
+    }
+    else {
+        // Add noise layer (single evaluation for speed)
+        finalColor = shadeNoise(vUV);
     }
 
-    vec4 finalColor = accum * INV_SAMPLES;
-
-    // Add noise layer (single evaluation for speed)
-    vec4 noiseColor = shadeNoise(vUV);
-    finalColor = mix(finalColor, finalColor * noiseColor, 0.6);
-
-    gl_FragColor = noiseColor;
-    // gl_FragColor = finalColor;
+    gl_FragColor = finalColor;
 }
 `;
 
