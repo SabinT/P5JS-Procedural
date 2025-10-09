@@ -96,9 +96,8 @@ vec4 shadeNoise(vec2 uv)
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
     uv.y *= float(uBarbulePatternRepeat);
 
-    float gap = 0.2;
-    float thickness = gap * 0.8;
-    float tNoiseBase = barbuleIntensity(uv, gap, thickness, uBarbuleHardness, uPatternTilt);
+    float thickness = uBarbulePatternSeparation * uBarbuleWidthNorm;
+    float tNoiseBase = barbuleIntensity(uv, uBarbulePatternSeparation, thickness, uBarbuleHardness, uPatternTilt);
 
     float n = fract(sin(dot(uv * 43.17, vec2(12.9898,78.233))) * 43758.5453);
     vec3 chosenColor = getPaletteColor(n);

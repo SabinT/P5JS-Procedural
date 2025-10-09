@@ -121,7 +121,19 @@ const params = {
     offsetUvAlongLength: 0.0,
     renderType: 0,
   },
-  barbMeshPass1: {
+  barbPatternPass1: {
+    barbColor: "#cacaca",
+    barbSpineWidth: 0.1,
+    barbSpineHardness: 0.35,
+    barbuleWidthNorm: 0.57,
+    barbuleHardness: 0.4,
+    barbulePatternRepeat: 1,
+    barbulePatternTilt: 0.2,
+    barbulePatternSeparation: 0.2,
+    offsetUvAlongLength: 0.0,
+    renderType: 1,
+  },
+  barbPatternPass2: {
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
@@ -133,15 +145,15 @@ const params = {
     offsetUvAlongLength: 0.0,
     renderType: 0,
   },
-  barbMeshPass2: {
+  spinePatternPass1: {
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.57,
+    barbuleWidthNorm: 0.37,
     barbuleHardness: 0.4,
-    barbulePatternRepeat: 1,
+    barbulePatternRepeat: 2.4,
     barbulePatternTilt: 0.2,
-    barbulePatternSeparation: 0.2,
+    barbulePatternSeparation: 0.3,
     offsetUvAlongLength: 0.0,
     renderType: 1,
   }
@@ -688,7 +700,6 @@ class Feather {
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < this.spine.length; i++) {
       const t = i / (this.spine.length - 1);
-      const u = t;
       const p = this.spine[i];
 
       const squeeze = smoothstep(0, 0.05, t);
@@ -696,8 +707,35 @@ class Feather {
       const d = p.width * 0.5 * squeeze;
       const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
       const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-      vertex(r.x, r.y, 0, u, 0.5);
-      vertex(l.x, l.y, 0, u, -0.5);
+      vertex(r.x, r.y, 0, 0.5, t);
+      vertex(l.x, l.y, 0, -0.5, t);
+    }
+    endShape();
+
+    resetShader();
+    resetToAlphaBlending();
+
+    // Additional pass with barb pattern shader
+    blendMode(ADD);
+    enableAdditiveBlending();
+
+    shader(barbMeshShader);
+    setBarbPatternShader(barbMeshShader, this.params.spinePatternPass1);
+    barbMeshShader.setUniform('uBarbIndex', 0);
+
+    beginShape(TRIANGLE_STRIP);
+    for (let i = 0; i < this.spine.length; i++) {
+      const t = i / (this.spine.length - 1);
+      const p = this.spine[i];
+
+      const squeeze = smoothstep(0, 0.05, t);
+
+      let d = p.width * 0.5 * squeeze;
+      d = remap(0, 1, 0.05, 1.1, d);
+      const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
+      const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
+      vertex(r.x, r.y, 0, 0.5, t);
+      vertex(l.x, l.y, 0, -0.5, t);
     }
     endShape();
 
@@ -752,7 +790,7 @@ class Feather {
     enableAdditiveBlending();
 
     shader(barbMeshShader);
-    setBarbPatternShader(barbMeshShader, this.params.barbMeshPass1);
+    setBarbPatternShader(barbMeshShader, this.params.barbPatternPass1);
     barbMeshShader.setUniform('uBarbIndex', index);
 
     beginShape(TRIANGLE_STRIP);
@@ -1011,7 +1049,7 @@ window.draw = function () {
   centerCanvas(canvas);
   setCanvasZIndex(canvas, -1); // so gui is on top
   translate(-hw, -hh);
-  background(15);
+  background(0);
   noLoop();
 
   feather.draw();
@@ -1160,9 +1198,11 @@ function createGui() {
   barbulesFolder.add(params.barbuleParams, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
 
-  const barbMeshPass1Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 1', params.barbMeshPass1);
+  const barbPatternPass1Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 1', params.barbPatternPass1);
 
-  const barbMeshPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbMeshPass2);
+  const barbPatternPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbPatternPass2);
+
+  const spinePatternPass1Folder = createBarbMeshPassGui(gui, 'Spine Pattern Pass 1', params.spinePatternPass1);
 }
 
 function refresh() {
@@ -1180,6 +1220,7 @@ function setupDebugParams() {
   debugParams.afterFeather = { ...params.afterFeather };
   debugParams.afterFeather.nBarbs = 10;
   debugParams.barbuleParams = { ...params.barbuleParams };
-  debugParams.barbMeshPass1 = { ...params.barbMeshPass1 };
-  debugParams.barbMeshPass2 = { ...params.barbMeshPass2 };
+  debugParams.barbPatternPass1 = { ...params.barbPatternPass1 };
+  debugParams.barbPatternPass2 = { ...params.barbPatternPass2 };
+  debugParams.spinePatternPass1 = { ...params.spinePatternPass1 };
 }

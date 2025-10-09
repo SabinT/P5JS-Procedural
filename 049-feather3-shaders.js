@@ -60,19 +60,19 @@ void main () {
     }
 
     // distance to center line across width: 0 at center, 1 at edges
-    float d = abs(vUV.y) / 0.5;
+    float d = abs(vUV.x) / 0.5;
     d = clamp(d, 0.0, 1.0);
 
     // soften edge blend
     float edge = smoothstep(0.95 - uEdgeSoftness, 0.95, d);
 
     // subtle center highlight (ridge)
-    float dRidge = abs(vUV.y - 0.1 /* ridgeOffset */) / 0.5;
+    float dRidge = abs(vUV.x - 0.1 /* ridgeOffset */) / 0.5;
     float ridge  = 1.0 - smoothstep(0.0, max(1e-5, uRidgeSoftness), dRidge);
 
     // darken toward shaft ends (tips)
-    float tip = max(remap(vUV.x, 0.0, 0.15, 1.0, 0.0),
-                    remap(vUV.x, 0.85, 1.0, 0.0, 1.0));
+    float tip = max(remap(vUV.y, 0.0, 0.15, 1.0, 0.0),
+                    remap(vUV.y, 0.85, 1.0, 0.0, 1.0));
     float tipShade = mix(1.0, 1.0 - uTipDarken, tip);
 
     // ----------- Base gradients -----------
