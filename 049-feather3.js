@@ -6,7 +6,7 @@ import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
 import { drawPath, drawPathWithGradient, getTangents, resamplePathUniform, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
-import { spineVert, spineFrag } from "./049-feather3-shaders.js";
+import { spineVert, spineFragSolid } from "./049-feather3-shaders.js";
 import { barbVert, barbFrag } from "./049-feather3-barb-shader.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
@@ -36,7 +36,7 @@ const debugDrawToggles = {
   barbTangents: false,
   barbMesh: true,
   afterFeather: true,
-  spineShader: false,
+  spineShaderSolid: false,
   vanePattern: false,
   colorizeByClump: false,
 }
@@ -110,7 +110,8 @@ const params = {
     barbColor: "#cacaca",
     barbMeshBaseWidth: 2,
     barbMeshTipWidth: 0.95,
-    nBarbulesPerBarb: 100,
+    barbulePatternRepeat: 27, // 27, 10
+    barbulePatternSeparation: 0.2, // 1 = one repitition per barbule width
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
     barbuleWidthNorm: 0.57,
@@ -630,15 +631,15 @@ class Feather {
     noStroke();
 
     // Use a shader that draws a gradient based on uv.y
-    shader(spineShader);
+    shader(spineShaderSolid);
     const sParams = this.params.shaderParams;
-    spineShader.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
-    spineShader.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
-    spineShader.setUniform('uEdgeSoftness', sParams.edgeSoftness);
-    spineShader.setUniform('uTipDarken', sParams.tipDarken);
-    spineShader.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
-    spineShader.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
-    spineShader.setUniform('uDebug', debugDrawToggles.spineShader ? 1 : 0);
+    spineShaderSolid.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
+    spineShaderSolid.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
+    spineShaderSolid.setUniform('uEdgeSoftness', sParams.edgeSoftness);
+    spineShaderSolid.setUniform('uTipDarken', sParams.tipDarken);
+    spineShaderSolid.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
+    spineShaderSolid.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
+    spineShaderSolid.setUniform('uDebug', debugDrawToggles.spineShaderSolid ? 1 : 0);
 
     // Construct a shape with UVs for the spine
     // Squeeze the starting tip to a point over a very short distance
@@ -680,7 +681,7 @@ class Feather {
     // const clumpColor = getClumpColor(barb.clumpIndex);
     const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
     const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
-    // const uvYRepeat = params.barbuleParams.nBarbulesPerBarb;
+    // const uvYRepeat = params.barbuleParams.barbulePatternRepeat;
 
     // Estimate gap to neighbouring barb on the same side to derive mesh width
     let neighbour = null;
@@ -714,7 +715,8 @@ class Feather {
     barbMeshShader.setUniform('uBarbSpineHardness', this.params.barbuleParams.barbSpineHardness);
     barbMeshShader.setUniform('uBarbuleWidthNorm', this.params.barbuleParams.barbuleWidthNorm);
     barbMeshShader.setUniform('uBarbuleHardness', this.params.barbuleParams.barbuleHardness);
-    barbMeshShader.setUniform('uBarbuleCount', this.params.barbuleParams.nBarbulesPerBarb);
+    barbMeshShader.setUniform('uBarbulePatternRepeat', this.params.barbuleParams.barbulePatternRepeat);
+    barbMeshShader.setUniform('uBarbulePatternSeparation', this.params.barbuleParams.barbulePatternSeparation);
     barbMeshShader.setUniform('uBarbIndex', index);
 
     beginShape(TRIANGLE_STRIP);
@@ -939,7 +941,7 @@ class Feather {
 }
 
 let feather;
-let spineShader;
+let spineShaderSolid;
 let barbMeshShader;
 
 let font;
@@ -965,7 +967,7 @@ window.setup = function () {
   // Needed to enable fwidth
   drawingContext.getExtension('OES_standard_derivatives');
 
-  spineShader = createShader(spineVert, spineFrag);
+  spineShaderSolid = createShader(spineVert, spineFragSolid);
   barbMeshShader = createShader(barbVert, barbFrag);
 };
 
@@ -1049,7 +1051,7 @@ function createGui() {
   debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'barbMesh').name('Draw Barb Mesh').onChange(() => { refresh(); });
-  debugFolder.add(debugDrawToggles, 'spineShader').name('Spine Shader').onChange(() => { refresh(); });
+  debugFolder.add(debugDrawToggles, 'spineShaderSolid').name('Spine Shader').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'vanePattern').name('Vane Pattern').onChange(() => { refresh(); });
   debugFolder.add(debugDrawToggles, 'colorizeByClump').name('Colorize By Clump').onChange(() => { refresh(); });
   debugFolder.add(debugSliders, 'a', 0.9, 0.999999).step(0.000001).name('Debug Slider A').onChange(() => { refresh(); });
@@ -1095,7 +1097,8 @@ function createGui() {
   const barbulesFolder = gui.addFolder('Barbules');
   barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'nBarbDivisions', 1, 200).step(1).name('nBarbDivisions').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'nBarbulesPerBarb', 1, 100).step(1).name('nBarbulesPerBarb').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbulePatternRepeat', 1, 100).step(1).name('barbulePatternRepeat').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('barbMeshBaseWidth').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('barbMeshTipWidth').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });

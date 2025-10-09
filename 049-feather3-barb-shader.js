@@ -26,7 +26,8 @@ uniform float uBarbSpineWidth;
 uniform float uBarbSpineHardness;
 uniform float uBarbuleWidthNorm;
 uniform float uBarbuleHardness;
-uniform float uBarbuleCount;
+uniform float uBarbulePatternRepeat;
+uniform float uBarbulePatternSeparation;
 uniform float uBarbIndex;
 
 // =========================================================
@@ -52,7 +53,7 @@ float barbuleIntensity(vec2 uv, float gap, float thickness, float hardness, floa
 vec4 shadeBarbule(vec2 uv)
 {
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
-    uv.y *= float(uBarbuleCount / 5.0);
+    uv.y *= float(uBarbulePatternRepeat / 5.0);
 
     float tspine = smoothstep(-uBarbSpineWidth, -uBarbSpineWidth * uBarbSpineHardness, uv.x) *
                    smoothstep(uBarbSpineWidth,  uBarbSpineWidth * uBarbSpineHardness, uv.x);
@@ -91,7 +92,7 @@ vec3 getPaletteColor(float n)
 vec4 shadeNoise(vec2 uv)
 {
     float tCloseToTop = smoothstep(0.5, 1.0, uv.y);
-    uv.y *= (float(uBarbuleCount)) / 50.0;
+    uv.y *= (float(uBarbulePatternRepeat)) / 50.0;
 
     float gap = 0.2;
     float tilt = 0.2;
@@ -139,8 +140,8 @@ void main()
     vec4 noiseColor = shadeNoise(vUV);
     finalColor = mix(finalColor, finalColor * noiseColor, 0.6);
 
-    //gl_FragColor = noiseColor;
-    gl_FragColor = finalColor;
+    gl_FragColor = noiseColor;
+    // gl_FragColor = finalColor;
 }
 `;
 
