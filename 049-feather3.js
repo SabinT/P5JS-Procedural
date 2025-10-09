@@ -1069,6 +1069,21 @@ function getClumpColor(i) {
   return c;
 }
 
+function createBarbMeshPassGui(gui, folderName, passParams) {
+  const folder = gui.addFolder(folderName);
+  folder.addColor(passParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
+  folder.add(passParams, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
+  folder.add(passParams, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
+  folder.add(passParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
+  return folder;
+}
+
 function createGui() {
   gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
   gui.add(params, 'randomSeed', 0, 2147483647).step(1).name('Random Seed').onFinishChange(() => { refresh(); });
@@ -1145,29 +1160,9 @@ function createGui() {
   barbulesFolder.add(params.barbuleParams, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
 
-  const barbMeshPass1Folder = gui.addFolder('Barb Mesh Pass 1');
-  barbMeshPass1Folder.addColor(params.barbMeshPass1, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
-  barbMeshPass1Folder.add(params.barbMeshPass1, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
+  const barbMeshPass1Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 1', params.barbMeshPass1);
 
-  const barbMeshPass2Folder = gui.addFolder('Barb Mesh Pass 2');
-  barbMeshPass2Folder.addColor(params.barbMeshPass2, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
-  barbMeshPass2Folder.add(params.barbMeshPass2, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
+  const barbMeshPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbMeshPass2);
 }
 
 function refresh() {
