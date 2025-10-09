@@ -98,9 +98,9 @@ const params = {
     }
   },
   shaderParams: {
-    baseColor: "#202020",
+    baseColor: "#151515",
     edgeColor: "#a8a6a6",
-    edgeSoftness: 0.79,
+    edgeSoftness: 0.25,
     ridgeSoftness: 0.29,
     ridgeHighlight: 0.15,
     tipDarken: 0.85,
@@ -110,7 +110,7 @@ const params = {
     barbColor: "#cacaca",
     barbMeshBaseWidth: 2,
     barbMeshTipWidth: 0.95,
-    barbulePatternRepeat: 27, // 27, 10
+    barbulePatternRepeat: 1, // 27, 10, 1
     barbulePatternTilt: 0.2,
 
     barbulePatternSeparation: 0.2, // 1 = one repitition per barbule width
@@ -118,6 +118,8 @@ const params = {
     barbSpineHardness: 0.35,
     barbuleWidthNorm: 0.57,
     barbuleHardness: 0.4,
+    offsetUvAlongLength: 0.0,
+    renderType: 0,
   }
 };
 
@@ -721,6 +723,8 @@ class Feather {
     barbMeshShader.setUniform('uPatternTilt', this.params.barbuleParams.barbulePatternTilt);
     barbMeshShader.setUniform('uBarbulePatternSeparation', this.params.barbuleParams.barbulePatternSeparation);
     barbMeshShader.setUniform('uBarbIndex', index);
+    barbMeshShader.setUniform('uOffsetUvAlongLength', this.params.barbuleParams.offsetUvAlongLength);
+    barbMeshShader.setUniform('uRenderType', this.params.barbuleParams.renderType);
 
     beginShape(TRIANGLE_STRIP);
     for (let i = 0; i < points.length; i++) {
@@ -1100,7 +1104,7 @@ function createGui() {
   const barbulesFolder = gui.addFolder('Barbules');
   barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'nBarbDivisions', 1, 200).step(1).name('nBarbDivisions').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbulePatternRepeat', 1, 100).step(1).name('barbulePatternRepeat').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('barbMeshBaseWidth').onChange(() => { refresh(); });
@@ -1109,6 +1113,8 @@ function createGui() {
   barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
   barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'offsetUvAlongLength', 0.0, 1.0).step(0.01).name('offsetUvAlongLength').onChange(() => { refresh(); });
+  barbulesFolder.add(params.barbuleParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
 }
 
 function refresh() {
