@@ -97,7 +97,8 @@ const params = {
       // return 0.1
     }
   },
-  shaderParams: {
+  spineSolidPass: {
+    enabled: false,
     baseColor: "#151515",
     edgeColor: "#a8a6a6",
     edgeSoftness: 0.25,
@@ -122,6 +123,7 @@ const params = {
     renderType: 0,
   },
   barbPatternPass1: {
+    enabled: true,
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
@@ -134,6 +136,7 @@ const params = {
     renderType: 1,
   },
   barbPatternPass2: {
+    enabled: true,
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
@@ -146,6 +149,7 @@ const params = {
     renderType: 0,
   },
   spinePatternPass1: {
+    enabled: true,
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
@@ -153,7 +157,7 @@ const params = {
     barbuleHardness: 0.4,
     barbulePatternRepeat: 2.4,
     barbulePatternTilt: 0.2,
-    barbulePatternSeparation: 0.3,
+    barbulePatternSeparation: 0.51,
     offsetUvAlongLength: 0.0,
     renderType: 1,
   }
@@ -684,63 +688,67 @@ class Feather {
 
     noStroke();
 
-    // Use a shader that draws a gradient based on uv.y
-    shader(spineShaderSolid);
-    const sParams = this.params.shaderParams;
-    spineShaderSolid.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
-    spineShaderSolid.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
-    spineShaderSolid.setUniform('uEdgeSoftness', sParams.edgeSoftness);
-    spineShaderSolid.setUniform('uTipDarken', sParams.tipDarken);
-    spineShaderSolid.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
-    spineShaderSolid.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
-    spineShaderSolid.setUniform('uDebug', debugDrawToggles.spineShaderSolid ? 1 : 0);
+    // Use a shader that draws a gradient based on uv.y (solid spine pass)
+    if (this.params.spineSolidPass && this.params.spineSolidPass.enabled) {
+      shader(spineShaderSolid);
+      const sParams = this.params.spineSolidPass;
+      spineShaderSolid.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
+      spineShaderSolid.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
+      spineShaderSolid.setUniform('uEdgeSoftness', sParams.edgeSoftness);
+      spineShaderSolid.setUniform('uTipDarken', sParams.tipDarken);
+      spineShaderSolid.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
+      spineShaderSolid.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
+      spineShaderSolid.setUniform('uDebug', debugDrawToggles.spineShaderSolid ? 1 : 0);
 
-    // Construct a shape with UVs for the spine
-    // Squeeze the starting tip to a point over a very short distance
-    beginShape(TRIANGLE_STRIP);
-    for (let i = 0; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      const p = this.spine[i];
+      // Construct a shape with UVs for the spine
+      // Squeeze the starting tip to a point over a very short distance
+      beginShape(TRIANGLE_STRIP);
+      for (let i = 0; i < this.spine.length; i++) {
+        const t = i / (this.spine.length - 1);
+        const p = this.spine[i];
 
-      const squeeze = smoothstep(0, 0.05, t);
+        const squeeze = smoothstep(0, 0.05, t);
 
-      const d = p.width * 0.5 * squeeze;
-      const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
-      const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-      vertex(r.x, r.y, 0, 0.5, t);
-      vertex(l.x, l.y, 0, -0.5, t);
+        const d = p.width * 0.5 * squeeze;
+        const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
+        const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
+        vertex(r.x, r.y, 0, 0.5, t);
+        vertex(l.x, l.y, 0, -0.5, t);
+      }
+      endShape();
+
+      resetShader();
+      resetToAlphaBlending();
     }
-    endShape();
 
-    resetShader();
-    resetToAlphaBlending();
+    // Additional pass with barb pattern shader (spine pattern)
+    if (this.params.spinePatternPass1 && this.params.spinePatternPass1.enabled) {
+      blendMode(ADD);
+      enableAdditiveBlending();
 
-    // Additional pass with barb pattern shader
-    blendMode(ADD);
-    enableAdditiveBlending();
+      shader(barbMeshShader);
+      setBarbPatternShader(barbMeshShader, this.params.spinePatternPass1);
+      barbMeshShader.setUniform('uBarbIndex', 0);
 
-    shader(barbMeshShader);
-    setBarbPatternShader(barbMeshShader, this.params.spinePatternPass1);
-    barbMeshShader.setUniform('uBarbIndex', 0);
+      beginShape(TRIANGLE_STRIP);
+      for (let i = 0; i < this.spine.length; i++) {
+        const t = i / (this.spine.length - 1);
+        const p = this.spine[i];
 
-    beginShape(TRIANGLE_STRIP);
-    for (let i = 0; i < this.spine.length; i++) {
-      const t = i / (this.spine.length - 1);
-      const p = this.spine[i];
+        const squeeze = smoothstep(0, 0.05, t);
 
-      const squeeze = smoothstep(0, 0.05, t);
+        let d = p.width * 0.5 * squeeze;
+        d = remap(0, 1, 0.05, 1.1, d);
+        const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
+        const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
+        vertex(r.x, r.y, 0, 0.5, t);
+        vertex(l.x, l.y, 0, -0.5, t);
+      }
+      endShape();
 
-      let d = p.width * 0.5 * squeeze;
-      d = remap(0, 1, 0.05, 1.1, d);
-      const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
-      const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-      vertex(r.x, r.y, 0, 0.5, t);
-      vertex(l.x, l.y, 0, -0.5, t);
+      resetShader();
+      resetToAlphaBlending();
     }
-    endShape();
-
-    resetShader();
-    resetToAlphaBlending();
 
     pop();
   }
@@ -786,14 +794,20 @@ class Feather {
     // const colorVec = rgba01FromColor(color("gray"));
     const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
 
-    // Enable additive blending for shaders
-    enableAdditiveBlending();
+    // If the barb pattern pass is disabled, skip the shader pass (no mesh shading)
+    if (!this.params.barbPatternPass1 || !this.params.barbPatternPass1.enabled) {
+      // When disabled, draw a simple filled mesh without the shader
+      beginShape(TRIANGLE_STRIP);
+    } else {
+      // Enable additive blending for shaders
+      enableAdditiveBlending();
 
-    shader(barbMeshShader);
-    setBarbPatternShader(barbMeshShader, this.params.barbPatternPass1);
-    barbMeshShader.setUniform('uBarbIndex', index);
+      shader(barbMeshShader);
+      setBarbPatternShader(barbMeshShader, this.params.barbPatternPass1);
+      barbMeshShader.setUniform('uBarbIndex', index);
 
-    beginShape(TRIANGLE_STRIP);
+      beginShape(TRIANGLE_STRIP);
+    }
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
       const last = points.length - 1;
@@ -847,7 +861,10 @@ class Feather {
 
     resetToAlphaBlending();
 
-    resetShader();
+    // If we used the shader, reset it
+    if (this.params.barbPatternPass1 && this.params.barbPatternPass1.enabled) {
+      resetShader();
+    }
 
     pop();
   }
@@ -1109,6 +1126,8 @@ function getClumpColor(i) {
 
 function createBarbMeshPassGui(gui, folderName, passParams) {
   const folder = gui.addFolder(folderName);
+  // Enabled toggle for the entire pass
+  folder.add(passParams, 'enabled').name('Enabled').onChange(() => { refresh(); });
   folder.addColor(passParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
   folder.add(passParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
   folder.add(passParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
@@ -1176,12 +1195,13 @@ function createGui() {
   afterFeatherFolder.add(params.afterFeather, 'baseWidth', 10, 200).step(1).onChange(() => { refresh(); });
 
   const shaderFolder = gui.addFolder('Shader');
-  shaderFolder.addColor(params.shaderParams, 'baseColor').name('Base Color').onChange(() => { refresh(); });
-  shaderFolder.addColor(params.shaderParams, 'edgeColor').name('Edge Color').onChange(() => { refresh(); });
-  shaderFolder.add(params.shaderParams, 'edgeSoftness', 0, 1).step(0.01).name('Edge Softness').onChange(() => { refresh(); });
-  shaderFolder.add(params.shaderParams, 'ridgeSoftness', 0, 1).step(0.01).name('Ridge Softness').onChange(() => { refresh(); });
-  shaderFolder.add(params.shaderParams, 'ridgeHighlight', 0, 1).step(0.01).name('Ridge Highlight').onChange(() => { refresh(); });
-  shaderFolder.add(params.shaderParams, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
+  shaderFolder.add(params.spineSolidPass, 'enabled').name('Spine Solid Enabled').onChange(() => { refresh(); });
+  shaderFolder.addColor(params.spineSolidPass, 'baseColor').name('Base Color').onChange(() => { refresh(); });
+  shaderFolder.addColor(params.spineSolidPass, 'edgeColor').name('Edge Color').onChange(() => { refresh(); });
+  shaderFolder.add(params.spineSolidPass, 'edgeSoftness', 0, 1).step(0.01).name('Edge Softness').onChange(() => { refresh(); });
+  shaderFolder.add(params.spineSolidPass, 'ridgeSoftness', 0, 1).step(0.01).name('Ridge Softness').onChange(() => { refresh(); });
+  shaderFolder.add(params.spineSolidPass, 'ridgeHighlight', 0, 1).step(0.01).name('Ridge Highlight').onChange(() => { refresh(); });
+  shaderFolder.add(params.spineSolidPass, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
 
   const barbulesFolder = gui.addFolder('Barbules');
   barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
@@ -1223,4 +1243,6 @@ function setupDebugParams() {
   debugParams.barbPatternPass1 = { ...params.barbPatternPass1 };
   debugParams.barbPatternPass2 = { ...params.barbPatternPass2 };
   debugParams.spinePatternPass1 = { ...params.spinePatternPass1 };
+  // Ensure enabled flags are present in debug copy
+  if (params.spineSolidPass) debugParams.spineSolidPass = { ...params.spineSolidPass };
 }
