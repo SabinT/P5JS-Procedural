@@ -122,7 +122,7 @@ vec3 getPaletteColor3(float n)
 
 vec3 getPaletteColor(float n)
 {
-    return getPaletteColor3(n);
+    return getPaletteColor1(n);
 }
 
 vec4 shadeNoise(vec2 uv)

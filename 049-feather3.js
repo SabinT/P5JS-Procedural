@@ -35,7 +35,7 @@ const debugDrawToggles = {
   barbs: false,
   barbTangents: false,
   barbMesh: true,
-  afterFeather: true,
+  afterFeather: false,
   spineShaderSolid: false,
   vanePattern: false,
   colorizeByClump: false,
@@ -50,7 +50,6 @@ const gui = new dat.GUI();
 
 const params = {
   randomSeed: 123456789,
-  // cubic hermite spline
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 200,
   spineBaseWidth: 13,
@@ -86,25 +85,18 @@ const params = {
   barbInnerNoiseLevel: 0.184,
   barbInnerNoiseScaleExp: 0.459,
   afterFeather: {
-    nBarbs: 40,
-    baseWidth: 37,
+    nBarbs: 61,
+    baseWidth: 62,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
       return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)
     },
-    barbTiltCurve: (t) => {
-      return (1 - smoothstep(0.1, 0.9, t)) * 0.25; // never fully tilted
-      // return 0.1
+    barbTiltCurve: (t, i) => {
+      let tilt = (1 - smoothstep(0.1, 0.9, t)) * 0.25; // never fully tilted
+      // Add some randomness
+      tilt += (sqRand(i) - 0.5) * 0.5 ;
+      return tilt;
     }
-  },
-  spineSolidPass: {
-    enabled: false,
-    baseColor: "#151515",
-    edgeColor: "#a8a6a6",
-    edgeSoftness: 0.25,
-    ridgeSoftness: 0.29,
-    ridgeHighlight: 0.15,
-    tipDarken: 0.85,
   },
   barbuleParams: {
     nBarbDivisions: 160,
@@ -121,6 +113,28 @@ const params = {
     barbuleHardness: 0.4,
     offsetUvAlongLength: 0.0,
     renderType: 0,
+  },
+  spineSolidPass: {
+    enabled: false,
+    baseColor: "#151515",
+    edgeColor: "#a8a6a6",
+    edgeSoftness: 0.25,
+    ridgeSoftness: 0.29,
+    ridgeHighlight: 0.15,
+    tipDarken: 0.85,
+  },
+  spinePatternPass1: {
+    enabled: true,
+    barbColor: "#cacaca",
+    barbSpineWidth: 0.1,
+    barbSpineHardness: 0.35,
+    barbuleWidthNorm: 0.37,
+    barbuleHardness: 0.4,
+    barbulePatternRepeat: 2.4,
+    barbulePatternTilt: 0.2,
+    barbulePatternSeparation: 0.51,
+    offsetUvAlongLength: 0.0,
+    renderType: 1,
   },
   barbPatternPass1: {
     enabled: true,
@@ -148,16 +162,16 @@ const params = {
     offsetUvAlongLength: 0.0,
     renderType: 0,
   },
-  spinePatternPass1: {
+  afterFeatherPatternPass1: {
     enabled: true,
     barbColor: "#cacaca",
     barbSpineWidth: 0.1,
     barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.37,
+    barbuleWidthNorm: 0.5,
     barbuleHardness: 0.4,
-    barbulePatternRepeat: 2.4,
-    barbulePatternTilt: 0.2,
-    barbulePatternSeparation: 0.51,
+    barbulePatternRepeat: 1,
+    barbulePatternTilt: 0.06,
+    barbulePatternSeparation: 0.33,
     offsetUvAlongLength: 0.0,
     renderType: 1,
   }
@@ -400,7 +414,7 @@ class Feather {
   // Estimate the expected same-side root gap based on full render params,
   // not the potentially sparse debug sampling. Uses current spine curve but
   // spacing (dt) from the top-level render params.
-  getExpectedSameSideRootGap(barb) {
+  getExpectedBarbSameSideRootGap(barb) {
     try {
       const renderParams = params; // use full render settings
       const tStart = renderParams.afterFeatherEnd;
@@ -418,8 +432,35 @@ class Feather {
     return Math.max(barb.length * 0.2, 0.001);
   }
 
+  // Estimate same-side spacing for afterfeather barbs using instance params
+  getExpectedAfterfeatherSameSideRootGap(barb) {
+    try {
+      const renderParams = params; // always use full render-time params
+      const tStart = renderParams.afterFeatherStart;
+      const tEnd   = renderParams.afterFeatherEnd;
+      const n = Math.max(2, renderParams.afterFeather.nBarbs);
+      const dt = (tEnd - tStart) / (n - 1); // root-to-root spacing used at build time
+
+      // Map barb's local 0..1 position in afterfeather to spine t in [tStart, tEnd]
+      const tAF = barb.tAlongAfterfeather ?? 0;
+      const t = tStart + tAF * (tEnd - tStart);
+
+      // Choose the true neighbor like at build time: next unless we're at the end
+      const t2 = (t + dt <= tEnd + 1e-9) ? (t + dt) : (t - dt);
+
+      const a = this.params.spineCurve.GetPosition(t);
+      const b = this.params.spineCurve.GetPosition(t2);
+      const gap = dist2d(a, b);
+      if (Number.isFinite(gap) && gap > 0) return gap;
+    } catch (_) {
+      // ignore and fall back
+    }
+    // Fallback proportional to barb length
+    return Math.max(barb.length * 0.2, 0.001);
+  }
+
   buildAfterfeather() {
-    const params = this.params.afterFeather;
+    const afParams = this.params.afterFeather;
     const tSpineStart = this.params.afterFeatherStart;
     const tSpineEnd = this.params.afterFeatherEnd;
 
@@ -427,8 +468,8 @@ class Feather {
 
     // Find root points
     let rootPoints = [];
-    for (let i = 0; i < params.nBarbs; i++) {
-      const t = i / (params.nBarbs - 1);
+    for (let i = 0; i < afParams.nBarbs; i++) {
+      const t = i / (afParams.nBarbs - 1);
       const tAlongSpine = lerp(tSpineStart, tSpineEnd, t);
       // Sample the spine spline
       const rootPoint = this.params.spineCurve.GetPosition(tAlongSpine);
@@ -444,12 +485,15 @@ class Feather {
 
       // Find the frame
       const spineWidth = this.params.spineBaseWidth * this.params.spineWidthCurve(tAlongSpine);
+      const spineHalfWidth = spineWidth / 2;
+      const digIntoSpine = lerp(0.7, 0.5, t);
+      const spineAdjustedWidth = spineHalfWidth * (1 - digIntoSpine);
       let frameRight = new Frame2D(rootPoints[i], tangents[i]);
       let frameLeft = new Frame2D(frameRight.origin, frameRight.forward, scale2d(frameRight.right, -1));
-      frameRight.translate(scale2d(frameRight.right, spineWidth / 2));
-      frameLeft.translate(scale2d(frameLeft.right, spineWidth / 2));
+      frameRight.translate(scale2d(frameRight.right, spineAdjustedWidth));
+      frameLeft.translate(scale2d(frameLeft.right, spineAdjustedWidth));
 
-      const barbLength = params.baseWidth * params.widthCurve(t);
+      const barbLength = afParams.baseWidth * afParams.widthCurve(t);
 
       this.afterFeatherBarbs.push({
         frame: frameRight,
@@ -512,7 +556,7 @@ class Feather {
       const rootTangentLength = 0.05 * this.spineLength; // TODO bad magic number
       const rootTangent = scale2d(barb.frame.forward, rootTangentLength); // point back along the spine
 
-      const barbTilt = clamp01(this.params.afterFeather.barbTiltCurve(barb.tAlongAfterfeather) + this.params.barbTiltStart);
+      const barbTilt = clamp01(this.params.afterFeather.barbTiltCurve(barb.tAlongAfterfeather, i) + this.params.barbTiltStart);
       const dirToTip = rotateTowards(barb.frame.right, barb.frame.forward, barbTilt);
       const barbTip = add2d(barbRoot, scale2d(dirToTip, barb.length));
       const tipTangent = scale2d(dirToTip, 0.02 * this.spineLength);
@@ -790,6 +834,7 @@ class Feather {
 
     const origPts = barb.pts;
     const points = resamplePathUniform(origPts);
+    const tangents = getTangents(points);
 
     // const clumpColor = getClumpColor(barb.clumpIndex);
     const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
@@ -797,7 +842,7 @@ class Feather {
     // const uvYRepeat = params.barbuleParams.barbulePatternRepeat;
 
     // Estimate gap based on full render params (robust even with sparse debug barbs)
-    let meshGap = this.getExpectedSameSideRootGap(barb);
+    let meshGap = this.getExpectedBarbSameSideRootGap(barb);
 
     // const colorVec = rgba01FromColor(color("gray"));
     const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
@@ -820,22 +865,7 @@ class Feather {
       const p = points[i];
       const last = points.length - 1;
 
-      // Better tangent calculation using central differences
-      let tangent;
-      if (last === 0) {
-        tangent = vec2(1, 0);
-      } else if (i === 0) {
-        tangent = sub2d(points[1], points[0]);
-      } else if (i === last) {
-        tangent = sub2d(points[last], points[last - 1]);
-      } else {
-        // Central difference for smoother tangents
-        tangent = sub2d(points[i + 1], points[i - 1]);
-      }
-
-      if ((tangent.x === 0 && tangent.y === 0) && i > 0) {
-        tangent = sub2d(points[i], points[i - 1]);
-      }
+      let tangent = tangents[i];
 
       let dir = normalize2d(tangent);
       if (!Number.isFinite(dir.x) || !Number.isFinite(dir.y)) {
@@ -944,19 +974,80 @@ class Feather {
 
   drawAfterfeather() {
     push();
-    enableAdditiveBlending();
-    blendMode(ADD);
+    // If an afterfeather mesh pass is enabled, render it using the barb mesh shader.
+    if (this.params.afterFeatherPatternPass1 && this.params.afterFeatherPatternPass1.enabled) {
+      blendMode(ADD);
+      enableAdditiveBlending();
 
-    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
-      const barb = this.afterFeatherBarbs[i];
-      const pts = barb.pts;
+      for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+        const barb = this.afterFeatherBarbs[i];
+        if (!barb || !barb.pts || barb.pts.length < 2) continue;
 
-      noFill();
-      stroke(200);
-      drawPath(pts);
+        const points = resamplePathUniform(barb.pts);
+        const tangents = getTangents(points);
+        // const points = barb.pts;
+        const passParams = this.params.afterFeatherPatternPass1;
+        const meshGap = this.getExpectedAfterfeatherSameSideRootGap(barb);
+
+        // Width factors reused from main barbule params for consistency
+        const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
+        const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
+
+        shader(barbMeshShader);
+        setBarbPatternShader(barbMeshShader, passParams);
+        barbMeshShader.setUniform('uBarbIndex', i);
+
+        beginShape(TRIANGLE_STRIP);
+        for (let j = 0; j < points.length; j++) {
+          const p = points[j];
+          const last = points.length - 1;
+
+          // Central difference tangent
+          let tangent = tangents[j];
+          let dir = normalize2d(tangent);
+
+          if (dir.x === 0 && dir.y === 0) { 
+            continue; 
+          }
+
+          let normal = vec2(-dir.y, dir.x);
+
+          // Orient normal consistently with barb frame
+          if (barb.frame && barb.frame.right) {
+            const dot = normal.x * barb.frame.right.x + normal.y * barb.frame.right.y;
+            if (dot < 0) normal = vec2(-normal.x, -normal.y);
+          }
+
+          const t = last > 0 ? j / last : 0;
+          const widthFactor = lerp(barbMeshWidthBaseFactor, barbMeshWidthTipFactor, t);
+          const halfWidth = 0.5 * meshGap * widthFactor;
+
+          const offset = scale2d(normal, halfWidth);
+          const right = add2d(p, offset);
+          const left = add2d(p, scale2d(offset, -1));
+
+          vertex(right.x, right.y, 0, 0.5, t);
+          vertex(left.x, left.y, 0, -0.5, t);
+        }
+        endShape();
+
+        resetShader();
+      }
+      // Restore standard blending after the mesh pass
+      resetToAlphaBlending();
+    } else {
+      // Fallback: simple stroke rendering of afterfeather curves
+      enableAdditiveBlending();
+      blendMode(ADD);
+      for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+        const barb = this.afterFeatherBarbs[i];
+        if (!barb || !barb.pts) continue;
+        noFill();
+        stroke(200);
+        drawPath(barb.pts);
+      }
+      resetToAlphaBlending();
     }
-
-    resetToAlphaBlending();
     pop();
   }
 
@@ -1080,6 +1171,8 @@ window.setup = function () {
 
   spineShaderSolid = createShader(spineVert, spineFragSolid);
   barbMeshShader = createShader(barbVert, barbFrag);
+
+  disableDepthTest(drawingContext);
 };
 
 window.draw = function () {
@@ -1243,6 +1336,7 @@ function createGui() {
   const barbPatternPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbPatternPass2);
 
   const spinePatternPass1Folder = createBarbMeshPassGui(gui, 'Spine Pattern Pass 1', params.spinePatternPass1);
+  const afterFeatherPatternPass1Folder = createBarbMeshPassGui(gui, 'AfterFeather Mesh Pass 1', params.afterFeatherPatternPass1);
 }
 
 function refresh() {
@@ -1263,6 +1357,7 @@ function setupDebugParams() {
   debugParams.barbPatternPass1 = { ...params.barbPatternPass1 };
   debugParams.barbPatternPass2 = { ...params.barbPatternPass2 };
   debugParams.spinePatternPass1 = { ...params.spinePatternPass1 };
+  debugParams.afterFeatherPatternPass1 = { ...params.afterFeatherPatternPass1 };
   // Ensure enabled flags are present in debug copy
   if (params.spineSolidPass) debugParams.spineSolidPass = { ...params.spineSolidPass };
 }
@@ -1351,3 +1446,10 @@ function resetPanZoom() {
   applyCanvasZoom();
 }
 // ----------------- END: CANVAS ZOOM + PAN -----------------
+
+// ----------------- GL HELPERS -----------------
+function disableDepthTest(gl = drawingContext) {
+  if (!gl) return;
+  gl.disable(gl.DEPTH_TEST);
+  gl.depthMask(false);
+}
