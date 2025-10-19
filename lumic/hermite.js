@@ -95,6 +95,26 @@ export class CubicHermite2D {
         });
     }
 
+    Scale(s) {
+        // Get the center point at t = 0.5
+        const center = this.GetPosition(0.5);
+        
+        // Scale points about the center
+        this.p0 = vec2(
+            center.x + (this.p0.x - center.x) * s,
+            center.y + (this.p0.y - center.y) * s
+        );
+        
+        this.p1 = vec2(
+            center.x + (this.p1.x - center.x) * s,
+            center.y + (this.p1.y - center.y) * s
+        );
+        
+        // Scale tangent vectors
+        this.m0 = scale2d(this.m0, s);
+        this.m1 = scale2d(this.m1, s);
+    }
+
     static FromJSONString(jsonString) {
         const data = JSON.parse(jsonString);
         return new CubicHermite2D(

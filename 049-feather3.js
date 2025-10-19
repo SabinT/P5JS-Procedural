@@ -48,9 +48,13 @@ const debugSliders = {
 
 const gui = new dat.GUI();
 
+// const spineCurve = CubicHermite2D.FromObject( {"p0":{"x":397,"y":582},"m0":{"x":332,"y":-569},"p1":{"x":1237,"y":593},"m1":{"x":458,"y":-611}}); 
+const spineCurve =  CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } });
+spineCurve.Scale(1.5);
+
 const params = {
   randomSeed: 123456789,
-  spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
+  spineCurve: spineCurve,
   spineDivisions: 200,
   spineBaseWidth: 10,
   spineEnd: 0.95,
@@ -63,7 +67,7 @@ const params = {
   afterFeatherEnd: 0.275,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
   vaneBreakEnd: 1,
-  vaneBaseWidth: 100,
+  vaneBaseWidth: 120,
   vaneWidthCurve: (t) => {
     return smoothstep(-0.25, 0.04, t)
       * smoothstep(2, 0.1, t)
@@ -1197,7 +1201,7 @@ window.draw = function () {
 
 window.keyTyped = function () {
   if (key === "s") {
-    save("feather.png");
+    save(`feather_${params.randomSeed}.png`);
   }
 };
 
@@ -1270,7 +1274,9 @@ function createGui() {
   const seedUi = {
     RerollSeed: () => {
       // change the seed once, everything else follows
-      params.randomSeed = (Math.random() * 2147483647) | 0;
+      const newSeed = Math.floor(Math.random() * 2147483647);
+      console.log(`New seed: ${newSeed}`);
+      params.randomSeed = newSeed;
       refresh();
     }
   };
