@@ -29,9 +29,9 @@ uniform float uBarbuleHardness;
 uniform float uBarbulePatternRepeat;
 uniform float uPatternTilt;
 uniform float uBarbulePatternSeparation;
-uniform float uBarbIndex;
-uniform float uBarbuleCount;
-uniform float uOffsetUvAlongLength;
+uniform float uBarbPosition; // t along spine
+uniform float uClumpPosition; // t along clump
+uniform float uPaletteScale;
 uniform int uRenderType; // 0 = solid, 1 = noisy color pattern
 
 // =========================================================
@@ -92,11 +92,16 @@ float bulge1D(float x, float c, float hw, float bulgeAmount)
 vec3 getPaletteColor1(float n)
 {
     // pick one of 5 colors based on noise value
-    if (n < 0.2)  return vec3(0xF2,0xA0,0xD5)/255.0; // #F2A0D5
-    else if (n < 0.4) return vec3(0xF2,0x79,0xDE)/255.0; // #F279DE
-    else if (n < 0.6) return vec3(0x88,0x6F,0xBF)/255.0; // #886FBF
-    else if (n < 0.8) return vec3(0x05,0xC7,0xF2)/255.0; // #05C7F2
-    else              return vec3(0x05,0xDB,0xF2)/255.0; // #05DBF2
+    if (n < 0.2)  
+        return vec3(0xF2,0x79,0xDE)/255.0; // #F279DE
+    else if (n < 0.4) 
+        return vec3(0xF2,0xA0,0xD5)/255.0; // #F2A0D5
+    else if (n < 0.6) 
+        return vec3(0xFD,0xB6,0xAE)/255.0; // #FDB6AE
+    else if (n < 0.8) 
+        return vec3(0x2D,0xA2,0xC8)/255.0; // #2DA2C8
+    else              
+        return vec3(0x44,0x8B,0xFF)/255.0; // #448BFF
 }
 
 vec3 getPaletteColor2(float n)
@@ -141,10 +146,18 @@ vec4 shadeNoise(vec2 uv)
     float angleNorm = (angle) / (2.0 * 3.14159265);
 
     float n = fract(sin(dot(uv * 43.17, vec2(12.9898,78.233))) * 43758.5453);
-    float bulgeCenter = mod(origUv.y + angleNorm, 1.0);
+    // float bulgeCenter = mod(origUv.y + angleNorm, 1.0);
+    float bulgeCenter = uBarbPosition;
     float bulgeWidth = 0.25;
     float bulgeAmount = 0.5;
     n = bulge1D(n, origUv.y * 0.5, bulgeWidth, bulgeAmount);
+    
+    n *= uPaletteScale;
+
+    // Shift along spine / clump
+    n += uBarbPosition;
+    n += uClumpPosition * 0.1;
+
     // n += smoothstep(0.0, 1.0, angleNorm);
     n = mod(n, 1.0);
     // n = clamp(0.0, 1.0, n);
