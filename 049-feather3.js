@@ -27,7 +27,7 @@ const hw = w / 2;
 const h = 1080;
 const hh = h / 2;
 
-Debug.enabled = false; // Enable debug drawing
+Debug.enabled = true; // Enable debug drawing
 
 const debugDrawToggles = {
   spine: false,
@@ -86,7 +86,7 @@ const params = {
   barbInnerNoiseLevel: 0.184,
   barbInnerNoiseScaleExp: 0.459,
   afterFeather: {
-    nBarbs: 0,
+    nBarbs: 40,
     baseWidth: 37,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
@@ -232,6 +232,10 @@ class Feather {
     const tBarbEnd = 1.01;
     const tVaneBreakEnd = params.vaneBreakEnd;
 
+    // Store spacing info for later gap estimation
+    this._tBarbStart = tBarbStart;
+    this._barbWidthNormalized = (1 - tBarbStart) / params.nBarbs;
+
     // Split vaneBreaks into left/right with some randomness
     // Create stops for the vane breaks
     const nVaneBreaks = params.vaneBreaks;
@@ -363,7 +367,7 @@ class Feather {
       const barbTilt = clamp01(params.barbTiltCurve(tAlongVane) + params.barbTiltStart);
 
       // if (barbTilt >= 0.99995) {
-      //   continue;
+      //   continue; 
       // }
 
       const rightBarb = {
@@ -391,6 +395,27 @@ class Feather {
       this.vaneBarbs.push(rightBarb);
       this.vaneBarbs.push(leftBarb);
     }
+  }
+
+  // Estimate the expected same-side root gap based on full render params,
+  // not the potentially sparse debug sampling. Uses current spine curve but
+  // spacing (dt) from the top-level render params.
+  getExpectedSameSideRootGap(barb) {
+    try {
+      const renderParams = params; // use full render settings
+      const tStart = renderParams.afterFeatherEnd;
+      const dt = (1 - tStart) / Math.max(1, renderParams.nBarbs);
+      const t = barb.tAlongSpine;
+      const t2 = Math.min(1, t + dt);
+      const a = this.params.spineCurve.GetPosition(t);
+      const b = this.params.spineCurve.GetPosition(t2);
+      const gap = dist2d(a, b);
+      if (Number.isFinite(gap) && gap > 0) {
+          return gap;
+      }
+    } catch (_) { /* ignore and fall back */ }
+    // Fallback: proportional to barb length (TODO bad magic numbers)
+    return Math.max(barb.length * 0.2, 0.001);
   }
 
   buildAfterfeather() {
@@ -771,25 +796,8 @@ class Feather {
     const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
     // const uvYRepeat = params.barbuleParams.barbulePatternRepeat;
 
-    // Estimate gap to neighbouring barb on the same side to derive mesh width
-    let neighbour = null;
-    if (index === undefined) {
-      index = this.vaneBarbs.indexOf(barb);
-    }
-    if (index !== -1) {
-      let neighbourIndex = index + 2;
-      if (neighbourIndex >= this.vaneBarbs.length) {
-        neighbourIndex = index - 2;
-      }
-      if (neighbourIndex >= 0 && neighbourIndex < this.vaneBarbs.length) {
-        neighbour = this.vaneBarbs[neighbourIndex];
-      }
-    }
-
-    let meshGap = neighbour ? dist2d(barb.frame.origin, neighbour.frame.origin) : barb.length * 0.2;
-    if (!Number.isFinite(meshGap) || meshGap <= 0) {
-      meshGap = barb.length * 0.2;
-    }
+    // Estimate gap based on full render params (robust even with sparse debug barbs)
+    let meshGap = this.getExpectedSameSideRootGap(barb);
 
     // const colorVec = rgba01FromColor(color("gray"));
     const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
@@ -879,7 +887,7 @@ class Feather {
       const barb = this.vaneBarbs[i];
       // barb.spline.Draw();
 
-      if (!Debug.enabled) {
+      if (!Debug.enabled || debugDrawToggles.barbMesh) {
         this.drawBarbMesh(barb, i);
         continue;
       }
@@ -1047,6 +1055,18 @@ window.setup = function () {
   canvas = createCanvas(w, h, WEBGL);
   centerCanvas(canvas);
   pixelDensity(8);
+
+  // Canvas-only zoom/pan
+  window.addEventListener('wheel', onWheelCanvasZoom, { passive: false });
+  canvas.elt.addEventListener('pointerdown', onPointerDownPan, { passive: false });
+  window.addEventListener('pointerup', onPointerUpPan, { passive: false });
+  window.addEventListener('pointermove', onPointerMovePan, { passive: false });
+  window.addEventListener('keydown', onKeyDownPan, { passive: false });
+  window.addEventListener('keyup', onKeyUpPan, { passive: false });
+  canvas.elt.addEventListener('dblclick', () => resetPanZoom());
+  applyCanvasZoom();
+  requestAnimationFrame(centerPanToViewport);
+
   createGui();
   textFont(font);
 
@@ -1246,3 +1266,88 @@ function setupDebugParams() {
   // Ensure enabled flags are present in debug copy
   if (params.spineSolidPass) debugParams.spineSolidPass = { ...params.spineSolidPass };
 }
+
+// ----------------- CANVAS ZOOM + PAN (CSS, no redraw) -----------------
+let canvasZoom = 1;                 // zoom factor
+const CANVAS_ZOOM_MIN = 0.25;
+const CANVAS_ZOOM_MAX = 4;
+
+let panX = 0;                       // px offset from centered position
+let panY = 0;
+let isPanning = false;
+let spaceDown = false;
+
+function applyCanvasZoom() {
+  if (!canvas || !canvas.elt) return;
+  // Keep centered, add pan offsets, then scale (no redraw)
+  canvas.elt.style.transformOrigin = '50% 50%';
+  canvas.elt.style.transform =
+    `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${canvasZoom})`;
+}
+
+// Compute pan so the canvas' visual center aligns with the viewport center.
+function centerPanToViewport() {
+  if (!canvas || !canvas.elt) return;
+  // Ensure our transform is applied first (so getBoundingClientRect reads the correct geometry)
+  applyCanvasZoom();
+
+  const rect = canvas.elt.getBoundingClientRect();
+  const viewCX = window.innerWidth * 0.5;
+  const viewCY = window.innerHeight * 0.5;
+  const canvasCX = rect.left + rect.width * 0.5;
+  const canvasCY = rect.top + rect.height * 0.5;
+
+  // Adjust pan by the delta
+  panX += (viewCX - canvasCX);
+  panY += (viewCY - canvasCY);
+  applyCanvasZoom();
+}
+
+function onWheelCanvasZoom(e) {
+  // Ctrl on Windows/Linux, Cmd on macOS. Prevent page zoom.
+  if (!(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const factor = Math.pow(1.0015, e.deltaY); // smooth
+  canvasZoom = Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, canvasZoom / factor));
+  applyCanvasZoom(); // CSS-only, no redraw
+}
+
+// Drag-to-pan (middle mouse, or Space + left mouse)
+function onPointerDownPan(e) {
+  if (e.button === 1 || (spaceDown && e.button === 0)) {
+    isPanning = true;
+    try { canvas.elt.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  }
+}
+function onPointerUpPan(e) {
+  if (isPanning) {
+    isPanning = false;
+    try { canvas.elt.releasePointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  }
+}
+function onPointerMovePan(e) {
+  if (!isPanning) return;
+  panX += e.movementX;
+  panY += e.movementY;
+  applyCanvasZoom();
+  e.preventDefault();
+}
+
+function onKeyDownPan(e) {
+  if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
+}
+function onKeyUpPan(e) {
+  if (e.code === 'Space') { spaceDown = false; e.preventDefault(); }
+}
+
+function resetPanZoom() {
+  canvasZoom = 1;
+  panX = 0;
+  panY = 0;
+  applyCanvasZoom();
+}
+// ----------------- END: CANVAS ZOOM + PAN -----------------
