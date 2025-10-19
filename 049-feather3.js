@@ -52,7 +52,7 @@ const params = {
   randomSeed: 123456789,
   spineCurve: CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } }),
   spineDivisions: 200,
-  spineBaseWidth: 13,
+  spineBaseWidth: 10,
   spineEnd: 0.95,
   spineWidthCurve: (t) => {
     return 1 - easeInQuad(t);
@@ -60,7 +60,7 @@ const params = {
   nBarbs: 400, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
   afterFeatherStart: 0.19,
-  afterFeatherEnd: 0.3,
+  afterFeatherEnd: 0.275,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
   vaneBreakEnd: 1,
   vaneBaseWidth: 100,
@@ -85,8 +85,11 @@ const params = {
   barbInnerNoiseLevel: 0.184,
   barbInnerNoiseScaleExp: 0.459,
   afterFeather: {
+    enabled: false,
     nBarbs: 61,
-    baseWidth: 62,
+    baseWidth: 70,
+    noiseLevelExp: -0.29,
+    noiseScaleExp: 0.764,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
       return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)
@@ -94,7 +97,7 @@ const params = {
     barbTiltCurve: (t, i) => {
       let tilt = (1 - smoothstep(0.1, 0.9, t)) * 0.25; // never fully tilted
       // Add some randomness
-      tilt += (sqRand(i) - 0.5) * 0.5 ;
+      tilt += (sqRand(i) - 0.5) * 0.1 ;
       return tilt;
     }
   },
@@ -672,8 +675,8 @@ class Feather {
     const afSeed = mixSeed(params.randomSeed, 0xAF00 + barb.index);
     const barbRandom = sqRand(afSeed);
     noiseSeed(afSeed);
-    const nL = Math.pow(10, this.params.vaneNoiseLevelExp);
-    const nS = Math.pow(10, this.params.vaneNoiseScaleExp);
+    const nL = Math.pow(10, this.params.afterFeather.noiseLevelExp);
+    const nS = Math.pow(10, this.params.afterFeather.noiseScaleExp);
 
     const origPts = barb.spline.GetPoints(nPoints);
     let origDirections = [];
@@ -740,7 +743,9 @@ class Feather {
 
   draw() {
     this.drawBarbs();
-    this.drawAfterfeather();
+    if ( this.params.afterFeather.enabled ) {
+      this.drawAfterfeather();
+    }
     this.drawSpine();
 
     if (Debug.enabled) {
@@ -1304,8 +1309,11 @@ function createGui() {
   barbsFolder.add(params, 'barbTiltStart', 0, 1).step(0.01).onChange(() => { refresh(); });
 
   const afterFeatherFolder = gui.addFolder('Afterfeather');
+  afterFeatherFolder.add(params.afterFeather, 'enabled').name('Enabled').onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'baseWidth', 10, 200).step(1).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'noiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'noiseScaleExp', -2, 4).step(0.001).onChange(() => { refresh(); });
 
   const shaderFolder = gui.addFolder('Shader');
   shaderFolder.add(params.spineSolidPass, 'enabled').name('Spine Solid Enabled').onChange(() => { refresh(); });
