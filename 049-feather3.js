@@ -1126,12 +1126,11 @@ class Feather {
     Debug.drawDashedLine2D(barb.frame.origin, barbTip);
 
     // Visualize clump index and tAlongClump
-    noStroke();
-    fill(255);
-    // textAlign(CENTER, CENTER);
-    const info = `c:${barb.clumpIndex}\nt:${barb.tAlongClump.toFixed(2)}`;
-    const textPos = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length + 20));
-    Debug.drawText(info, textPos);
+    // noStroke();
+    // fill(255);
+    // const info = `c:${barb.clumpIndex}\nt:${barb.tAlongClump.toFixed(2)}`;
+    // const textPos = add2d(barb.frame.origin, scale2d(barb.frame.right, barb.length + 20));
+    // Debug.drawText(info, textPos);
     // text(info, textPos.x, textPos.y);
   }
 
