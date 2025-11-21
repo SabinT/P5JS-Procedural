@@ -8,6 +8,7 @@ import { Frame2D } from "./lumic/frame.js";
 import { drawPath, drawPathWithGradient, getTangents, resamplePathUniform, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
 import { spineVert, spineFragSolid } from "./049-feather3-shaders.js";
 import { barbVert, barbFrag } from "./049-feather3-barb-shader.js";
+import { SVGDrawing } from "./lumic/svg.js";
 // import * as dat from 'libraries/dat.gui.min.js';
 
 // Interesting links / related materials:
@@ -54,6 +55,8 @@ spineCurve.Scale(1.5);
 
 const params = {
   randomSeed: 1470399325,
+  svgWidthMM: 297,
+  svgHeightMM: 210,
   spineCurve: spineCurve,
   spineDivisions: 200,
   spineBaseWidth: 10,
@@ -753,11 +756,13 @@ class Feather {
   }
 
   draw() {
+    this.svgDrawing = new SVGDrawing(this.params.svgWidthMM, this.params.svgHeightMM);
+    this.drawSpine();
+
     this.drawBarbs();
     if ( this.params.afterFeather.enabled ) {
       this.drawAfterfeather();
     }
-    this.drawSpine();
 
     if (Debug.enabled) {
       this.debugDraw();
@@ -870,6 +875,8 @@ class Feather {
       stroke(200);
       strokeWeight(1);
       drawPath(outlinePoints);
+
+      this.svgDrawing.addPath(outlinePoints, /* remapFromResolution: */ vec2(width, height));
     }
 
     pop();
@@ -989,6 +996,8 @@ class Feather {
         stroke(barbColor);
         drawPath(pts);
       }
+
+      this.svgDrawing.addPath(pts, /* remapFromResolution: */ vec2(width, height));
     }
 
     pop();
@@ -1068,8 +1077,10 @@ class Feather {
         noFill();
         stroke(200);
         drawPath(barb.pts);
+        this.svgDrawing.addPath(barb.pts, /* remapFromResolution: */ vec2(width, height));
       }
     }
+
     pop();
   }
 
@@ -1209,6 +1220,8 @@ window.draw = function () {
 window.keyTyped = function () {
   if (key === "s") {
     save(`feather_${params.randomSeed}.png`);
+
+    feather.svgDrawing.save(`feather_${params.randomSeed}.svg`);
   }
 };
 
