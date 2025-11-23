@@ -19,7 +19,6 @@ window.preload = function() {
 
 window.setup = function() {
     pixelDensity(1.5);
-    createCanvas(800, 800);
 
     // Read all pixels from the image
     img.loadPixels();
@@ -29,7 +28,7 @@ window.setup = function() {
     const imgHeight = img.height;
 
     // Canvas size = image size * cell size
-    createCanvas(imgWidth * size, imgHeight * size);
+    createCanvas(imgWidth * size, imgHeight * size, SVG);
     background(255);
     stroke(0);
     strokeWeight(1);
@@ -49,6 +48,10 @@ window.setup = function() {
             renderCell(x, y, c);
         }
     }
+
+    // svg.save('bitmapLines.svg');
+
+    save('bitmapLines.svg');
 
     noLoop();
 }
@@ -214,8 +217,10 @@ function renderCell(x, y, c) {
   pop(); // Restore the previous drawing state
 }
 
+const svgLines = [];
 function addToSvgLine2D(lineStart, lineEnd) {
-    // TODO
+    // Use vpype for optimization / dedupe / etc
+    // svg.addPath([lineStart, lineEnd]);
 
     // Also show a preview in canvas
     line2D(lineStart, lineEnd);
