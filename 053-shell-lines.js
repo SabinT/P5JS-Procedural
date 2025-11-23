@@ -15,11 +15,17 @@ let params = {
   BumpRotation: 0.0,
   BumpHeight: 0.15,
   BumpWidthTransverse: 0.8,
-  BumpWidthLongitudinal: 0.6
+  BumpWidthLongitudinal: 0.6,
+  Grid: {
+    divisionsS: 32,
+    divisionsTheta: 32,
+    showTheta: true,   // constant theta (vary s)
+    showS: true,       // constant s (vary theta)
+    colorTheta: "#e6e6e6",
+    colorS: "#78b4ff"
+  }
 };
 
-const divisionsS = 32;
-const divisionsTheta = 32;
 const PI = Math.PI;
 const TWOPI = 2 * PI;
 const thetaMax = 10 * PI; // spiral extent
@@ -63,32 +69,36 @@ function getPosition(p, s, theta) {
 }
 
 function render() {
-  stroke(230);
+  const grid = params.Grid;
   strokeWeight(1);
   noFill();
-  // Removed translate(hw, hh) in WEBGL
-  // Lines varying s, fixed theta
-  for (let ti = 0; ti <= divisionsTheta; ti++) {
-    const theta = thetaMax * ti / divisionsTheta;
-    beginShape();
-    for (let si = 0; si <= divisionsS; si++) {
-      const s = TWOPI * si / divisionsS;
-      const p = getPosition(params, s, theta);
-      vertex(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+
+  if (grid.showTheta) {
+    stroke(grid.colorTheta);
+    for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
+      const theta = thetaMax * ti / grid.divisionsTheta;
+      beginShape();
+      for (let si = 0; si <= grid.divisionsS; si++) {
+        const s = TWOPI * si / grid.divisionsS;
+        const p = getPosition(params, s, theta);
+        vertex(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+      }
+      endShape();
     }
-    endShape();
   }
-  // Lines varying theta, fixed s
-  stroke(120, 180, 255);
-  for (let si = 0; si < divisionsS; si++) {
-    const s = TWOPI * si / divisionsS;
-    beginShape();
-    for (let ti = 0; ti <= divisionsTheta; ti++) {
-      const theta = thetaMax * ti / divisionsTheta;
-      const p = getPosition(params, s, theta);
-      vertex(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+
+  if (grid.showS) {
+    stroke(grid.colorS);
+    for (let si = 0; si < grid.divisionsS; si++) {
+      const s = TWOPI * si / grid.divisionsS;
+      beginShape();
+      for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
+        const theta = thetaMax * ti / grid.divisionsTheta;
+        const p = getPosition(params, s, theta);
+        vertex(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+      }
+      endShape();
     }
-    endShape();
   }
 }
 
@@ -115,6 +125,14 @@ function createGui() {
   bumpFolder.add(params, 'BumpHeight', 0, 1).step(0.001);
   bumpFolder.add(params, 'BumpWidthTransverse', 0.1, 3).step(0.01);
   bumpFolder.add(params, 'BumpWidthLongitudinal', 0.1, 3).step(0.01);
+
+  const gridFolder = gui.addFolder('Grid');
+  gridFolder.add(params.Grid, 'divisionsS', 2, 256).step(1).name('Divisions S');
+  gridFolder.add(params.Grid, 'divisionsTheta', 2, 256).step(1).name('Divisions Theta');
+  gridFolder.add(params.Grid, 'showTheta').name('Show Theta Lines');
+  gridFolder.add(params.Grid, 'showS').name('Show S Lines');
+  gridFolder.addColor(params.Grid, 'colorTheta').name('Theta Color');
+  gridFolder.addColor(params.Grid, 'colorS').name('S Color');
 
   const actions = {
     ApplyPreset: () => {
