@@ -204,11 +204,11 @@ function screenPt(x, y, z) {
 let draggingView = false;
 let lastMX = 0, lastMY = 0;
 function attachViewInput() {
-  if (!canvas || !canvas.elt) return; // guard added
+  if (!canvas || !canvas.elt) return;
   canvas.elt.addEventListener('mousedown', e => {
     if (e.button === 0) { draggingView = true; lastMX = e.clientX; lastMY = e.clientY; }
   });
-  window.addEventListener('mouseup', () => draggingView = false);
+  window.addEventListener('mouseup', () => { draggingView = false; });
   window.addEventListener('mousemove', e => {
     if (!draggingView) return;
     const dx = e.clientX - lastMX;
@@ -216,60 +216,116 @@ function attachViewInput() {
     lastMX = e.clientX; lastMY = e.clientY;
     params.View.azimuth += dx * 0.005;
     params.View.elevation = Math.max(-Math.PI/2+0.01, Math.min(Math.PI/2-0.01, params.View.elevation + dy * 0.005));
+    markDirty();
   });
   canvas.elt.addEventListener('wheel', e => {
-    if (e.ctrlKey || e.metaKey) return; // avoid conflict with system zoom
+    if (e.ctrlKey || e.metaKey) return;
     params.View.distance *= Math.pow(1.0015, e.deltaY);
     params.View.distance = Math.max(10, Math.min(8000, params.View.distance));
+    markDirty();
   }, { passive: true });
 }
 // ---- END INPUT ----
 
+const PARAMS_STORAGE_KEY = 'shellLinesParamsV1';
+let paramsDirty = false;
+let saveTimeout = null;
+
+function markDirty() {
+  paramsDirty = true;
+  if (saveTimeout) return;
+  saveTimeout = setTimeout(() => {
+    if (paramsDirty) {
+      saveParamsToStorage();
+      paramsDirty = false;
+    }
+    saveTimeout = null;
+  }, 300);
+}
+
+function applyStoredParams(stored, target) {
+  if (!stored || typeof stored !== 'object') return;
+  for (const k in stored) {
+    if (!(k in target)) continue;
+    const sv = stored[k];
+    const tv = target[k];
+    if (sv && typeof sv === 'object' && !Array.isArray(sv)) {
+      applyStoredParams(sv, tv);
+    } else if (typeof sv !== 'function') {
+      target[k] = sv;
+    }
+  }
+}
+
+function loadParamsFromStorage() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(PARAMS_STORAGE_KEY);
+    if (!raw) return;
+    const stored = JSON.parse(raw);
+    applyStoredParams(stored, params);
+  } catch (e) {
+    console.warn('Failed to load stored params:', e);
+  }
+}
+
+function saveParamsToStorage() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const serialized = JSON.stringify(params);
+    localStorage.setItem(PARAMS_STORAGE_KEY, serialized);
+  } catch (e) {
+    console.warn('Failed to save params:', e);
+  }
+}
+
 function createGui() {
   gui = new dat.GUI();
-  gui.add(params, 'SpiralScale', 0.1, 5).step(0.01);
+  const controllers = [];
+  controllers.push(gui.add(params, 'SpiralScale', 0.1, 5).step(0.01));
 
   const spiralFolder = gui.addFolder('SpiralParams');
-  spiralFolder.add(params.SpiralParams, 'alpha', 0.01, 2).step(0.001);
-  spiralFolder.add(params.SpiralParams, 'beta', 0, Math.PI).step(0.001);
+  controllers.push(spiralFolder.add(params.SpiralParams, 'alpha', 0.01, 2).step(0.001));
+  controllers.push(spiralFolder.add(params.SpiralParams, 'beta', 0, Math.PI).step(0.001));
 
   const ellipseRotFolder = gui.addFolder('EllipseRotation');
-  ellipseRotFolder.add(params.EllipseRotation, 'mu', -Math.PI, Math.PI).step(0.001);
-  ellipseRotFolder.add(params.EllipseRotation, 'Omega', -Math.PI, Math.PI).step(0.001);
-  ellipseRotFolder.add(params.EllipseRotation, 'Phi', -Math.PI, Math.PI).step(0.001);
+  controllers.push(ellipseRotFolder.add(params.EllipseRotation, 'mu', -Math.PI, Math.PI).step(0.001));
+  controllers.push(ellipseRotFolder.add(params.EllipseRotation, 'Omega', -Math.PI, Math.PI).step(0.001));
+  controllers.push(ellipseRotFolder.add(params.EllipseRotation, 'Phi', -Math.PI, Math.PI).step(0.001));
 
   const ellipseRadiiFolder = gui.addFolder('EllipseRadii');
-  ellipseRadiiFolder.add(params.EllipseRadii, 'a', 0.1, 3).step(0.01);
-  ellipseRadiiFolder.add(params.EllipseRadii, 'b', 0.1, 3).step(0.01);
+  controllers.push(ellipseRadiiFolder.add(params.EllipseRadii, 'a', 0.1, 3).step(0.01));
+  controllers.push(ellipseRadiiFolder.add(params.EllipseRadii, 'b', 0.1, 3).step(0.01));
 
   const bumpFolder = gui.addFolder('Bumps');
-  bumpFolder.add(params, 'BumpCount', 1, 64).step(1);
-  bumpFolder.add(params, 'BumpRotation', -Math.PI, Math.PI).step(0.001);
-  bumpFolder.add(params, 'BumpHeight', 0, 1).step(0.001);
-  bumpFolder.add(params, 'BumpWidthTransverse', 0.1, 3).step(0.01);
-  bumpFolder.add(params, 'BumpWidthLongitudinal', 0.1, 3).step(0.01);
+  controllers.push(bumpFolder.add(params, 'BumpCount', 1, 64).step(1));
+  controllers.push(bumpFolder.add(params, 'BumpRotation', -Math.PI, Math.PI).step(0.001));
+  controllers.push(bumpFolder.add(params, 'BumpHeight', 0, 1).step(0.001));
+  controllers.push(bumpFolder.add(params, 'BumpWidthTransverse', 0.1, 3).step(0.01));
+  controllers.push(bumpFolder.add(params, 'BumpWidthLongitudinal', 0.1, 3).step(0.01));
 
   const gridFolder = gui.addFolder('Grid');
-  gridFolder.add(params.Grid, 'divisionsS', 2, 256).step(1).name('Divisions S');
-  gridFolder.add(params.Grid, 'divisionsTheta', 2, 256).step(1).name('Divisions Theta');
-  gridFolder.add(params.Grid, 'showTheta').name('Show Theta Lines');
-  gridFolder.add(params.Grid, 'showS').name('Show S Lines');
-  gridFolder.addColor(params.Grid, 'colorTheta').name('Theta Color');
-  gridFolder.addColor(params.Grid, 'colorS').name('S Color');
+  controllers.push(gridFolder.add(params.Grid, 'divisionsS', 2, 256).step(1).name('Divisions S'));
+  controllers.push(gridFolder.add(params.Grid, 'divisionsTheta', 2, 256).step(1).name('Divisions Theta'));
+  controllers.push(gridFolder.add(params.Grid, 'showTheta').name('Show Theta Lines'));
+  controllers.push(gridFolder.add(params.Grid, 'showS').name('Show S Lines'));
+  controllers.push(gridFolder.addColor(params.Grid, 'colorTheta').name('Theta Color'));
+  controllers.push(gridFolder.addColor(params.Grid, 'colorS').name('S Color'));
 
   const viewFolder = gui.addFolder('View');
-  viewFolder.add(params.View, 'distance', 50, 4000).step(1).name('Distance');
-  viewFolder.add(params.View, 'azimuth', -Math.PI, Math.PI).step(0.001).name('Azimuth');
-  viewFolder.add(params.View, 'elevation', -Math.PI/2+0.01, Math.PI/2-0.01).step(0.001).name('Elevation');
-  viewFolder.add(params.View, 'fovDeg', 20, 120).step(1).name('FOV (deg)');
-  viewFolder.add(params.View, 'near', 0.01, 10).step(0.01).name('Near');
-  viewFolder.add(params.View, 'far', 100, 20000).step(10).name('Far');
+  controllers.push(viewFolder.add(params.View, 'distance', 50, 4000).step(1).name('Distance'));
+  controllers.push(viewFolder.add(params.View, 'azimuth', -Math.PI, Math.PI).step(0.001).name('Azimuth'));
+  controllers.push(viewFolder.add(params.View, 'elevation', -Math.PI/2+0.01, Math.PI/2-0.01).step(0.001).name('Elevation'));
+  controllers.push(viewFolder.add(params.View, 'fovDeg', 20, 120).step(1).name('FOV (deg)'));
+  controllers.push(viewFolder.add(params.View, 'near', 0.01, 10).step(0.01).name('Near'));
+  controllers.push(viewFolder.add(params.View, 'far', 100, 20000).step(10).name('Far'));
   viewFolder.add({ ResetView: () => {
     Object.assign(params.View, { distance: 900, azimuth: 0.7, elevation: 0.5, fovDeg: 55, near:0.1, far:5000 });
+    markDirty();
   }}, 'ResetView').name('Reset View');
 
   const actions = {
-    ApplyPreset: () => {
+    Defaults: () => {
       params.SpiralScale = 1.0;
       params.SpiralParams.alpha = 1.504;
       params.SpiralParams.beta = Math.PI;
@@ -283,11 +339,16 @@ function createGui() {
       params.BumpHeight = 0.15;
       params.BumpWidthTransverse = 0.8;
       params.BumpWidthLongitudinal = 0.6;
+      markDirty();
     },
-    Export: () => exportShellSVG()
+    Export: () => exportAll(),
+    Import: () => importFileInput && importFileInput.click()
   };
-  gui.add(actions, 'ApplyPreset').name('Apply Preset');
-  gui.add(actions, 'Export').name('Export');
+  gui.add(actions, 'Defaults');
+  gui.add(actions, 'Export');
+  gui.add(actions, 'Import');
+
+  controllers.forEach(c => c.onChange(markDirty));
 }
 
 // Liang-Barsky segment clip to rect (0,0)-(w,h)
@@ -373,9 +434,12 @@ function collectShellLines() {
 }
 
 window.setup = function () {
-  canvas = createCanvas(w, h, WEBGL); // capture canvas
+  loadParamsFromStorage();
+  canvas = createCanvas(w, h, WEBGL);
   createGui();
+  setupImportInput();
   attachViewInput();
+  window.addEventListener('beforeunload', saveParamsToStorage);
 };
 
 window.draw = function () {
@@ -385,19 +449,81 @@ window.draw = function () {
   // noLoop(); // removed to allow interaction
 };
 
-function exportShellSVG() {
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAll() {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const base = `shell-lines-${ts}`;
+  // SVGs
   const { thetaPaths, sPaths } = collectShellLines();
   const svgTheta = new SVGDrawing(w, h);
   thetaPaths.forEach(path => svgTheta.addPath(path));
-  svgTheta.save("shell-lines-theta.svg");
+  svgTheta.save(`${base}-theta.svg`);
   const svgS = new SVGDrawing(w, h);
   sPaths.forEach(path => svgS.addPath(path));
-  svgS.save("shell-lines-s.svg");
+  svgS.save(`${base}-s.svg`);
+  // PNG
+  saveCanvas(base, 'png');
+  // JSON (params)
+  const json = {
+    SpiralScale: params.SpiralScale,
+    SpiralParams: params.SpiralParams,
+    EllipseRotation: params.EllipseRotation,
+    EllipseRadii: params.EllipseRadii,
+    BumpCount: params.BumpCount,
+    BumpRotation: params.BumpRotation,
+    BumpHeight: params.BumpHeight,
+    BumpWidthTransverse: params.BumpWidthTransverse,
+    BumpWidthLongitudinal: params.BumpWidthLongitudinal,
+    Grid: params.Grid,
+    View: params.View
+  };
+  downloadJSON(`${base}.json`, json);
+}
+
+function importParams(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  applyStoredParams(obj, params);
+  markDirty();
+}
+
+let importFileInput;
+function setupImportInput() {
+  importFileInput = document.createElement('input');
+  importFileInput.type = 'file';
+  importFileInput.accept = '.json,application/json';
+  importFileInput.style.display = 'none';
+  importFileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        importParams(data);
+      } catch (err) {
+        console.warn('Import failed:', err);
+      }
+    };
+    reader.readAsText(file);
+    importFileInput.value = '';
+  });
+  document.body.appendChild(importFileInput);
 }
 
 window.keyTyped = function () {
   if (key === "s") {
-    exportShellSVG();
+    exportAll();
   } else if (key === "p") {
     save("shell-lines-3d.png");
   }
