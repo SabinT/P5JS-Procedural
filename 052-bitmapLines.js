@@ -49,10 +49,6 @@ window.setup = function() {
         }
     }
 
-    // svg.save('bitmapLines.svg');
-
-    save('bitmapLines.svg');
-
     noLoop();
 }
 
@@ -224,4 +220,11 @@ function addToSvgLine2D(lineStart, lineEnd) {
 
     // Also show a preview in canvas
     line2D(lineStart, lineEnd);
+}
+
+// Save is s key pressed
+window.keyPressed = function() {
+  if (key === 's' || key === 'S') {
+    save('bitmapLines.svg');
+  }
 }
