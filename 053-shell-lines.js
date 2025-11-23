@@ -1,3 +1,5 @@
+import { SVGDrawing } from "./lumic/svg.js";
+
 const w = 800;
 const hw = w / 2;
 const h = 800;
@@ -5,6 +7,7 @@ const hh = h / 2;
 
 let g;
 let gui;
+let canvas; // added
 
 let params = {
   SpiralScale: 1.0,
@@ -23,6 +26,14 @@ let params = {
     showS: true,       // constant s (vary theta)
     colorTheta: "#e6e6e6",
     colorS: "#78b4ff"
+  },
+  View: {
+    distance: 900,
+    azimuth: 0.7,
+    elevation: 0.5,
+    fovDeg: 55,
+    near: 0.1,
+    far: 5000
   }
 };
 
@@ -102,6 +113,118 @@ function render() {
   }
 }
 
+// ---- VIEW / CAMERA MATRIX HELPERS ----
+const viewState = { viewMatrix: null, projectionMatrix: null };
+
+function vec3(x,y,z){ return {x,y,z}; }
+function sub3(a,b){ return vec3(a.x-b.x,a.y-b.y,a.z-b.z); }
+function add3(a,b){ return vec3(a.x+b.x,a.y+b.y,a.z+b.z); }
+function mul3(a,s){ return vec3(a.x*s,a.y*s,a.z*s); }
+function dot3(a,b){ return a.x*b.x + a.y*b.y + a.z*b.z; }
+function cross3(a,b){
+  return vec3(
+    a.y*b.z - a.z*b.y,
+    a.z*b.x - a.x*b.z,
+    a.x*b.y - a.y*b.x
+  );
+}
+function norm3(v){
+  const d = Math.hypot(v.x,v.y,v.z) || 1e-9;
+  return vec3(v.x/d,v.y/d,v.z/d);
+}
+
+function mat4LookAt(eye, target, up) {
+  const f = norm3(sub3(target, eye));      // forward (camera looks toward target)
+  const r = norm3(cross3(f, up));          // right
+  const u = cross3(r, f);                  // corrected up
+  // Right-handed lookAt with forward pointing TO target => view forward is -f
+  return [
+    r.x,  u.x, -f.x, 0,
+    r.y,  u.y, -f.y, 0,
+    r.z,  u.z, -f.z, 0,
+    -dot3(r, eye), -dot3(u, eye), dot3(f, eye), 1
+  ];
+}
+
+function mat4Perspective(fovYRad, aspect, near, far) {
+  const f = 1 / Math.tan(fovYRad / 2);
+  return [
+    f/aspect, 0, 0, 0,
+    0, f, 0, 0,
+    0, 0, (far+near)/(near - far), -1,
+    0, 0, (2*far*near)/(near - far), 0
+  ];
+}
+
+function multMat4Vec4(m, v) {
+  return [
+    m[0]*v[0]+m[4]*v[1]+m[8]*v[2]+m[12]*v[3],
+    m[1]*v[0]+m[5]*v[1]+m[9]*v[2]+m[13]*v[3],
+    m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14]*v[3],
+    m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]*v[3]
+  ];
+}
+
+function updateViewMatrices() {
+  const vp = params.View;
+  const dist = vp.distance;
+  const az = vp.azimuth;
+  const el = vp.elevation;
+  const eye = vec3(
+    dist * Math.cos(el) * Math.cos(az),
+    dist * Math.sin(el),
+    dist * Math.cos(el) * Math.sin(az)
+  );
+  const target = vec3(0,0,0);
+  const up = vec3(0,1,0);
+  viewState.viewMatrix = mat4LookAt(eye, target, up);
+  viewState.projectionMatrix = mat4Perspective(vp.fovDeg * PI/180, width/height, vp.near, vp.far);
+
+  // Apply to p5 so rendered geometry matches export
+  perspective(vp.fovDeg * PI/180, width/height, vp.near, vp.far);
+  camera(eye.x, eye.y, eye.z, target.x, target.y, target.z, up.x, up.y, up.z);
+}
+
+function screenPt(x, y, z) {
+  // world -> view
+  const v = multMat4Vec4(viewState.viewMatrix, [x, y, z, 1]);
+  // view -> clip
+  const c = multMat4Vec4(viewState.projectionMatrix, v);
+  const wClip = c[3] === 0 ? 1e-9 : c[3];
+  const ndcX = c[0] / wClip;
+  const ndcY = c[1] / wClip;
+  return {
+    x: (ndcX * 0.5 + 0.5) * width,
+    y: (ndcY * 0.5 + 0.5) * height // removed inversion
+  };
+}
+// ---- END VIEW ----
+
+// ---- SIMPLE INPUT FOR VIEW (drag rotate, wheel zoom) ----
+let draggingView = false;
+let lastMX = 0, lastMY = 0;
+function attachViewInput() {
+  if (!canvas || !canvas.elt) return; // guard added
+  canvas.elt.addEventListener('mousedown', e => {
+    if (e.button === 0) { draggingView = true; lastMX = e.clientX; lastMY = e.clientY; }
+  });
+  window.addEventListener('mouseup', () => draggingView = false);
+  window.addEventListener('mousemove', e => {
+    if (!draggingView) return;
+    const dx = e.clientX - lastMX;
+    const dy = e.clientY - lastMY;
+    lastMX = e.clientX; lastMY = e.clientY;
+    params.View.azimuth += dx * 0.005;
+    params.View.elevation = Math.max(-Math.PI/2+0.01, Math.min(Math.PI/2-0.01, params.View.elevation + dy * 0.005));
+  });
+  canvas.elt.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) return; // avoid conflict with system zoom
+    params.View.distance *= Math.pow(1.0015, e.deltaY);
+    params.View.distance = Math.max(10, Math.min(8000, params.View.distance));
+  }, { passive: true });
+}
+// ---- END INPUT ----
+
 function createGui() {
   gui = new dat.GUI();
   gui.add(params, 'SpiralScale', 0.1, 5).step(0.01);
@@ -134,6 +257,17 @@ function createGui() {
   gridFolder.addColor(params.Grid, 'colorTheta').name('Theta Color');
   gridFolder.addColor(params.Grid, 'colorS').name('S Color');
 
+  const viewFolder = gui.addFolder('View');
+  viewFolder.add(params.View, 'distance', 50, 4000).step(1).name('Distance');
+  viewFolder.add(params.View, 'azimuth', -Math.PI, Math.PI).step(0.001).name('Azimuth');
+  viewFolder.add(params.View, 'elevation', -Math.PI/2+0.01, Math.PI/2-0.01).step(0.001).name('Elevation');
+  viewFolder.add(params.View, 'fovDeg', 20, 120).step(1).name('FOV (deg)');
+  viewFolder.add(params.View, 'near', 0.01, 10).step(0.01).name('Near');
+  viewFolder.add(params.View, 'far', 100, 20000).step(10).name('Far');
+  viewFolder.add({ ResetView: () => {
+    Object.assign(params.View, { distance: 900, azimuth: 0.7, elevation: 0.5, fovDeg: 55, near:0.1, far:5000 });
+  }}, 'ResetView').name('Reset View');
+
   const actions = {
     ApplyPreset: () => {
       params.SpiralScale = 1.0;
@@ -149,25 +283,122 @@ function createGui() {
       params.BumpHeight = 0.15;
       params.BumpWidthTransverse = 0.8;
       params.BumpWidthLongitudinal = 0.6;
-    }
+    },
+    Export: () => exportShellSVG()
   };
   gui.add(actions, 'ApplyPreset').name('Apply Preset');
+  gui.add(actions, 'Export').name('Export');
+}
+
+// Liang-Barsky segment clip to rect (0,0)-(w,h)
+function clipSegment(p0, p1) {
+  const x0 = p0.x, y0 = p0.y, x1 = p1.x, y1 = p1.y;
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  let p = [-dx, dx, -dy, dy];
+  let q = [x0 - 0, w - x0, y0 - 0, h - y0];
+  let u1 = 0, u2 = 1;
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return null;
+    } else {
+      const t = q[i] / p[i];
+      if (p[i] < 0) {
+        if (t > u2) return null;
+        if (t > u1) u1 = t;
+      } else {
+        if (t < u1) return null;
+        if (t < u2) u2 = t;
+      }
+    }
+  }
+  return [
+    { x: x0 + u1 * dx, y: y0 + u1 * dy },
+    { x: x0 + u2 * dx, y: y0 + u2 * dy }
+  ];
+}
+function clipPolyline(points) {
+  const paths = [];
+  let current = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    const clipped = clipSegment(a, b);
+    if (clipped) {
+      const [c0, c1] = clipped;
+      if (!current.length) current.push(c0);
+      // Avoid duplicate consecutive points
+      if (current.length === 0 || (current[current.length - 1].x !== c0.x || current[current.length - 1].y !== c0.y)) {
+        current.push(c0);
+      }
+      current.push(c1);
+    } else {
+      if (current.length > 1) paths.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 1) paths.push(current);
+  return paths;
+}
+function collectShellLines() {
+  const grid = params.Grid;
+  const thetaPaths = [];
+  const sPaths = [];
+  if (grid.showTheta) {
+    for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
+      const theta = thetaMax * ti / grid.divisionsTheta;
+      const linePts = [];
+      for (let si = 0; si <= grid.divisionsS; si++) {
+        const s = TWOPI * si / grid.divisionsS;
+        const p = getPosition(params, s, theta);
+        const sp = screenPt(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+        linePts.push(sp);
+      }
+      clipPolyline(linePts).forEach(seg => thetaPaths.push(seg));
+    }
+  }
+  if (grid.showS) {
+    for (let si = 0; si < grid.divisionsS; si++) {
+      const s = TWOPI * si / grid.divisionsS;
+      const linePts = [];
+      for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
+        const theta = thetaMax * ti / grid.divisionsTheta;
+        const p = getPosition(params, s, theta);
+        const sp = screenPt(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
+        linePts.push(sp);
+      }
+      clipPolyline(linePts).forEach(seg => sPaths.push(seg));
+    }
+  }
+  return { thetaPaths, sPaths };
 }
 
 window.setup = function () {
-  createCanvas(w, h, WEBGL);
+  canvas = createCanvas(w, h, WEBGL); // capture canvas
   createGui();
+  attachViewInput();
 };
 
 window.draw = function () {
   background(10);
-  orbitControl(); // added orbit controls
+  updateViewMatrices(); // apply custom view (replaces orbitControl)
   render();
   // noLoop(); // removed to allow interaction
 };
 
+function exportShellSVG() {
+  const { thetaPaths, sPaths } = collectShellLines();
+  const svgTheta = new SVGDrawing(w, h);
+  thetaPaths.forEach(path => svgTheta.addPath(path));
+  svgTheta.save("shell-lines-theta.svg");
+  const svgS = new SVGDrawing(w, h);
+  sPaths.forEach(path => svgS.addPath(path));
+  svgS.save("shell-lines-s.svg");
+}
+
 window.keyTyped = function () {
   if (key === "s") {
+    exportShellSVG();
+  } else if (key === "p") {
     save("shell-lines-3d.png");
   }
 };
