@@ -378,7 +378,7 @@ function createGui() {
   controllers.push(viewFolder.add(params.View, 'distance', 50, 4000).step(1).name('Distance'));
   controllers.push(viewFolder.add(params.View, 'azimuth', -Math.PI, Math.PI).step(0.001).name('Azimuth'));
   controllers.push(viewFolder.add(params.View, 'elevation', -Math.PI/2+0.01, Math.PI/2-0.01).step(0.001).name('Elevation'));
-  controllers.push(viewFolder.add(params.View, 'fovDeg', 20, 120).step(1).name('FOV (deg)'));
+  controllers.push(viewFolder.add(params.View, 'fovDeg', 1, 120).step(1).name('FOV (deg)'));
   controllers.push(viewFolder.add(params.View, 'near', 0.01, 10).step(0.01).name('Near'));
   controllers.push(viewFolder.add(params.View, 'far', 100, 20000).step(10).name('Far'));
   viewFolder.add({ ResetView: () => {
