@@ -107,83 +107,6 @@ const params = {
       tilt += (sqRand(i) - 0.5) * 0.1 ;
       return tilt;
     }
-  },
-  barbuleParams: {
-    nBarbDivisions: 160,
-    barbColor: "#cacaca",
-    barbMeshBaseWidth: 2,
-    barbMeshTipWidth: 0.95,
-    barbulePatternRepeat: 1, // 27, 10, 1
-    barbulePatternTilt: 0.2,
-
-    barbulePatternSeparation: 0.2, // 1 = one repitition per barbule width
-    barbSpineWidth: 0.1,
-    barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.57,
-    barbuleHardness: 0.4,
-    paletteScale: 1.0,
-    renderType: 0,
-  },
-  spineSolidPass: {
-    enabled: false,
-    baseColor: "#151515",
-    edgeColor: "#a8a6a6",
-    edgeSoftness: 0.25,
-    ridgeSoftness: 0.29,
-    ridgeHighlight: 0.15,
-    tipDarken: 0.85,
-  },
-  spinePatternPass1: {
-    enabled: true,
-    barbColor: "#cacaca",
-    barbSpineWidth: 0.1,
-    barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.37,
-    barbuleHardness: 0.4,
-    barbulePatternRepeat: 2.4,
-    barbulePatternTilt: 0.2,
-    barbulePatternSeparation: 0.51,
-    paletteScale: 1.0,
-    renderType: 1,
-  },
-  barbPatternPass1: {
-    enabled: true,
-    barbColor: "#cacaca",
-    barbSpineWidth: 0.1,
-    barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.53,
-    barbuleHardness: 0.59,
-    barbulePatternRepeat: 7.89,
-    barbulePatternTilt: 0.6,
-    barbulePatternSeparation: 0.13,
-    paletteScale: 1.0,
-    renderType: 1,
-  },
-  barbPatternPass2: {
-    enabled: true,
-    barbColor: "#cacaca",
-    barbSpineWidth: 0.1,
-    barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.57,
-    barbuleHardness: 0.4,
-    barbulePatternRepeat: 1,
-    barbulePatternTilt: 0.2,
-    barbulePatternSeparation: 0.2,
-    paletteScale: 1.0,
-    renderType: 0,
-  },
-  afterFeatherPatternPass1: {
-    enabled: true,
-    barbColor: "#cacaca",
-    barbSpineWidth: 0.1,
-    barbSpineHardness: 0.35,
-    barbuleWidthNorm: 0.5,
-    barbuleHardness: 0.4,
-    barbulePatternRepeat: 1,
-    barbulePatternTilt: 0.06,
-    barbulePatternSeparation: 0.33,
-    paletteScale: 1.0,
-    renderType: 1,
   }
 };
 
@@ -1345,37 +1268,6 @@ function createGui() {
   afterFeatherFolder.add(params.afterFeather, 'baseWidth', 10, 200).step(1).onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'noiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'noiseScaleExp', -2, 4).step(0.001).onChange(() => { refresh(); });
-
-  const shaderFolder = gui.addFolder('Shader');
-  shaderFolder.add(params.spineSolidPass, 'enabled').name('Spine Solid Enabled').onChange(() => { refresh(); });
-  shaderFolder.addColor(params.spineSolidPass, 'baseColor').name('Base Color').onChange(() => { refresh(); });
-  shaderFolder.addColor(params.spineSolidPass, 'edgeColor').name('Edge Color').onChange(() => { refresh(); });
-  shaderFolder.add(params.spineSolidPass, 'edgeSoftness', 0, 1).step(0.01).name('Edge Softness').onChange(() => { refresh(); });
-  shaderFolder.add(params.spineSolidPass, 'ridgeSoftness', 0, 1).step(0.01).name('Ridge Softness').onChange(() => { refresh(); });
-  shaderFolder.add(params.spineSolidPass, 'ridgeHighlight', 0, 1).step(0.01).name('Ridge Highlight').onChange(() => { refresh(); });
-  shaderFolder.add(params.spineSolidPass, 'tipDarken', 0, 1).step(0.01).name('Tip Darken').onChange(() => { refresh(); });
-
-  const barbulesFolder = gui.addFolder('Barbules');
-  barbulesFolder.addColor(params.barbuleParams, 'barbColor').name('Barb Color').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'nBarbDivisions', 1, 200).step(1).name('nBarbDivisions').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbulePatternRepeat', 0, 30).step(0.01).name('barbulePatternRepeat').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbulePatternTilt', -5, 5).step(0.01).name('barbulePatternTilt').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbulePatternSeparation', 0.0, 1.0).step(0.01).name('barbulePatternSeparation').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbMeshBaseWidth', 0.0, 10.0).step(0.01).name('barbMeshBaseWidth').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbMeshTipWidth', 0.0, 10.0).step(0.01).name('barbMeshTipWidth').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbSpineWidth', 0.0, 1.0).step(0.01).name('barbSpineWidth').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbSpineHardness', 0.0, 1.0).step(0.01).name('barbSpineHardness').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbuleWidthNorm', 0.0, 1.0).step(0.01).name('barbuleWidthNorm').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'barbuleHardness', 0.0, 1.0).step(0.01).name('barbuleHardness').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'paletteScale', 0.0, 1.0).step(0.01).name('paletteScale').onChange(() => { refresh(); });
-  barbulesFolder.add(params.barbuleParams, 'renderType', 0, 1).step(1).name('renderType').onChange(() => { refresh(); });
-
-  const barbPatternPass1Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 1', params.barbPatternPass1);
-
-  const barbPatternPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbPatternPass2);
-
-  const spinePatternPass1Folder = createBarbMeshPassGui(gui, 'Spine Pattern Pass 1', params.spinePatternPass1);
-  const afterFeatherPatternPass1Folder = createBarbMeshPassGui(gui, 'AfterFeather Mesh Pass 1', params.afterFeatherPatternPass1);
 }
 
 function refresh() {
