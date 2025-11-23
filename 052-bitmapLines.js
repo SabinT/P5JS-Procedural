@@ -5,11 +5,13 @@
 import { vec2, line2D, lerp2d, PI } from "./lumic/common.js";
 import { clamp01, easeInOutElastic, easeInOutQuad, easeInOutQuart, easeInQuad, easeOutQuad } from "./lumic/easing.js";
 import { Polygon } from "./lumic/geomerty.js";
+import { SVGDrawing } from "./lumic/svg.js";
 
 let size = 10; // Global variable for square size
 let edgeDivisions = 1; 
 
 let img;
+let svg = new SVGDrawing(/* widthMM */ 100, /* heightMM */ 100);
 
 window.preload = function() {
   img = loadImage('../052-artcode80x80-shadow.png');
@@ -65,12 +67,12 @@ function renderFill45(size, divisions, shrink) {
         let B = vec2(y, x); // Reflect arond y=x
 
         // stroke("red");
-        // line2D(A, B);
+        // addToSvgLine2D(A, B);
 
         ({ A, B } = MoveTowardsMid(A, B, shrink));
 
         // stroke("black")
-        line2D(A, B);
+        addToSvgLine2D(A, B);
         y -= slantStep;
     }
 
@@ -82,12 +84,12 @@ function renderFill45(size, divisions, shrink) {
         let B = vec2(y, x); // Reflect around y=x
 
         // stroke("red");
-        // line2D(A, B);
+        // addToSvgLine2D(A, B);
 
         ({ A, B } = MoveTowardsMid(A, B, shrink));
 
         // stroke("black")
-        line2D(A, B);
+        addToSvgLine2D(A, B);
         x -= slantStep;
     }
 }
@@ -121,12 +123,12 @@ function renderFillHorizontal(size, divisions, shrink) {
       let B = vec2(hs, y);
 
       // stroke("red")
-      // line2D(A, B);
+      // addToSvgLine2D(A, B);
 
       ({ A, B } = MoveTowardsMid(A, B, shrink));
 
       // stroke("black")
-      line2D(A, B);
+      addToSvgLine2D(A, B);
       y += step;
   }
 }
@@ -143,12 +145,12 @@ function renderFillVertical(size, divisions, shrink) {
       let B = vec2(x, hs);
 
       // stroke("red")
-      // line2D(A, B);
+      // addToSvgLine2D(A, B);
 
       ({ A, B } = MoveTowardsMid(A, B, shrink));
 
       // stroke("black")
-      line2D(A, B);
+      addToSvgLine2D(A, B);
       x += step;
   }
 }
@@ -210,4 +212,11 @@ function renderCell(x, y, c) {
   }
 
   pop(); // Restore the previous drawing state
+}
+
+function addToSvgLine2D(lineStart, lineEnd) {
+    // TODO
+
+    // Also show a preview in canvas
+    line2D(lineStart, lineEnd);
 }
