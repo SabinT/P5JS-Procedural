@@ -185,20 +185,82 @@ function updateViewMatrices() {
   camera(eye.x, eye.y, eye.z, target.x, target.y, target.z, up.x, up.y, up.z);
 }
 
-function screenPt(x, y, z) {
-  // world -> view
-  const v = multMat4Vec4(viewState.viewMatrix, [x, y, z, 1]);
-  // view -> clip
-  const c = multMat4Vec4(viewState.projectionMatrix, v);
-  const wClip = c[3] === 0 ? 1e-9 : c[3];
-  const ndcX = c[0] / wClip;
-  const ndcY = c[1] / wClip;
-  return {
-    x: (ndcX * 0.5 + 0.5) * width,
-    y: (ndcY * 0.5 + 0.5) * height // removed inversion
-  };
+function ensureViewSynced() {
+  updateViewMatrices();
 }
-// ---- END VIEW ----
+
+function worldToClip(x,y,z){
+  const v = multMat4Vec4(viewState.viewMatrix, [x,y,z,1]);
+  const c = multMat4Vec4(viewState.projectionMatrix, v);
+  return { cx:c[0], cy:c[1], cz:c[2], cw:c[3] };
+}
+
+// Homogeneous segment clip against frustum |x|<=w, |y|<=w, |z|<=w
+function clipSegmentFrustumHomogeneous(a,b){
+  let t0 = 0, t1 = 1;
+  const planes = [
+    {axis:'x', sign:+1}, // x - w <= 0
+    {axis:'x', sign:-1}, // -x - w <= 0
+    {axis:'y', sign:+1},
+    {axis:'y', sign:-1},
+    {axis:'z', sign:+1},
+    {axis:'z', sign:-1},
+  ];
+  // Helpers to access components
+  function comp(pt, axis){ return axis==='x'?pt.cx:(axis==='y'?pt.cy:pt.cz); }
+  function evalPlane(pt, p){ return p.sign*comp(pt,p.axis) - pt.cw; } // inside if <=0
+  const dcx = b.cx - a.cx, dcy = b.cy - a.cy, dcz = b.cz - a.cz, dcw = b.cw - a.cw;
+  for (const p of planes){
+    const f0 = evalPlane(a,p);
+    const f1 = evalPlane(b,p);
+    if (f0 > 0 && f1 > 0) return null; // entirely outside
+    if (f0 <= 0 && f1 <= 0) continue;  // entirely inside
+    // Solve f(t)=0: (sign*(c0 + t dc) - (w0 + t dw)) = 0
+    const c0 = comp(a,p.axis);
+    const dc = (p.axis==='x'?dcx:(p.axis==='y'?dcy:dcz));
+    const numerator = a.cw - p.sign*c0;
+    const denom = p.sign*dc - dcw;
+    if (Math.abs(denom) < 1e-9){
+      // Parallel to plane: keep the inside portion only (already handled above)
+      continue;
+    }
+    const t = numerator / denom;
+    if (f0 > 0){ // entering
+      if (t > t1 || t < t0) return null;
+      t0 = Math.max(t0, t);
+    } else {    // exiting
+      if (t > t1 || t < t0) return null;
+      t1 = Math.min(t1, t);
+    }
+    if (t0 > t1) return null;
+  }
+  function lerpClip(t){
+    return {
+      cx: a.cx + t*dcx,
+      cy: a.cy + t*dcy,
+      cz: a.cz + t*dcz,
+      cw: a.cw + t*dcw
+    };
+  }
+  return [ lerpClip(t0), lerpClip(t1) ];
+}
+
+function clipAndProjectSegment(aWorld, bWorld){
+  const ca = worldToClip(aWorld.x, aWorld.y, aWorld.z);
+  const cb = worldToClip(bWorld.x, bWorld.y, bWorld.z);
+  const clipped = clipSegmentFrustumHomogeneous(ca, cb);
+  if (!clipped) return null;
+  // Perspective divide -> screen
+  return clipped.map(c=>{
+    const wClip = c.cw === 0 ? 1e-9 : c.cw;
+    const ndcX = c.cx / wClip;
+    const ndcY = c.cy / wClip;
+    return {
+      x: (ndcX * 0.5 + 0.5) * width,
+      y: (ndcY * 0.5 + 0.5) * height
+    };
+  });
+}
 
 // ---- SIMPLE INPUT FOR VIEW (drag rotate, wheel zoom) ----
 let draggingView = false;
@@ -401,33 +463,47 @@ function clipPolyline(points) {
   return paths;
 }
 function collectShellLines() {
+  ensureViewSynced();
   const grid = params.Grid;
   const thetaPaths = [];
   const sPaths = [];
+
+  // Helper to process a polyline of world points into clipped screen-space segments
+  function processPolyline(worldPts, accumulator){
+    for (let i=0;i<worldPts.length-1;i++){
+      const seg = clipAndProjectSegment(worldPts[i], worldPts[i+1]);
+      if (!seg) continue;
+      // seg now two screen points; viewport clip (2D) already handled by clipSegmentFrustumHomogeneous for frustum,
+      // but we still crop to canvas bounds with existing Liang-Barsky if desired:
+      const clipped2d = clipSegment(seg[0], seg[1]);
+      if (clipped2d){
+        accumulator.push(clipped2d);
+      }
+    }
+  }
+
   if (grid.showTheta) {
     for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
       const theta = thetaMax * ti / grid.divisionsTheta;
-      const linePts = [];
+      const worldPts = [];
       for (let si = 0; si <= grid.divisionsS; si++) {
         const s = TWOPI * si / grid.divisionsS;
         const p = getPosition(params, s, theta);
-        const sp = screenPt(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
-        linePts.push(sp);
+        worldPts.push({x:p.x*scaleFactor, y:p.y*scaleFactor, z:p.z*scaleFactor});
       }
-      clipPolyline(linePts).forEach(seg => thetaPaths.push(seg));
+      processPolyline(worldPts, thetaPaths);
     }
   }
   if (grid.showS) {
     for (let si = 0; si < grid.divisionsS; si++) {
       const s = TWOPI * si / grid.divisionsS;
-      const linePts = [];
+      const worldPts = [];
       for (let ti = 0; ti <= grid.divisionsTheta; ti++) {
         const theta = thetaMax * ti / grid.divisionsTheta;
         const p = getPosition(params, s, theta);
-        const sp = screenPt(p.x * scaleFactor, p.y * scaleFactor, p.z * scaleFactor);
-        linePts.push(sp);
+        worldPts.push({x:p.x*scaleFactor, y:p.y*scaleFactor, z:p.z*scaleFactor});
       }
-      clipPolyline(linePts).forEach(seg => sPaths.push(seg));
+      processPolyline(worldPts, sPaths);
     }
   }
   return { thetaPaths, sPaths };
@@ -462,6 +538,7 @@ function downloadJSON(filename, obj) {
 }
 
 function exportAll() {
+  ensureViewSynced();
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const base = `shell-lines-${ts}`;
   // SVGs
