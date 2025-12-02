@@ -694,6 +694,9 @@ class Feather {
     if (Debug.enabled) {
       this.debugDraw();
     }
+
+    this.svgDrawing.scaleContentsToFit(/* margin (mm): */ 3);
+    this.svgDrawing.addOutline();
   }
 
   drawSpine() {
@@ -897,8 +900,6 @@ window.draw = function () {
 window.keyTyped = function () {
   if (key === "s") {
     // save(`feather_${params.randomSeed}.png`);
-    feather.svgDrawing.scaleContentsToFit(/* margin (mm): */ 3);
-    feather.svgDrawing.addOutline();
     feather.svgDrawing.save(`feather_${params.randomSeed}.svg`);
   }
 

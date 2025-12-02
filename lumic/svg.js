@@ -2,9 +2,10 @@ import { Frame2D } from "./frame.js";
 import { add2d, sub2d, vec2, TAU } from "./common.js";
 
 export class SVGDrawing {
-    constructor(widthMM, heightMM) {
+    constructor(widthMM, heightMM, strokeWidthMM = 0.5) {
         this.widthMM = widthMM;
         this.heightMM = heightMM;
+        this.strokeWidthMM = strokeWidthMM; // stroke width for all paths, in mm
         this.paths = [];
         // Track bounding box in mm space
         this._bbox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
@@ -105,7 +106,7 @@ export class SVGDrawing {
                 const d = path
                     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`)
                     .join(' ');
-                return `    <path d="${d}" fill="none" stroke="black" stroke-width="0.5"/>`;
+                return `    <path d="${d}" fill="none" stroke="black" stroke-width="${this.strokeWidthMM}"/>`;
             })
             .join('\n');
 
