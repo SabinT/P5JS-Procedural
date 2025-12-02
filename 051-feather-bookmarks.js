@@ -6,23 +6,10 @@ import { CubicHermite2D } from "./lumic/hermite.js";
 import { centerCanvas, setCanvasZIndex } from "./lumic/p5Extensions.js";
 import { Frame2D } from "./lumic/frame.js";
 import { drawPath, drawPathWithGradient, getTangents, resamplePathUniform, rotateAbout, rotateTowards } from "./lumic/geomerty.js";
-// Remove unused shader imports
-import { barbVert, barbFrag } from "./049-feather3-barb-shader.js";
 import { SVGDrawing } from "./lumic/svg.js";
-// import * as dat from 'libraries/dat.gui.min.js';
+import { inchesToMM } from "./lumic/units.js";
 
-// Interesting links / related materials:
-// https://eyosido.com/hairtg-feather
-
-// Outline of the feather:
-// Feather contains:
-// - A spine (hermite spline - p0,m1,p1,m1)
-// - Tendrils (on both sides)
-//   - grouped into clumps
-//   - some properties are randomized per clump (ic = clump index)
-//   - some properties are graded per clump (tc = 0-1 along clump)
-//   - some peroperties are graded per feather (tf = 0-1 along feather)
-
+const dpi = 100;
 const w = 600;
 const hw = w / 2;
 const h = 150;
@@ -65,8 +52,8 @@ spineCurve
 
 const params = {
   randomSeed: Math.random() * 0xFFFFFFFF,
-  svgWidthMM: 297,
-  svgHeightMM: 210,
+  svgWidthMM: inchesToMM(w / dpi),
+  svgHeightMM: inchesToMM(h / dpi),
   spineCurve: spineCurve,
   // Bend controls (degrees)
   spineStartBendDeg: 15,
@@ -909,9 +896,15 @@ window.draw = function () {
 
 window.keyTyped = function () {
   if (key === "s") {
-    save(`feather_${params.randomSeed}.png`);
-
+    // save(`feather_${params.randomSeed}.png`);
+    feather.svgDrawing.scaleContentsToFit(/* margin (mm): */ 3);
+    feather.svgDrawing.addOutline();
     feather.svgDrawing.save(`feather_${params.randomSeed}.svg`);
+  }
+
+  if (key === "r") {
+    randomizeParams();
+    refresh();
   }
 };
 

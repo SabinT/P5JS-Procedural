@@ -6,6 +6,23 @@ export class SVGDrawing {
         this.widthMM = widthMM;
         this.heightMM = heightMM;
         this.paths = [];
+        // Track bounding box in mm space
+        this._bbox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    }
+
+    _extendBBox(pts) {
+        for (const p of pts) {
+            if (!p) continue;
+            if (p.x < this._bbox.minX) this._bbox.minX = p.x;
+            if (p.y < this._bbox.minY) this._bbox.minY = p.y;
+            if (p.x > this._bbox.maxX) this._bbox.maxX = p.x;
+            if (p.y > this._bbox.maxY) this._bbox.maxY = p.y;
+        }
+    }
+
+    _recomputeBBox() {
+        this._bbox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        for (const path of this.paths) { this._extendBBox(path); }
     }
 
     addPath(pts, /* vec2 */ remapFromResolution = null) {
@@ -15,9 +32,52 @@ export class SVGDrawing {
             const scaleY = this.heightMM / remapFromResolution.y;
             const scaledPts = pts.map(p => vec2(p.x * scaleX, p.y * scaleY));
             this.paths.push(scaledPts);
+            this._extendBBox(scaledPts);
         } else {
             this.paths.push(pts);
+            this._extendBBox(pts);
         }
+    }
+
+    // Uniformly scale + center all paths to fit inside the SVG (widthMM/heightMM) with margin (in mm)
+    // margin: distance from edges after fitting
+    scaleContentsToFit(margin = 0) {
+        this._recomputeBBox();
+        const { minX, minY, maxX, maxY } = this._bbox;
+        if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return; // nothing to scale
+        const srcW = Math.max(1e-9, maxX - minX);
+        const srcH = Math.max(1e-9, maxY - minY);
+        const tgtW = Math.max(0, this.widthMM - 2 * margin);
+        const tgtH = Math.max(0, this.heightMM - 2 * margin);
+        if (tgtW <= 0 || tgtH <= 0) return;
+        const scale = Math.min(tgtW / srcW, tgtH / srcH);
+        // After scaling, compute offset to center within target rect
+        const scaledW = srcW * scale;
+        const scaledH = srcH * scale;
+        const offsetX = margin + (tgtW - scaledW) * 0.5;
+        const offsetY = margin + (tgtH - scaledH) * 0.5;
+        for (let pi = 0; pi < this.paths.length; pi++) {
+            const path = this.paths[pi];
+            for (let i = 0; i < path.length; i++) {
+                const p = path[i];
+                const nx = (p.x - minX) * scale + offsetX;
+                const ny = (p.y - minY) * scale + offsetY;
+                path[i] = vec2(nx, ny);
+            }
+        }
+        this._recomputeBBox();
+    }
+
+    // Add a closed rectangle outline along the SVG edges (in mm)
+    addOutline() {
+        const pts = [
+            vec2(0, 0),
+            vec2(this.widthMM, 0),
+            vec2(this.widthMM, this.heightMM),
+            vec2(0, this.heightMM),
+            vec2(0, 0), // close
+        ];
+        this.addPath(pts);
     }
 
     save(filename = 'drawing.svg') {
