@@ -937,6 +937,39 @@ function getClumpColor(i) {
   return c;
 }
 
+// Centralized ranges for GUI controls
+const paramRanges = {
+  spineDivisions: { min: 10, max: 300, step: 1 },
+  spineEnd: { min: 0.5, max: 1, step: 0.01 },
+  spineBaseWidth: { min: 1, max: 100, step: 1 },
+  afterFeatherStart: { min: 0, max: 1, step: 0.01 },
+  afterFeatherEnd: { min: 0, max: 1, step: 0.01 },
+  spineStartBendDeg: { min: -40, max: 40, step: 0.1 },
+  spineEndBendDeg: { min: -40, max: 40, step: 0.1 },
+
+  vaneBaseWidth: { min: 10, max: 300, step: 1 },
+  vaneBreaks: { min: 0, max: 100, step: 1 },
+  vaneBreakSymmetry: { min: 0, max: 1, step: 0.01 },
+  vaneBreakEnd: { min: 0, max: 1, step: 0.01 },
+  vaneNoiseLevelExp: { min: -2, max: 2, step: 0.01 },
+  vaneNoiseScaleExp: { min: -2, max: 4, step: 0.001 },
+  clumpCohesionStart: { min: -2, max: 2, step: 0.01 },
+  clumpCohesionEnd: { min: -2, max: 2, step: 0.01 },
+  clumpNoiseLevel: { min: 0, max: 2, step: 0.001 },
+  clumpNoiseScaleExp: { min: 2, max: 3, step: 0.001 },
+  barbInnerNoiseLevel: { min: 0, max: 1, step: 0.001 },
+  barbInnerNoiseScaleExp: { min: 0, max: 3, step: 0.001 },
+
+  nBarbs: { min: 40, max: 150, step: 1 },
+  barbTiltStart: { min: 0, max: 0.6, step: 0.01 },
+
+  afterFeather_enabled: { /* boolean toggle */ },
+  afterFeather_nBarbs: { min: 1, max: 100, step: 1 },
+  afterFeather_baseWidth: { min: 10, max: 200, step: 1 },
+  afterFeather_noiseLevelExp: { min: -2, max: 2, step: 0.01 },
+  afterFeather_noiseScaleExp: { min: -2, max: 4, step: 0.001 },
+};
+
 function createGui() {
   gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
   gui.add(params, 'randomSeed', 0, 2147483647).step(1).name('Random Seed').onFinishChange(() => { refresh(); });
@@ -951,58 +984,40 @@ function createGui() {
   };
   gui.add(seedUi, 'RerollSeed').name('🎲 Reseed');
 
-  const debugFolder = gui.addFolder('Debug');
-  debugFolder.add(debugDrawToggles, 'spine').name('Draw Spine').onChange(() => { refresh(); });
-  debugFolder.add(debugDrawToggles, 'vane').name('Draw Vane').onChange(() => { refresh(); });
-  debugFolder.add(debugDrawToggles, 'barbs').name('Draw Barbs').onChange(() => { refresh(); });
-  debugFolder.add(debugDrawToggles, 'barbTangents').name('Draw Barb Tangents').onChange(() => { refresh(); });
-  debugFolder.add(debugDrawToggles, 'afterFeather').name('Draw Afterfeather').onChange(() => { refresh(); });
-
   const paramsFolder = gui.addFolder('Feather Params');
-  paramsFolder.add(params, 'spineDivisions', 10, 300).step(1).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'spineEnd', 0.5, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  paramsFolder.add(params, 'spineStartBendDeg', -40, 40).step(0.1).name('Start Bend (deg)').onChange(() => { refresh(); });
-  paramsFolder.add(params, 'spineEndBendDeg', -40, 40).step(0.1).name('End Bend (deg)').onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineDivisions', paramRanges.spineDivisions.min, paramRanges.spineDivisions.max).step(paramRanges.spineDivisions.step).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineEnd', paramRanges.spineEnd.min, paramRanges.spineEnd.max).step(paramRanges.spineEnd.step).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineBaseWidth', paramRanges.spineBaseWidth.min, paramRanges.spineBaseWidth.max).step(paramRanges.spineBaseWidth.step).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'afterFeatherStart', paramRanges.afterFeatherStart.min, paramRanges.afterFeatherStart.max).step(paramRanges.afterFeatherStart.step).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'afterFeatherEnd', paramRanges.afterFeatherEnd.min, paramRanges.afterFeatherEnd.max).step(paramRanges.afterFeatherEnd.step).onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineStartBendDeg', paramRanges.spineStartBendDeg.min, paramRanges.spineStartBendDeg.max).step(paramRanges.spineStartBendDeg.step).name('Start Bend (deg)').onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineEndBendDeg', paramRanges.spineEndBendDeg.min, paramRanges.spineEndBendDeg.max).step(paramRanges.spineEndBendDeg.step).name('End Bend (deg)').onChange(() => { refresh(); });
 
   const clumpingFolder = gui.addFolder('Clumping');
-  clumpingFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'vaneBreaks', 0, 100).step(1).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'vaneBreakSymmetry', 0, 1).step(0.01).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'vaneBreakEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'vaneNoiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'vaneNoiseScaleExp', -2, 4).step(0.001).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'clumpCohesionStart', -2, 2).step(0.01).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'clumpCohesionEnd', -2, 2).step(0.01).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'clumpNoiseLevel', 0, 2).step(0.001).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'clumpNoiseScaleExp', 2, 3).step(0.001).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'barbInnerNoiseLevel', 0, 1).step(0.001).onChange(() => { refresh(); });
-  clumpingFolder.add(params, 'barbInnerNoiseScaleExp', 0, 3).step(0.001).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBaseWidth', paramRanges.vaneBaseWidth.min, paramRanges.vaneBaseWidth.max).step(paramRanges.vaneBaseWidth.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreaks', paramRanges.vaneBreaks.min, paramRanges.vaneBreaks.max).step(paramRanges.vaneBreaks.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreakSymmetry', paramRanges.vaneBreakSymmetry.min, paramRanges.vaneBreakSymmetry.max).step(paramRanges.vaneBreakSymmetry.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneBreakEnd', paramRanges.vaneBreakEnd.min, paramRanges.vaneBreakEnd.max).step(paramRanges.vaneBreakEnd.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneNoiseLevelExp', paramRanges.vaneNoiseLevelExp.min, paramRanges.vaneNoiseLevelExp.max).step(paramRanges.vaneNoiseLevelExp.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'vaneNoiseScaleExp', paramRanges.vaneNoiseScaleExp.min, paramRanges.vaneNoiseScaleExp.max).step(paramRanges.vaneNoiseScaleExp.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpCohesionStart', paramRanges.clumpCohesionStart.min, paramRanges.clumpCohesionStart.max).step(paramRanges.clumpCohesionStart.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpCohesionEnd', paramRanges.clumpCohesionEnd.min, paramRanges.clumpCohesionEnd.max).step(paramRanges.clumpCohesionEnd.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpNoiseLevel', paramRanges.clumpNoiseLevel.min, paramRanges.clumpNoiseLevel.max).step(paramRanges.clumpNoiseLevel.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'clumpNoiseScaleExp', paramRanges.clumpNoiseScaleExp.min, paramRanges.clumpNoiseScaleExp.max).step(paramRanges.clumpNoiseScaleExp.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'barbInnerNoiseLevel', paramRanges.barbInnerNoiseLevel.min, paramRanges.barbInnerNoiseLevel.max).step(paramRanges.barbInnerNoiseLevel.step).onChange(() => { refresh(); });
+  clumpingFolder.add(params, 'barbInnerNoiseScaleExp', paramRanges.barbInnerNoiseScaleExp.min, paramRanges.barbInnerNoiseScaleExp.max).step(paramRanges.barbInnerNoiseScaleExp.step).onChange(() => { refresh(); });
 
   const barbsFolder = gui.addFolder('Barbs');
-  barbsFolder.add(params, 'nBarbs', 1, 500).step(1).onChange(() => { refresh(); });
-  barbsFolder.add(params, 'barbTiltStart', 0, 1).step(0.01).onChange(() => { refresh(); });
+  barbsFolder.add(params, 'nBarbs', paramRanges.nBarbs.min, paramRanges.nBarbs.max).step(paramRanges.nBarbs.step).onChange(() => { refresh(); });
+  barbsFolder.add(params, 'barbTiltStart', paramRanges.barbTiltStart.min, paramRanges.barbTiltStart.max).step(paramRanges.barbTiltStart.step).onChange(() => { refresh(); });
 
   const afterFeatherFolder = gui.addFolder('Afterfeather');
   afterFeatherFolder.add(params.afterFeather, 'enabled').name('Enabled').onChange(() => { refresh(); });
-  afterFeatherFolder.add(params.afterFeather, 'nBarbs', 1, 100).step(1).onChange(() => { refresh(); });
-  afterFeatherFolder.add(params.afterFeather, 'baseWidth', 10, 200).step(1).onChange(() => { refresh(); });
-  afterFeatherFolder.add(params.afterFeather, 'noiseLevelExp', -2, 2).step(0.01).onChange(() => { refresh(); });
-  afterFeatherFolder.add(params.afterFeather, 'noiseScaleExp', -2, 4).step(0.001).onChange(() => { refresh(); });
-
-  // Removed shader folder and barbules shader controls
+  afterFeatherFolder.add(params.afterFeather, 'nBarbs', paramRanges.afterFeather_nBarbs.min, paramRanges.afterFeather_nBarbs.max).step(paramRanges.afterFeather_nBarbs.step).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'baseWidth', paramRanges.afterFeather_baseWidth.min, paramRanges.afterFeather_baseWidth.max).step(paramRanges.afterFeather_baseWidth.step).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'noiseLevelExp', paramRanges.afterFeather_noiseLevelExp.min, paramRanges.afterFeather_noiseLevelExp.max).step(paramRanges.afterFeather_noiseLevelExp.step).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'noiseScaleExp', paramRanges.afterFeather_noiseScaleExp.min, paramRanges.afterFeather_noiseScaleExp.max).step(paramRanges.afterFeather_noiseScaleExp.step).onChange(() => { refresh(); });
 }
-
-// Remove createBarbMeshPassGui calls
-// const barbPatternPass1Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 1', params.barbPatternPass1);
-// const barbPatternPass2Folder = createBarbMeshPassGui(gui, 'Barb Mesh Pass 2', params.barbPatternPass2);
-// const spinePatternPass1Folder = createBarbMeshPassGui(gui, 'Spine Pattern Pass 1', params.spinePatternPass1);
-// const afterFeatherPatternPass1Folder = createBarbMeshPassGui(gui, 'AfterFeather Mesh Pass 1', params.afterFeatherPatternPass1);
-
-// Remove createBarbMeshPassGui itself if unused
-function createBarbMeshPassGui() { /* removed unused */ }
 
 function refresh() {
   setupDebugParams();
