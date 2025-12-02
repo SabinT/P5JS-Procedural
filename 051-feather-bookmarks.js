@@ -771,314 +771,74 @@ class Feather {
 
   drawSpine() {
     push();
-    blendMode(BLEND);
-    resetToAlphaBlending();
-    // blendMode(ADD);
-    // enableAdditiveBlending();
+    noFill();
+    stroke(255);
+    strokeWeight(1);
 
-    noStroke();
-
-    // Use a shader that draws a gradient based on uv.y (solid spine pass)
-    if (this.params.spineSolidPass && this.params.spineSolidPass.enabled) {
-      shader(spineShaderSolid);
-      const sParams = this.params.spineSolidPass;
-      spineShaderSolid.setUniform('uBaseColor', rgba01FromHex(sParams.baseColor));
-      spineShaderSolid.setUniform('uEdgeColor', rgba01FromHex(sParams.edgeColor));
-      spineShaderSolid.setUniform('uEdgeSoftness', sParams.edgeSoftness);
-      spineShaderSolid.setUniform('uTipDarken', sParams.tipDarken);
-      spineShaderSolid.setUniform('uRidgeSoftness', sParams.ridgeSoftness);
-      spineShaderSolid.setUniform('uRidgeHighlight', sParams.ridgeHighlight);
-      spineShaderSolid.setUniform('uDebug', debugDrawToggles.spineShaderSolid ? 1 : 0);
-
-      // Construct a shape with UVs for the spine
-      // Squeeze the starting tip to a point over a very short distance
-      beginShape(TRIANGLE_STRIP);
-      for (let i = 0; i < this.spine.length; i++) {
-        const t = i / (this.spine.length - 1);
-        const p = this.spine[i];
-
-        const squeeze = smoothstep(0, 0.05, t);
-
-        const d = p.width * 0.5 * squeeze;
-        const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
-        const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-        vertex(r.x, r.y, 0, 0.5, t);
-        vertex(l.x, l.y, 0, -0.5, t);
-      }
-      endShape();
-
-      resetShader();
-      resetToAlphaBlending();
+    // Build spine outline once and draw it
+    const outlinePoints = [];
+    // Right edge
+    for (let i = 0; i < this.spine.length; i++) {
+      const t = i / (this.spine.length - 1);
+      const p = this.spine[i];
+      const squeeze = smoothstep(0, 0.05, t);
+      let d = p.width * 0.5 * squeeze;
+      d = remap(0, 1, 0.05, 1.1, d);
+      const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
+      outlinePoints.push(r);
+    }
+    // Left edge (backwards)
+    for (let i = this.spine.length - 1; i >= 0; i--) {
+      const t = i / (this.spine.length - 1);
+      const p = this.spine[i];
+      const squeeze = smoothstep(0, 0.05, t);
+      let d = p.width * 0.5 * squeeze;
+      d = remap(0, 1, 0.05, 1.1, d);
+      const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
+      outlinePoints.push(l);
+    }
+    if (outlinePoints.length > 0) {
+      outlinePoints.push(outlinePoints[0]);
     }
 
-    // Additional pass with barb pattern shader (spine pattern)
-    // if (this.params.spinePatternPass1 && this.params.spinePatternPass1.enabled) {
-    //   blendMode(ADD);
-    //   enableAdditiveBlending();
-
-    //   shader(barbMeshShader);
-    //   setBarbPatternShader(barbMeshShader, this.params.spinePatternPass1);
-    //   setBarbPositionInShader(barbMeshShader, { tAlongSpine: 0 }); // dummy barb for position
-
-    //   beginShape(TRIANGLE_STRIP);
-    //   for (let i = 0; i < this.spine.length; i++) {
-    //     const t = i / (this.spine.length - 1);
-    //     const p = this.spine[i];
-
-    //     const squeeze = smoothstep(0, 0.05, t);
-
-    //     let d = p.width * 0.5 * squeeze;
-    //     d = remap(0, 1, 0.05, 1.1, d);
-    //     const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
-    //     const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-    //     vertex(r.x, r.y, 0, 0.5, t);
-    //     vertex(l.x, l.y, 0, -0.5, t);
-    //   }
-    //   endShape();
-
-    //   resetShader();
-    //   resetToAlphaBlending();
-    // }
-
-    if (this.params.spinePatternPass1 && this.params.spinePatternPass1.enabled) {
-      const outlinePoints = [];
-      
-      // Forward pass along right edge
-      for (let i = 0; i < this.spine.length; i++) {
-        const t = i / (this.spine.length - 1);
-        const p = this.spine[i];
-        const squeeze = smoothstep(0, 0.05, t);
-        let d = p.width * 0.5 * squeeze;
-        d = remap(0, 1, 0.05, 1.1, d);
-        const r = add2d(p.frame.origin, scale2d(p.frame.right, d));
-        outlinePoints.push(r);
-      }
-      
-      // Backward pass along left edge
-      for (let i = this.spine.length - 1; i >= 0; i--) {
-        const t = i / (this.spine.length - 1);
-        const p = this.spine[i];
-        const squeeze = smoothstep(0, 0.05, t);
-        let d = p.width * 0.5 * squeeze;
-        d = remap(0, 1, 0.05, 1.1, d);
-        const l = add2d(p.frame.origin, scale2d(p.frame.right, -d));
-        outlinePoints.push(l);
-      }
-      
-      // Close the loop by connecting back to first point
-      if (outlinePoints.length > 0) {
-        outlinePoints.push(outlinePoints[0]);
-      }
-      
-      // Draw as a single continuous line
-      noFill();
-      stroke(200);
-      strokeWeight(1);
-      drawPath(outlinePoints);
-
-      this.svgDrawing.addPath(outlinePoints, /* remapFromResolution: */ vec2(width, height));
-    }
-
+    drawPath(outlinePoints);
+    this.svgDrawing.addPath(outlinePoints, vec2(width, height));
     pop();
   }
 
   drawBarbMesh(barb, index) {
-    push();
-    blendMode(ADD);
-    noStroke();
-
-    if (!barbMeshShader || !barb || !barb.pts || barb.pts.length < 2) {
-      pop();
-      return;
-    }
-
-    const origPts = barb.pts;
-    const points = resamplePathUniform(origPts);
-    const tangents = getTangents(points);
-
-    // const clumpColor = getClumpColor(barb.clumpIndex);
-    const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
-    const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
-    // const uvYRepeat = params.barbuleParams.barbulePatternRepeat;
-
-    // Estimate gap based on full render params (robust even with sparse debug barbs)
-    let meshGap = this.getExpectedBarbSameSideRootGap(barb);
-
-    // const colorVec = rgba01FromColor(color("gray"));
-    const colorVec = rgba01FromHex(this.params.barbuleParams.barbColor);
-
-    // If the barb pattern pass is disabled, skip the shader pass (no mesh shading)
-    if (!this.params.barbPatternPass1 || !this.params.barbPatternPass1.enabled) {
-      // When disabled, draw a simple filled mesh without the shader
-      beginShape(TRIANGLE_STRIP);
-    } else {
-      // Enable additive blending for shaders
-      enableAdditiveBlending();
-
-      shader(barbMeshShader);
-      setBarbPatternShader(barbMeshShader, this.params.barbPatternPass1);
-      setBarbPositionInShader(barbMeshShader, barb);
-
-      beginShape(TRIANGLE_STRIP);
-    }
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i];
-      const last = points.length - 1;
-
-      let tangent = tangents[i];
-
-      let dir = normalize2d(tangent);
-      if (!Number.isFinite(dir.x) || !Number.isFinite(dir.y)) {
-        dir = vec2(1, 0);
-      }
-
-      // Ensure normal points in consistent direction
-      let normal = vec2(-dir.y, dir.x);
-
-      // If we have barb frame info, make sure normal points in right direction
-      if (barb.frame && barb.frame.right) {
-        const dot = normal.x * barb.frame.right.x + normal.y * barb.frame.right.y;
-        if (dot < 0) {
-          normal = vec2(-normal.x, -normal.y);
-        }
-      }
-
-      const t = last > 0 ? i / last : 0;
-      const widthFactor = lerp(barbMeshWidthBaseFactor, barbMeshWidthTipFactor, t);
-      const halfWidth = 0.5 * meshGap * widthFactor;
-
-      const offset = scale2d(normal, halfWidth);
-      const right = add2d(p, offset);
-      const left = add2d(p, scale2d(offset, -1));
-
-      // Consistent vertex order: right first, then left (like spine)
-      vertex(right.x, right.y, 0, 0.5, t);   // U=0.5 for right edge
-      vertex(left.x, left.y, 0, -0.5, t);    // U=-0.5 for left edge
-    }
-    endShape();
-
-    resetToAlphaBlending();
-
-    // If we used the shader, reset it
-    if (this.params.barbPatternPass1 && this.params.barbPatternPass1.enabled) {
-      resetShader();
-    }
-
-    pop();
+    // Mesh/shader rendering removed for this simplified sketch
   }
 
+  // Simplified barbs: white polylines only
   drawBarbs() {
     push();
-    blendMode(ADD);
+    noFill();
+    stroke(255);
+    strokeWeight(1);
 
-    for (let i = 0; i < this.vaneBarbs.length - 6; i++) {
-      // if (i < 82) { continue; } // TEMPORARY
-
+    for (let i = 0; i < this.vaneBarbs.length; i++) {
       const barb = this.vaneBarbs[i];
-      // barb.spline.Draw();
-
-      // if (!Debug.enabled || debugDrawToggles.barbMesh) {
-      //   this.drawBarbMesh(barb, i);
-      //   continue;
-      // }
-
-      const pts = barb.pts;
-
-      noFill();
-      let barbColor;
-      if (debugDrawToggles.colorizeByClump) {
-        const clumpColor = getClumpColor(barb.clumpIndex);
-        barbColor = lerpColor(clumpColor, color(255), barb.tAlongClump);
-        let barbEndColor = lerpColor(barbColor, color(255), 1);
-        drawPathWithGradient(pts, barbColor, barbEndColor);
-      } else {
-        barbColor = color(200);
-        stroke(barbColor);
-        drawPath(pts);
-      }
-
-      this.svgDrawing.addPath(pts, /* remapFromResolution: */ vec2(width, height));
+      if (!barb || !barb.pts) continue;
+      drawPath(barb.pts);
+      this.svgDrawing.addPath(barb.pts, vec2(width, height));
     }
 
     pop();
   }
 
+  // Simplified afterfeather: white polylines only
   drawAfterfeather() {
     push();
-    // If an afterfeather mesh pass is enabled, render it using the barb mesh shader.
-    // const drawMesh = this.params.afterFeatherPatternPass1 && this.params.afterFeatherPatternPass1.enabled;
-    const drawMesh = false;
-    if (drawMesh) {
-      blendMode(ADD);
-      enableAdditiveBlending();
+    noFill();
+    stroke(255);
+    strokeWeight(1);
 
-      for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
-        const barb = this.afterFeatherBarbs[i];
-        if (!barb || !barb.pts || barb.pts.length < 2) continue;
-
-        const points = resamplePathUniform(barb.pts);
-        const tangents = getTangents(points);
-        // const points = barb.pts;
-        const passParams = this.params.afterFeatherPatternPass1;
-        const meshGap = this.getExpectedAfterfeatherSameSideRootGap(barb);
-
-        // Width factors reused from main barbule params for consistency
-        const barbMeshWidthBaseFactor = params.barbuleParams.barbMeshBaseWidth;
-        const barbMeshWidthTipFactor = params.barbuleParams.barbMeshTipWidth;
-
-        shader(barbMeshShader);
-        setBarbPatternShader(barbMeshShader, passParams);
-        barbMeshShader.setUniform('uBarbIndex', i);
-
-        beginShape(TRIANGLE_STRIP);
-        for (let j = 0; j < points.length; j++) {
-          const p = points[j];
-          const last = points.length - 1;
-
-          // Central difference tangent
-          let tangent = tangents[j];
-          let dir = normalize2d(tangent);
-
-          if (dir.x === 0 && dir.y === 0) { 
-            continue; 
-          }
-
-          let normal = vec2(-dir.y, dir.x);
-
-          // Orient normal consistently with barb frame
-          if (barb.frame && barb.frame.right) {
-            const dot = normal.x * barb.frame.right.x + normal.y * barb.frame.right.y;
-            if (dot < 0) normal = vec2(-normal.x, -normal.y);
-          }
-
-          const t = last > 0 ? j / last : 0;
-          const widthFactor = lerp(barbMeshWidthBaseFactor, barbMeshWidthTipFactor, t);
-          const halfWidth = 0.5 * meshGap * widthFactor;
-
-          const offset = scale2d(normal, halfWidth);
-          const right = add2d(p, offset);
-          const left = add2d(p, scale2d(offset, -1));
-
-          vertex(right.x, right.y, 0, 0.5, t);
-          vertex(left.x, left.y, 0, -0.5, t);
-        }
-        endShape();
-
-        resetShader();
-      }
-      // Restore standard blending after the mesh pass
-      resetToAlphaBlending();
-    } else {
-      // Fallback: simple stroke rendering of afterfeather curves
-      stroke(200);
-      for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
-        const barb = this.afterFeatherBarbs[i];
-        if (!barb || !barb.pts) continue;
-        noFill();
-        stroke(200);
-        drawPath(barb.pts);
-        this.svgDrawing.addPath(barb.pts, /* remapFromResolution: */ vec2(width, height));
-      }
+    for (let i = 0; i < this.afterFeatherBarbs.length; i++) {
+      const barb = this.afterFeatherBarbs[i];
+      if (!barb || !barb.pts) continue;
+      drawPath(barb.pts);
+      this.svgDrawing.addPath(barb.pts, vec2(width, height));
     }
 
     pop();
@@ -1197,14 +957,6 @@ window.setup = function () {
 
   feather = new Feather(Debug.enabled ? debugParams : params);
   feather.build();
-
-  // Needed to enable fwidth
-  drawingContext.getExtension('OES_standard_derivatives');
-
-  spineShaderSolid = createShader(spineVert, spineFragSolid);
-  barbMeshShader = createShader(barbVert, barbFrag);
-
-  disableDepthTest(drawingContext);
 };
 
 window.draw = function () {
@@ -1225,29 +977,9 @@ window.keyTyped = function () {
   }
 };
 
-function resetToAlphaBlending(gl = drawingContext)
-{
-    gl.enable(gl.BLEND);
-    gl.blendEquation(gl.FUNC_ADD);
-
-    const isPMA = gl.getContextAttributes()?.premultipliedAlpha === true;
-
-    if (isPMA)
-    {
-        // Premultiplied alpha canvas/textures
-        gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    }
-    else
-    {
-        // Straight (unpremultiplied) alpha
-        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    }
-}
-
-function enableAdditiveBlending() {
-  drawingContext.enable(drawingContext.BLEND);
-  drawingContext.blendFunc(drawingContext.ONE, drawingContext.ONE);
-}
+function resetToAlphaBlending() {}
+function enableAdditiveBlending() {}
+function disableDepthTest() {}
 
 function rgba01FromColor(col) {
   if (!col) {
@@ -1485,10 +1217,3 @@ function resetPanZoom() {
   applyCanvasZoom();
 }
 // ----------------- END: CANVAS ZOOM + PAN -----------------
-
-// ----------------- GL HELPERS -----------------
-function disableDepthTest(gl = drawingContext) {
-  if (!gl) return;
-  gl.disable(gl.DEPTH_TEST);
-  gl.depthMask(false);
-}
