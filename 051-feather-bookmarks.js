@@ -947,7 +947,7 @@ const paramRanges = {
   barbInnerNoiseLevel: { min: 0, max: 0.578, step: 0.001 },
   barbInnerNoiseScaleExp: { min: 0, max: 1.37, step: 0.001 },
 
-  nBarbs: { min: 40, max: 150, step: 1 },
+  nBarbs: { min: 60, max: 150, step: 1 },
   barbTiltStart: { min: 0, max: 0.6, step: 0.01 },
 
   afterFeather_enabled: { /* boolean toggle */ },
@@ -956,6 +956,42 @@ const paramRanges = {
   afterFeather_noiseLevelExp: { min: -2, max: 0.14, step: 0.01 },
   afterFeather_noiseScaleExp: { min: -2, max: 0.8, step: 0.001 },
 };
+
+// Randomize all params within their ranges using current seed
+function randomizeParams() {
+  const baseSeed = (params.randomSeed | 0) >>> 0;
+  let i = 0;
+  const rand01 = (label) => sqRand(i++, baseSeed);
+
+  const applyRange = (obj, key, range) => {
+    if (!range || typeof range.min !== 'number' || typeof range.max !== 'number') return;
+    const step = typeof range.step === 'number' && range.step > 0 ? range.step : 0;
+    let v = range.min + rand01(key) * (range.max - range.min);
+    if (step > 0) {
+      v = Math.round(v / step) * step;
+      v = Math.min(range.max, Math.max(range.min, v));
+    }
+    obj[key] = v;
+  };
+
+  // Walk ranges; handle nested afterFeather_* specially
+  for (const [key, range] of Object.entries(paramRanges)) {
+    if (key.startsWith('afterFeather_')) {
+      const sub = key.substring('afterFeather_'.length);
+      if (sub === 'enabled') {
+        params.afterFeather.enabled = rand01(key) > 0.5;
+      } else if (params.afterFeather && sub in params.afterFeather) {
+        applyRange(params.afterFeather, sub, range);
+      }
+    } else if (key in params) {
+      applyRange(params, key, range);
+    }
+  }
+
+  // Assign a new deterministic seed derived from the current one
+  const newSeed = Math.floor(sqRand(0xDEADBEEF, baseSeed) * 2147483647) >>> 0;
+  params.randomSeed = newSeed;
+}
 
 function createGui() {
   gui.add(Debug, 'enabled').name('Debug Draw').onChange(() => { refresh(); });
@@ -970,6 +1006,9 @@ function createGui() {
     }
   };
   gui.add(seedUi, 'RerollSeed').name('🎲 Reseed');
+
+  const randomizeUi = { Randomize: () => { randomizeParams(); refresh(); } };
+  gui.add(randomizeUi, 'Randomize').name('🔀 Randomize');
 
   const paramsFolder = gui.addFolder('Feather Params');
   paramsFolder.add(params, 'spineDivisions', paramRanges.spineDivisions.min, paramRanges.spineDivisions.max).step(paramRanges.spineDivisions.step).onChange(() => { refresh(); });
