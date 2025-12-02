@@ -107,16 +107,15 @@ const params = {
   afterFeather: {
     enabled: true,
     nBarbs: 15,
-    baseWidth: 36,
+    // Normalized (0-1) base width relative to vaneBaseWidth
+    baseWidthNorm: 36 / 53, // approx previous absolute 36 when vaneBaseWidth=53
     noiseLevelExp: -0.22,
     noiseScaleExp: 1.071,
     widthCurve: (t) => {
-      // t = 0-1 along afterfeather
       return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)
     },
     barbTiltCurve: (t, i) => {
       let tilt = (1 - smoothstep(0.1, 0.9, t)) * 0.25; // never fully tilted
-      // Add some randomness
       tilt += (sqRand(i) - 0.5) * 0.1 ;
       return tilt;
     }
@@ -432,10 +431,7 @@ class Feather {
     const afParams = this.params.afterFeather;
     const tSpineStart = this.params.afterFeatherStart;
     const tSpineEnd = this.params.afterFeatherEnd;
-
     this.afterFeatherBarbs = [];
-
-    // Find root points
     let rootPoints = [];
     for (let i = 0; i < afParams.nBarbs; i++) {
       const t = i / (afParams.nBarbs - 1);
@@ -444,10 +440,7 @@ class Feather {
       const rootPoint = this.params.spineCurve.GetPosition(tAlongSpine);
       rootPoints.push(rootPoint);
     }
-
-    // Find tangents
     const tangents = getTangents(rootPoints);
-
     for (let i = 0; i < rootPoints.length; i++) {
       const t = i / (rootPoints.length - 1);
       const tAlongSpine = lerp(tSpineStart, tSpineEnd, t);
@@ -463,18 +456,12 @@ class Feather {
       frameRight.translate(scale2d(frameRight.right, spineAdjustedWidth));
       frameLeft.translate(scale2d(frameLeft.right, spineAdjustedWidth));
 
-      const barbLength = afParams.baseWidth * afParams.widthCurve(t);
+      // Compute actual base width from normalized ratio
+      const baseWidthActual = this.params.vaneBaseWidth * afParams.baseWidthNorm;
+      const barbLength = baseWidthActual * afParams.widthCurve(t);
 
-      this.afterFeatherBarbs.push({
-        frame: frameRight,
-        length: barbLength,
-        tAlongAfterfeather: t
-      });
-      this.afterFeatherBarbs.push({
-        frame: frameLeft,
-        length: barbLength,
-        tAlongAfterfeather: t
-      });
+      this.afterFeatherBarbs.push({ frame: frameRight, length: barbLength, tAlongAfterfeather: t });
+      this.afterFeatherBarbs.push({ frame: frameLeft, length: barbLength, tAlongAfterfeather: t });
     }
   }
 
@@ -940,34 +927,34 @@ function getClumpColor(i) {
 // Centralized ranges for GUI controls
 const paramRanges = {
   spineDivisions: { min: 10, max: 300, step: 1 },
-  spineEnd: { min: 0.5, max: 1, step: 0.01 },
-  spineBaseWidth: { min: 1, max: 100, step: 1 },
-  afterFeatherStart: { min: 0, max: 1, step: 0.01 },
-  afterFeatherEnd: { min: 0, max: 1, step: 0.01 },
+  spineEnd: { min: 0.9, max: 0.96, step: 0.01 },
+  spineBaseWidth: { min: 2, max: 8, step: 1 },
+  afterFeatherStart: { min: 0.15, max: 0.21, step: 0.01 },
+  afterFeatherEnd: { min: 0.24, max: 0.27, step: 0.01 },
   spineStartBendDeg: { min: -40, max: 40, step: 0.1 },
   spineEndBendDeg: { min: -40, max: 40, step: 0.1 },
 
-  vaneBaseWidth: { min: 10, max: 300, step: 1 },
+  vaneBaseWidth: { min: 30, max: 59, step: 1 },
   vaneBreaks: { min: 0, max: 100, step: 1 },
   vaneBreakSymmetry: { min: 0, max: 1, step: 0.01 },
-  vaneBreakEnd: { min: 0, max: 1, step: 0.01 },
+  vaneBreakEnd: { min: 0.82, max: 1, step: 0.01 },
   vaneNoiseLevelExp: { min: -2, max: 2, step: 0.01 },
   vaneNoiseScaleExp: { min: -2, max: 4, step: 0.001 },
-  clumpCohesionStart: { min: -2, max: 2, step: 0.01 },
-  clumpCohesionEnd: { min: -2, max: 2, step: 0.01 },
+  clumpCohesionStart: { min: 0.7, max: 1.33, step: 0.01 },
+  clumpCohesionEnd: { min: 0.58, max: 1.33, step: 0.01 },
   clumpNoiseLevel: { min: 0, max: 2, step: 0.001 },
   clumpNoiseScaleExp: { min: 2, max: 3, step: 0.001 },
-  barbInnerNoiseLevel: { min: 0, max: 1, step: 0.001 },
-  barbInnerNoiseScaleExp: { min: 0, max: 3, step: 0.001 },
+  barbInnerNoiseLevel: { min: 0, max: 0.578, step: 0.001 },
+  barbInnerNoiseScaleExp: { min: 0, max: 1.37, step: 0.001 },
 
   nBarbs: { min: 40, max: 150, step: 1 },
   barbTiltStart: { min: 0, max: 0.6, step: 0.01 },
 
   afterFeather_enabled: { /* boolean toggle */ },
-  afterFeather_nBarbs: { min: 1, max: 100, step: 1 },
-  afterFeather_baseWidth: { min: 10, max: 200, step: 1 },
-  afterFeather_noiseLevelExp: { min: -2, max: 2, step: 0.01 },
-  afterFeather_noiseScaleExp: { min: -2, max: 4, step: 0.001 },
+  afterFeather_nBarbs: { min: 5, max: 20, step: 1 },
+  afterFeather_baseWidthNorm: { min: 0, max: 0.8, step: 0.01 },
+  afterFeather_noiseLevelExp: { min: -2, max: 0.14, step: 0.01 },
+  afterFeather_noiseScaleExp: { min: -2, max: 0.8, step: 0.001 },
 };
 
 function createGui() {
@@ -1014,7 +1001,7 @@ function createGui() {
   const afterFeatherFolder = gui.addFolder('Afterfeather');
   afterFeatherFolder.add(params.afterFeather, 'enabled').name('Enabled').onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'nBarbs', paramRanges.afterFeather_nBarbs.min, paramRanges.afterFeather_nBarbs.max).step(paramRanges.afterFeather_nBarbs.step).onChange(() => { refresh(); });
-  afterFeatherFolder.add(params.afterFeather, 'baseWidth', paramRanges.afterFeather_baseWidth.min, paramRanges.afterFeather_baseWidth.max).step(paramRanges.afterFeather_baseWidth.step).onChange(() => { refresh(); });
+  afterFeatherFolder.add(params.afterFeather, 'baseWidthNorm', paramRanges.afterFeather_baseWidthNorm.min, paramRanges.afterFeather_baseWidthNorm.max).step(paramRanges.afterFeather_baseWidthNorm.step).name('Base Width (norm)').onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'noiseLevelExp', paramRanges.afterFeather_noiseLevelExp.min, paramRanges.afterFeather_noiseLevelExp.max).step(paramRanges.afterFeather_noiseLevelExp.step).onChange(() => { refresh(); });
   afterFeatherFolder.add(params.afterFeather, 'noiseScaleExp', paramRanges.afterFeather_noiseScaleExp.min, paramRanges.afterFeather_noiseScaleExp.max).step(paramRanges.afterFeather_noiseScaleExp.step).onChange(() => { refresh(); });
 }
