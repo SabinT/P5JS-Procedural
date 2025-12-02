@@ -138,6 +138,42 @@ export class CubicHermite2D {
         return this;
     }
 
+    Straighten() {
+        // Align both tangents to the direction from p0 to p1, preserving their lengths
+        const dx = this.p1.x - this.p0.x;
+        const dy = this.p1.y - this.p0.y;
+        const segLen = Math.hypot(dx, dy);
+        if (!(segLen > 1e-12)) return this; // degenerate, keep as-is
+
+        const ux = dx / segLen;
+        const uy = dy / segLen;
+
+        const m0Len = Math.hypot(this.m0.x, this.m0.y);
+        const m1Len = Math.hypot(this.m1.x, this.m1.y);
+
+        this.m0 = vec2(ux * m0Len, uy * m0Len);
+        this.m1 = vec2(ux * m1Len, uy * m1Len);
+        return this;
+    }
+
+    BendStartTangentDegrees(angle) {
+        if (!Number.isFinite(angle)) return this;
+        const a = angle * Math.PI / 180;
+        const c = Math.cos(a), s = Math.sin(a);
+        const x = this.m0.x, y = this.m0.y;
+        this.m0 = vec2(c * x - s * y, s * x + c * y);
+        return this;
+    }
+
+    BendEndTangentDegrees(angle) {
+        if (!Number.isFinite(angle)) return this;
+        const a = angle * Math.PI / 180;
+        const c = Math.cos(a), s = Math.sin(a);
+        const x = this.m1.x, y = this.m1.y;
+        this.m1 = vec2(c * x - s * y, s * x + c * y);
+        return this;
+    }
+
     Scale(s) {
         // Get the center point at t = 0.5
         const center = this.GetPosition(0.5);

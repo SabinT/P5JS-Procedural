@@ -49,16 +49,28 @@ const debugSliders = {
 
 const gui = new dat.GUI();
 
+// Seed object for the base spine curve (unbent/unfitted)
+const baseSpineCurveObj = { "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 546 }, "m1": { "x": 680, "y": -284 } };
+
+// Start from base (final bending/fitting will be applied per params later)
+const spineCurve =  CubicHermite2D.FromObject(baseSpineCurveObj);
+
 // const spineCurve = CubicHermite2D.FromObject( {"p0":{"x":397,"y":582},"m0":{"x":332,"y":-569},"p1":{"x":1237,"y":593},"m1":{"x":458,"y":-611}}); 
-const spineCurve =  CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 546 }, "m1": { "x": 680, "y": -284 } });
 // spineCurve.Scale(0.25);
-spineCurve.FitTo(0, w, 0, h, 20, 20);
+spineCurve
+  .Straighten()
+  .BendStartTangentDegrees(15)
+  .BendEndTangentDegrees(-15)
+  .FitTo(0, w, 0, h, 20, 20);
 
 const params = {
   randomSeed: Math.random() * 0xFFFFFFFF,
   svgWidthMM: 297,
   svgHeightMM: 210,
   spineCurve: spineCurve,
+  // Bend controls (degrees)
+  spineStartBendDeg: 15,
+  spineEndBendDeg: -15,
   spineDivisions: 200,
   spineBaseWidth: 4,
   spineEnd: 0.95,
@@ -67,8 +79,8 @@ const params = {
   },
   nBarbs: 116, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
-  afterFeatherStart: 0.19,
-  afterFeatherEnd: 0.275,
+  afterFeatherStart: 0.16,
+  afterFeatherEnd: 0.27,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
   vaneBreakEnd: 1,
   vaneBaseWidth: 53,
@@ -924,8 +936,6 @@ class Feather {
 }
 
 let feather;
-let spineShaderSolid;
-let barbMeshShader;
 
 let font;
 window.preload = function () {
@@ -977,23 +987,6 @@ window.keyTyped = function () {
     feather.svgDrawing.save(`feather_${params.randomSeed}.svg`);
   }
 };
-
-function resetToAlphaBlending() {}
-function enableAdditiveBlending() {}
-function disableDepthTest() {}
-
-function rgba01FromColor(col) {
-  if (!col) {
-    return [1, 1, 1, 1];
-  }
-
-  const levels = col.levels || [];
-  const r = (levels[0] ?? 255) / 255;
-  const g = (levels[1] ?? 255) / 255;
-  const b = (levels[2] ?? 255) / 255;
-  const a = (levels[3] ?? 255) / 255;
-  return [r, g, b, a];
-}
 
 function getClumpColor(i) {
   // Deterministic random color, random hue
@@ -1053,6 +1046,9 @@ function createGui() {
   paramsFolder.add(params, 'spineBaseWidth', 1, 100).step(1).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherStart', 0, 1).step(0.01).onChange(() => { refresh(); });
   paramsFolder.add(params, 'afterFeatherEnd', 0, 1).step(0.01).onChange(() => { refresh(); });
+  // New: bend controls
+  paramsFolder.add(params, 'spineStartBendDeg', -40, 40).step(0.1).name('Start Bend (deg)').onChange(() => { refresh(); });
+  paramsFolder.add(params, 'spineEndBendDeg', -40, 40).step(0.1).name('End Bend (deg)').onChange(() => { refresh(); });
 
   const clumpingFolder = gui.addFolder('Clumping');
   clumpingFolder.add(params, 'vaneBaseWidth', 10, 300).step(1).onChange(() => { refresh(); });
@@ -1118,6 +1114,16 @@ function refresh() {
   redraw();
 }
 
+// Helper to rebuild spine curve from seed + params
+function buildCurveFromParams(p) {
+  const c = CubicHermite2D.FromObject(baseSpineCurveObj);
+  c.Straighten()
+   .BendStartTangentDegrees(p.spineStartBendDeg || 0)
+   .BendEndTangentDegrees(p.spineEndBendDeg || 0)
+   .FitTo(0, w, 0, h, 20, 20);
+  return c;
+}
+
 function setupDebugParams() {
   // Copy params to debugParams except for the reduced divisions
   debugParams = { ...params }
@@ -1130,8 +1136,11 @@ function setupDebugParams() {
   debugParams.barbPatternPass2 = { ...params.barbPatternPass2 };
   debugParams.spinePatternPass1 = { ...params.spinePatternPass1 };
   debugParams.afterFeatherPatternPass1 = { ...params.afterFeatherPatternPass1 };
-  // Ensure enabled flags are present in debug copy
   if (params.spineSolidPass) debugParams.spineSolidPass = { ...params.spineSolidPass };
+
+  // Rebuild spine curves from the base seed and current bend params
+  params.spineCurve = buildCurveFromParams(params);
+  debugParams.spineCurve = buildCurveFromParams(debugParams);
 }
 
 // ----------------- CANVAS ZOOM + PAN (CSS, no redraw) -----------------
