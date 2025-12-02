@@ -23,9 +23,9 @@ import { SVGDrawing } from "./lumic/svg.js";
 //   - some properties are graded per clump (tc = 0-1 along clump)
 //   - some peroperties are graded per feather (tf = 0-1 along feather)
 
-const w = 1920;
+const w = 600;
 const hw = w / 2;
-const h = 1080;
+const h = 150;
 const hh = h / 2;
 
 Debug.enabled = false; // Enable debug drawing
@@ -50,27 +50,28 @@ const debugSliders = {
 const gui = new dat.GUI();
 
 // const spineCurve = CubicHermite2D.FromObject( {"p0":{"x":397,"y":582},"m0":{"x":332,"y":-569},"p1":{"x":1237,"y":593},"m1":{"x":458,"y":-611}}); 
-const spineCurve =  CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 576 }, "m1": { "x": 680, "y": -284 } });
-spineCurve.Scale(1.5);
+const spineCurve =  CubicHermite2D.FromObject({ "p0": { "x": 297, "y": 546 }, "m0": { "x": 176, "y": -122 }, "p1": { "x": 1343, "y": 546 }, "m1": { "x": 680, "y": -284 } });
+// spineCurve.Scale(0.25);
+spineCurve.FitTo(0, w, 0, h, 20, 20);
 
 const params = {
-  randomSeed: 1470399325,
+  randomSeed: Math.random() * 0xFFFFFFFF,
   svgWidthMM: 297,
   svgHeightMM: 210,
   spineCurve: spineCurve,
   spineDivisions: 200,
-  spineBaseWidth: 10,
+  spineBaseWidth: 4,
   spineEnd: 0.95,
   spineWidthCurve: (t) => {
     return 1 - easeInQuad(t);
   },
-  nBarbs: 400, // barbs start at the end of the calamus
+  nBarbs: 116, // barbs start at the end of the calamus
   // Afterfeather is the plumaceous part of the feather (fluffy)
   afterFeatherStart: 0.19,
   afterFeatherEnd: 0.275,
   // Vane is the pennaceous part of the feather (flat, stiff), starts after the afterfeather
   vaneBreakEnd: 1,
-  vaneBaseWidth: 120,
+  vaneBaseWidth: 53,
   vaneWidthCurve: (t) => {
     return smoothstep(-0.25, 0.04, t)
       * smoothstep(2, 0.1, t)
@@ -81,11 +82,11 @@ const params = {
     return smoothstep(0.8, 1, t);
   },
   // Number of breaks in the vane (when the barbs are not connected, causing a gap)
-  vaneBreaks: 34,
+  vaneBreaks: 31,
   vaneBreakSymmetry: 0.74, // 0 = left only, 1 = right only, 0.5 = even on both sides
   vaneNoiseLevelExp: -2,
   vaneNoiseScaleExp: -2,
-  clumpCohesionStart: 0.8,
+  clumpCohesionStart: 0.93,
   clumpCohesionEnd: 1.0,
   clumpNoiseLevel: 0.13,
   clumpNoiseScaleExp: 2.814,
@@ -93,10 +94,10 @@ const params = {
   barbInnerNoiseScaleExp: 0.459,
   afterFeather: {
     enabled: true,
-    nBarbs: 37,
-    baseWidth: 70,
-    noiseLevelExp: -0.93,
-    noiseScaleExp: -0.4,
+    nBarbs: 15,
+    baseWidth: 36,
+    noiseLevelExp: -0.22,
+    noiseScaleExp: 1.071,
     widthCurve: (t) => {
       // t = 0-1 along afterfeather
       return smoothstep(-1, 0.9, t) * smoothstep(2, 0.5, t)

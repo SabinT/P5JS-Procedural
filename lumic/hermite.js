@@ -95,6 +95,49 @@ export class CubicHermite2D {
         });
     }
 
+    FitTo(xMin, xMax, yMin, yMax, marginX = 0, marginY = 0) {
+        // Compute target inner size
+        const targetW = Math.max(0, (xMax - xMin) - 2 * marginX);
+        const targetH = Math.max(0, (yMax - yMin) - 2 * marginY);
+        if (!(targetW > 0 && targetH > 0)) return this;
+
+        // Sample curve to estimate current bounds (captures overshoot due to tangents)
+        const pts = this.GetPoints(64);
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+        }
+
+        const curW = maxX - minX;
+        const curH = maxY - minY;
+        if (!(curW > 0 || curH > 0)) return this; // degenerate
+
+        // Uniform scale to fit inside target
+        const sX = curW > 0 ? (targetW / curW) : Infinity;
+        const sY = curH > 0 ? (targetH / curH) : Infinity;
+        const s = Math.min(sX, sY);
+        if (!Number.isFinite(s) || s <= 0) return this;
+
+        // Centers: curve bounds center -> target box center (margins are symmetric)
+        const cx = 0.5 * (minX + maxX);
+        const cy = 0.5 * (minY + maxY);
+        const dx = 0.5 * (xMin + xMax);
+        const dy = 0.5 * (yMin + yMax);
+
+        // Apply affine transform: p' = (p - c) * s + d; m' = m * s
+        const txPt = (pt) => vec2((pt.x - cx) * s + dx, (pt.y - cy) * s + dy);
+        this.p0 = txPt(this.p0);
+        this.p1 = txPt(this.p1);
+        this.m0 = scale2d(this.m0, s);
+        this.m1 = scale2d(this.m1, s);
+
+        return this;
+    }
+
     Scale(s) {
         // Get the center point at t = 0.5
         const center = this.GetPosition(0.5);
@@ -113,6 +156,8 @@ export class CubicHermite2D {
         // Scale tangent vectors
         this.m0 = scale2d(this.m0, s);
         this.m1 = scale2d(this.m1, s);
+
+        return this;
     }
 
     static FromJSONString(jsonString) {
