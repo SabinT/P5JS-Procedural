@@ -570,6 +570,256 @@ export function textSegment(s, i, options) {
   pop();
 }
 
+// ── ORGANIC ──────────────────────────────────────────────────────────────────
+
+/**
+ * Ripple: concentric arcs stacked at evenly-spaced radii.
+ * Alternating arcs are squeezed inward to create an organic wave.
+ */
+export function rippleSegment(s, i, options) {
+  const count = options?.ripples || 4;
+  const divisions = options?.lineDivisions || 8;
+  for (let k = 0; k < count; k++) {
+    const r = lerp(s.r1, s.r2, (k + 0.5) / count);
+    const sq = k % 2 === 0 ? 0.12 : 0;
+    const a1 = lerp(s.a1, s.a2, sq);
+    const a2 = lerp(s.a2, s.a1, sq);
+    polarLine(r, a1, r, a2, divisions, options?.vertexMode);
+  }
+}
+
+/**
+ * Thorn: N pointed spikes rising from the inner edge to the outer.
+ * Each spike is a triangle sharing its base with the inner arc.
+ */
+export function thornSegment(s, i, options) {
+  const count = options?.thorns || 2;
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  for (let k = 0; k < count; k++) {
+    const aBase1 = lerp(s.a1, s.a2, k / count);
+    const aTip   = lerp(s.a1, s.a2, (k + 0.5) / count);
+    const aBase2 = lerp(s.a1, s.a2, (k + 1) / count);
+    polarLine(s.r1, aBase1, s.r2, aTip,   divisions, vertexMode);
+    polarLine(s.r2, aTip,   s.r1, aBase2, divisions, vertexMode);
+  }
+  if (!options?.hidePerimeter) {
+    polarLine(s.r1, s.a1, s.r1, s.a2, divisions, vertexMode);
+  }
+}
+
+/**
+ * Root: Y-shaped branching vein — a central stem that splits into two
+ * branches reaching the outer corners of the segment.
+ */
+export function rootSegment(s, i, options) {
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  const am = avg(s.a1, s.a2);
+  const rm = avg(s.r1, s.r2);
+  polarLine(s.r1, am,  rm,    am,    divisions, vertexMode); // stem
+  polarLine(rm,   am,  s.r2,  s.a1,  divisions, vertexMode); // left branch
+  polarLine(rm,   am,  s.r2,  s.a2,  divisions, vertexMode); // right branch
+}
+
+// ── MECHANICAL ───────────────────────────────────────────────────────────────
+
+/**
+ * Gear tooth: a stepped notch profile — a wide base at r1 with a narrower
+ * raised tooth at r2, like a single cog.
+ */
+export function gearToothSegment(s, i, options) {
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  const rStep = lerp(s.r1, s.r2, 0.4);
+  const aq1   = lerp(s.a1, s.a2, 0.25);
+  const aq3   = lerp(s.a1, s.a2, 0.75);
+  polarLine(s.r1,  s.a1,  rStep, s.a1,  divisions, vertexMode); // left flank up
+  polarLine(rStep, s.a1,  rStep, aq1,   divisions, vertexMode); // left shoulder in
+  polarLine(rStep, aq1,   s.r2,  aq1,   divisions, vertexMode); // left tooth wall
+  polarLine(s.r2,  aq1,   s.r2,  aq3,   divisions, vertexMode); // tooth crown
+  polarLine(s.r2,  aq3,   rStep, aq3,   divisions, vertexMode); // right tooth wall
+  polarLine(rStep, aq3,   rStep, s.a2,  divisions, vertexMode); // right shoulder in
+  polarLine(rStep, s.a2,  s.r1,  s.a2,  divisions, vertexMode); // right flank down
+  if (!options?.hidePerimeter) {
+    polarLine(s.r1, s.a2, s.r1, s.a1, divisions, vertexMode);   // inner arc
+  }
+}
+
+/**
+ * Arrow: an outward-pointing chevron — widens to full width at the midpoint
+ * then tapers to a single point at the outer arc center.
+ */
+export function arrowSegment(s, i, options) {
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  const am = avg(s.a1, s.a2);
+  const rm = avg(s.r1, s.r2);
+  polarLine(s.r1,  s.a1,  rm,    s.a1,  divisions, vertexMode); // left base to waist
+  polarLine(rm,    s.a1,  s.r2,  am,    divisions, vertexMode); // left tip
+  polarLine(s.r2,  am,    rm,    s.a2,  divisions, vertexMode); // right tip
+  polarLine(rm,    s.a2,  s.r1,  s.a2,  divisions, vertexMode); // right base to waist
+  if (!options?.hidePerimeter) {
+    polarLine(s.r1, s.a1, s.r1, s.a2, divisions, vertexMode);   // inner arc
+  }
+}
+
+/**
+ * Bracket: two facing C-brackets on opposite angular edges of the segment,
+ * like [ ... ] rotated to sit in the segment.
+ */
+export function bracketSegment(s, i, options) {
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  const bw = (s.a2 - s.a1) * 0.25;
+  const aq1 = s.a1 + bw;
+  const aq2 = s.a2 - bw;
+  // Left bracket
+  polarLine(s.r2, s.a1,  s.r2,  aq1,   divisions, vertexMode); // outer arm
+  polarLine(s.r2, s.a1,  s.r1,  s.a1,  divisions, vertexMode); // spine
+  polarLine(s.r1, s.a1,  s.r1,  aq1,   divisions, vertexMode); // inner arm
+  // Right bracket
+  polarLine(s.r2, s.a2,  s.r2,  aq2,   divisions, vertexMode); // outer arm
+  polarLine(s.r2, s.a2,  s.r1,  s.a2,  divisions, vertexMode); // spine
+  polarLine(s.r1, s.a2,  s.r1,  aq2,   divisions, vertexMode); // inner arm
+}
+
+// ── RANDOM / CHAOTIC ─────────────────────────────────────────────────────────
+
+/**
+ * Zigzag: a jagged path that bounces between the two angular edges while
+ * stepping outward from r1 to r2.
+ */
+export function zigzagSegment(s, i, options) {
+  const steps = options?.steps || 3;
+  const divisions = options?.lineDivisions || 6;
+  const vertexMode = options?.vertexMode;
+  for (let k = 0; k < steps; k++) {
+    const r1 = lerp(s.r1, s.r2,  k      / steps);
+    const r2 = lerp(s.r1, s.r2, (k + 1) / steps);
+    const a1 = k % 2 === 0 ? s.a1 : s.a2;
+    const a2 = k % 2 === 0 ? s.a2 : s.a1;
+    polarLine(r1, a1, r2, a2, divisions, vertexMode);
+  }
+}
+
+/**
+ * Noise: a single Perlin-noise-perturbed path that wanders from the inner
+ * edge to the outer edge, staying inside the segment bounds.
+ * Deterministic per (ring index × step) so it looks the same on every frame.
+ */
+export function noiseSegment(s, i, options) {
+  const steps = options?.steps || 7;
+  const amplitude = options?.amplitude || 0.4;
+  const am = avg(s.a1, s.a2);
+  const rm = avg(s.r1, s.r2);
+  const halfRange = (s.a2 - s.a1) * 0.5;
+  let prevR = s.r1;
+  let prevA = am;
+  for (let k = 1; k <= steps; k++) {
+    const r = lerp(s.r1, s.r2, k / steps);
+    const n = noise(i * 2.39 + k * 1.17, rm * 0.05);
+    const a = constrain(
+      am + map(n, 0, 1, -1, 1) * halfRange * amplitude,
+      s.a1,
+      s.a2
+    );
+    polarLine(prevR, prevA, r, a, 4, false);
+    prevR = r;
+    prevA = a;
+  }
+}
+
+/**
+ * Spark: short line bursts radiating from the segment centre outward to
+ * noise-seeded positions on the segment surface — like static or a spark plug.
+ * Positions are deterministic per segment index.
+ */
+export function sparkSegment(s, i, options) {
+  const count = options?.sparks || 6;
+  const am = avg(s.a1, s.a2);
+  const rm = avg(s.r1, s.r2);
+  for (let k = 0; k < count; k++) {
+    const tA = noise(i * 1.61 + k * 3.14, 0.0);
+    const tR = noise(i * 2.72 + k * 1.41, 1.0);
+    const a  = lerp(s.a1, s.a2, tA);
+    const r  = lerp(s.r1, s.r2, tR);
+    polarLine(rm, am, r, a, 4, false);
+  }
+}
+
+// ── TILES / PATTERNS ─────────────────────────────────────────────────────────
+
+/**
+ * MazeTile: straight-line Truchet — connects edge midpoints in one of two
+ * complementary orientations. When alternated across a ring, the two
+ * configurations interlock into maze-like corridors.
+ */
+export function mazeTileSegment(s, i, options) {
+  const divisions = options?.lineDivisions || 8;
+  const vertexMode = options?.vertexMode;
+  const rm = avg(s.r1, s.r2);
+  const am = avg(s.a1, s.a2);
+  const flip = i % 2 === 0;
+  if (flip) {
+    // left-mid ↔ inner-mid  +  right-mid ↔ outer-mid  (parallel passages)
+    polarLine(rm, s.a1, s.r1, am, divisions, vertexMode);
+    polarLine(rm, s.a2, s.r2, am, divisions, vertexMode);
+  } else {
+    // left-mid ↔ outer-mid  +  right-mid ↔ inner-mid  (crossing passages)
+    polarLine(rm, s.a1, s.r2, am, divisions, vertexMode);
+    polarLine(rm, s.a2, s.r1, am, divisions, vertexMode);
+  }
+}
+
+/**
+ * Truchet: curved Truchet tile — each segment draws two quarter-circle
+ * bezier arcs that connect edge midpoints through the adjacent corner.
+ * Two complementary orientations tile seamlessly into flowing curved patterns.
+ */
+export function truchetSegment(s, i, options) {
+  const rm = avg(s.r1, s.r2);
+  const am = avg(s.a1, s.a2);
+  // Edge midpoints (Cartesian)
+  const mN  = polar2cart(vec2(s.r2, am  ));
+  const mS  = polar2cart(vec2(s.r1, am  ));
+  const mE  = polar2cart(vec2(rm,   s.a2));
+  const mW  = polar2cart(vec2(rm,   s.a1));
+  // Corners used as coincident bezier control points → arc-like curve
+  const cNE = polar2cart(vec2(s.r2, s.a2));
+  const cNW = polar2cart(vec2(s.r2, s.a1));
+  const cSE = polar2cart(vec2(s.r1, s.a2));
+  const cSW = polar2cart(vec2(s.r1, s.a1));
+  const flip = i % 2 === 0;
+  if (flip) {
+    bezier2D(mN, cNE, cNE, mE); // outer-right arc
+    bezier2D(mW, cSW, cSW, mS); // inner-left arc
+  } else {
+    bezier2D(mN, cNW, cNW, mW); // outer-left arc
+    bezier2D(mE, cSE, cSE, mS); // inner-right arc
+  }
+}
+
+/**
+ * DotWave: a sine-wave path from the inner to the outer edge drawn as a
+ * chain of small circles rather than a line.
+ * The wave oscillates angularly; phase is offset per segment so adjacent rings
+ * decohere into different phases for visual variety.
+ */
+export function dotWaveSegment(s, i, options) {
+  const count   = options?.dots    || 12;
+  const dotSize = options?.dotSize || (s.r2 - s.r1) * 0.18;
+  const am      = avg(s.a1, s.a2);
+  const halfA   = (s.a2 - s.a1) * 0.5 * 0.85;
+  for (let k = 0; k <= count; k++) {
+    const t = k / count;
+    const r = lerp(s.r1, s.r2, t);
+    const a = am + Math.sin(t * Math.PI * 2 + i * 0.31) * halfA;
+    const pt = polar2cart(vec2(r, a));
+    circle(pt.x, pt.y, dotSize);
+  }
+}
+
 export const supportsVertexMode = new Set();
 supportsVertexMode.add(diamondSegment);
 supportsVertexMode.add(crossSegment);
@@ -578,28 +828,47 @@ supportsVertexMode.add(boxSegment);
 supportsVertexMode.add(leafSegment);
 supportsVertexMode.add(leafTiltedSegment);
 supportsVertexMode.add(circleSegment);
+supportsVertexMode.add(thornSegment);
+supportsVertexMode.add(gearToothSegment);
+supportsVertexMode.add(arrowSegment);
+supportsVertexMode.add(zigzagSegment);
+supportsVertexMode.add(mazeTileSegment);
 
 export const supportsInset = new Set();
 supportsInset.add(diamondSegment);
 supportsInset.add(crossSegment);
 supportsInset.add(boxSegment);
 supportsInset.add(circleSegment);
+supportsInset.add(gearToothSegment);
+supportsInset.add(arrowSegment);
 
 export const supportsRepeat = new Set();
 supportsRepeat.add(bezierSegment);
 supportsRepeat.add(diamondSegment);
 supportsRepeat.add(crossSegment);
 supportsRepeat.add(squareWaveSegment);
+supportsRepeat.add(rippleSegment);
+supportsRepeat.add(zigzagSegment);
+supportsRepeat.add(mazeTileSegment);
+supportsRepeat.add(truchetSegment);
+supportsRepeat.add(dotWaveSegment);
 
 export const hasPerimeter = new Set();
 hasPerimeter.add(boxSegment);
 hasPerimeter.add(squareWaveSegment);
 hasPerimeter.add(leafSegment);
+hasPerimeter.add(gearToothSegment);
+hasPerimeter.add(arrowSegment);
+hasPerimeter.add(bracketSegment);
 
 export const noSkip = new Set();
 noSkip.add(squareWaveSegment);
 noSkip.add(crissCrossPetalSegment);
 noSkip.add(crossSegment);
+noSkip.add(zigzagSegment);
+noSkip.add(bracketSegment);
+noSkip.add(mazeTileSegment);
+noSkip.add(truchetSegment);
 
 export const allSegments = [
   emptySegment,
@@ -613,6 +882,22 @@ export const allSegments = [
   crissCrossPetalSegment,
   // leafTiltedSegment,
   circleSegment,
+  // Organic
+  rippleSegment,
+  thornSegment,
+  rootSegment,
+  // Mechanical
+  gearToothSegment,
+  arrowSegment,
+  bracketSegment,
+  // Chaotic
+  zigzagSegment,
+  noiseSegment,
+  sparkSegment,
+  // Tiles
+  mazeTileSegment,
+  truchetSegment,
+  dotWaveSegment,
 ];
 
 export function getRandomSegment() {

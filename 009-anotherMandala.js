@@ -7,9 +7,31 @@ const hw = w / 2;
 const h = 600;
 const hh = h / 2;
 
+// All segments including those that need special options (e.g. textSegment).
+const allSegments = [
+  ...m.allSegments,
+  m.textSegment,
+];
+
+// Per-segment option overrides required for correct rendering.
+const segmentOptionOverrides = new Map([
+  [m.textSegment,      { text: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", fontSize: 0 }],
+  [m.rippleSegment,    { ripples: 4 }],
+  [m.thornSegment,     { thorns: 3 }],
+  [m.gearToothSegment, {}],
+  [m.arrowSegment,     {}],
+  [m.bracketSegment,   {}],
+  [m.zigzagSegment,    { steps: 6 }],
+  [m.noiseSegment,     { steps: 8, amplitude: 0.5 }],
+  [m.sparkSegment,     { sparks: 7 }],
+  [m.rootSegment,      {}],
+  [m.mazeTileSegment,  {}],
+  [m.truchetSegment,   {}],
+  [m.dotWaveSegment,   { dots: 14, dotSize: 4 }],
+]);
 
 const defaultOptions = {
-  count: 32,
+  count: 24,
   hidePerimeter: true,
 };
 
@@ -22,7 +44,6 @@ function render() {
 
   push();
   translate(hw, hh);
-  //   scale(0.9);
 
   stroke(200);
   noFill();
@@ -34,34 +55,26 @@ function render() {
   const rMax = w * 0.4;
   for (let i = 0; m.getCurrentRadius() < rMax; i++) {
     const step = 10 + random(30);
-     const seg = m.getRandomSegment();
-    //const seg = getRandom([m.bezierSegment, m.bezierSegment]);
+    const seg = getRandom(allSegments);
 
-    const baseMultiplier = Math.floor(random(3, 3));
-    const count = Math.floor((3 * m.getCurrentRadius()) / rMax) * (baseMultiplier * 6);
-
-    const skip = getRandom([0, 2]);
+    // Merge any per-segment required options.
+    const segOverrides = segmentOptionOverrides.get(seg) ?? {};
 
     const newOptions = {
       ...defaultOptions,
-      count: 24,
-      // skip: random() < 0.5 ? skip : undefined,
+      ...segOverrides,
       invertSkip: true,
     };
-
-    // fill(getRandomColor(cyberpunkTheme));
 
     m.addRing(seg, step, newOptions);
 
     if (random(1) < 0.5 && m.supportsRepeat.has(seg)) {
-      // Small repeat chance
       m.addRing(seg, step, newOptions);
     }
 
     noFill();
 
     if (random() < 0.5) {
-      // adding perimeter doesn't make sense for squareWaveSegment
       if (random(1) < 1 && seg !== m.squareWaveSegment) {
         m.addSpacer(5, true, true);
       } else {
