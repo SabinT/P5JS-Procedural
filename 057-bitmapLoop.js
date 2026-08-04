@@ -27,7 +27,7 @@ const BG_ALPHA = "55"; // appended to the hex, #RRGGBBAA
 
 const CANVAS_PX = 1080;
 const DISPLAY_PX = 720; // on-screen CSS size
-const LOOP = { T: 240, fps: 30 }; // 8 s master period
+const LOOP = { T: 480, fps: 30 }; // 16 s master period
 const EXPORT = { prefix: "bitmapLoop_" };
 
 // The hatch grid covers the whole canvas; the art maps into it centered
