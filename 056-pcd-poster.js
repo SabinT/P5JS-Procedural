@@ -4,6 +4,7 @@
 
 import { loadCp437Sheet } from "./lumic/cp437.js";
 import { createBuffer } from "./lumic/asciiCanvas.js";
+import { exportFrameSequence } from "./lumic/frameExport.js";
 
 // ═══════════════════════ CONFIG ═══════════════════════
 
@@ -86,6 +87,11 @@ const LOOP = { T: 480, fps: 60 }; // 8 s master period
 const SCALE = 2;
 const DISPLAY_PX = 720; // on-screen CSS size (1:1 with the backing store on HiDPI)
 
+// Frame export (E key only — the sketch otherwise just plays). Writes exactly
+// LOOP.T frames, phases 0..(T-1)/T, into a folder you pick; no closing
+// duplicate of frame 0, so ffmpeg's loop point is clean.
+const EXPORT = { prefix: "pcd_" };
+
 // ═══════════════════════ SKETCH ═══════════════════════
 
 const CHAR_W = 9;
@@ -121,9 +127,15 @@ window.setup = function () {
 };
 
 window.draw = function () {
-  const ft = frameCount % LOOP.T; // frame within the loop
-  const u = ft / LOOP.T; // loop phase 0..1
+  renderFrame((frameCount % LOOP.T) / LOOP.T);
+};
 
+/**
+ * The whole poster at loop phase u in [0,1) — a pure function of u, with no
+ * state carried between frames. That is what lets the frame exporter re-render
+ * any phase on demand and get a byte-identical loop.
+ */
+function renderFrame(u) {
   background(PALETTE.bg);
   buf.clear(PALETTE.bg);
 
@@ -134,11 +146,15 @@ window.draw = function () {
   buf.blit(0, 0, SCALE);
 
   drawBottomText(u); // 2x rows blit over the main canvas
-};
+}
 
 window.keyPressed = function () {
   if (key === "s" || key === "S") save("056-pcd-poster.png");
   if (key === "r" || key === "R") ART.rampIndex = (ART.rampIndex + 1) % RAMPS.length;
+  // E is the only path that exports; the sketch just animates otherwise.
+  if (key === "e" || key === "E") {
+    exportFrameSequence({ frames: LOOP.T, fps: LOOP.fps, render: renderFrame, prefix: EXPORT.prefix });
+  }
 };
 
 // ─────────────────────── static chassis ───────────────────────
