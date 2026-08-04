@@ -16,6 +16,7 @@
 import { vec2, line2D, lerp2d, TAU } from "./lumic/common.js";
 import { clamp01 } from "./lumic/easing.js";
 import { exportFrameSequence } from "./lumic/frameExport.js";
+import { makeNoise4D } from "./lumic/noise4d.js";
 
 // ═══════════════════════ CONFIG ═══════════════════════
 
@@ -59,13 +60,15 @@ const INK = {
 const BG = {
   divisions: 1,
   weight: 1.2,
-  on: 0.42,
-  full: 0.68,
+  on: 0.47,
+  full: 0.74,
 };
 
-// Looping noise fields: sampled along a circle in noise space, so the value
-// at u=0 and u=1 is identical. scale = cells -> noise units, radius = how far
-// the loop travels (bigger = more churn per loop), ox/oy decorrelate fields.
+// Looping noise fields: 4D simplex sampled at (x, y, R cos, R sin) — the 2D
+// slice stays put while the sample point circles through the two extra
+// dimensions, so the field evolves in place (no scrolling) and u=0 equals
+// u=1 exactly. scale = cells -> noise units, radius = how much the field
+// churns per loop, ox/oy decorrelate the fields spatially.
 const FIELDS = {
   bg45: { scale: 0.09, radius: 0.9, ox: 0, oy: 0 },
   bg135: { scale: 0.09, radius: 0.9, ox: 137, oy: 71 },
@@ -85,6 +88,7 @@ let cellC0; // per art cell: base coverage from source brightness (052's c)
 let rampInk = []; // css colors, straight from the palette
 let rampLight = []; // same colors at low alpha, for the bg hatch
 let textSizePx;
+let noise4; // seeded 4D simplex — keeps renderFrame(u) pure
 
 window.preload = function () {
   img = loadImage("../052-artcode80x80-shadow.png");
@@ -92,7 +96,7 @@ window.preload = function () {
 };
 
 window.setup = function () {
-  noiseSeed(4057); // fixed: renderFrame(u) must be pure for the exporter
+  noise4 = makeNoise4D(4057);
 
   rampInk = [...RAMP_HEX];
   rampLight = RAMP_HEX.map((hex) => hex + BG_ALPHA);
@@ -140,6 +144,7 @@ window.keyPressed = function () {
 
 /** The whole frame at loop phase u in [0,1) — pure given the noise seed. */
 function renderFrame(u) {
+  u = u - Math.floor(u); // wrap so u=1 is exactly u=0 (sin(TAU) isn't quite 0)
   background(255);
   noFill();
 
@@ -210,13 +215,20 @@ function rampIndex(n) {
   return Math.min(RAMP_HEX.length - 1, Math.floor(v * RAMP_HEX.length));
 }
 
-/** Noise on a circular path through noise space: identical at u=0 and u=1. */
+/**
+ * Looping field value in [0,1]: a fixed 2D slice of 4D simplex noise whose
+ * sample point travels a circle in the two extra dimensions — the pattern
+ * evolves in place instead of scrolling, and u=0 equals u=1 exactly.
+ */
 function loopNoise(x, y, u, f) {
   const a = TAU * u;
-  return noise(
-    f.ox + x * f.scale + f.radius * Math.cos(a),
-    f.oy + y * f.scale + f.radius * Math.sin(a)
+  const v = noise4(
+    f.ox + x * f.scale,
+    f.oy + y * f.scale,
+    f.radius * Math.cos(a),
+    f.radius * Math.sin(a)
   );
+  return 0.5 + 0.5 * v;
 }
 
 // ─────────────── line mechanism, verbatim from 052 ───────────────
