@@ -4,9 +4,11 @@
 //   - fully black pixels of the source PNG: static full crosshatch, ink ramp
 //   - anything between black and white (the shadow): coverage fluctuates
 //     with a looping noise field, so the shadow shimmers
-//   - fully white pixels (the background): 45°/135° crosshatch that swells
-//     in and out of patches driven by two independent noise fields, drawn in
-//     lighter (low-alpha) versions of the same palette
+//   - fully white pixels (and everything outside the art): 45°/135° crosshatch
+//     that swells in and out of patches driven by two independent noise
+//     fields, drawn in lighter (low-alpha) versions of the same palette
+// The art sits centered near the top of a larger hatch grid, with a Joystix
+// info block (event time / venue / address) in palette pink+blue below it.
 // Loop phase u in [0,1): renderFrame(u) is pure (fixed noise seed, no state),
 // which is what lets frameExport re-render any phase deterministically.
 // Keys: S save png, E export one loop as a PNG sequence (like 056).
@@ -27,20 +29,36 @@ const DISPLAY_PX = 720; // on-screen CSS size
 const LOOP = { T: 240, fps: 30 }; // 8 s master period
 const EXPORT = { prefix: "bitmapLoop_" };
 
+// The hatch grid covers the whole canvas; the art maps into it centered
+// horizontally, topCells down from the top. Smaller cells = smaller art.
+const GRID = { cell: 10, artTopCells: 6 };
+
+// Info block under the art, Joystix, palette pink/blue.
+const TEXT = {
+  maxWidth: 860, // widest line is fitted to this
+  centerY: 925, // vertical middle of the block (art ends at 860)
+  leadingEm: 1.7,
+  lines: [
+    { str: "Every 1st Wednesday, 7 - 10 PM", color: "#DF1A89" },
+    { str: "Seattle Interactive Media Lab", color: "#00A5DF" },
+    { str: "3131 Western Ave #421", color: "#00A5DF" },
+  ],
+};
+
 // Source-pixel classification (0..255 brightness).
 const IMG = { blackMax: 10, whiteMin: 250 };
 
 // Ink cells (black + shadow), same mechanism as 052.
 const INK = {
   divisions: 1,
-  weight: 1.8,
+  weight: 1.6,
   shadowAmp: 0.6, // +/- swing added to the shadow's base coverage
 };
 
 // Background crosshatch: noise value n maps to hatch growth over [on, full].
 const BG = {
   divisions: 1,
-  weight: 1.4,
+  weight: 1.2,
   on: 0.42,
   full: 0.68,
 };
@@ -58,14 +76,19 @@ const FIELDS = {
 // ═══════════════════════ SKETCH ═══════════════════════
 
 let img;
-let size; // cell size in px, CANVAS_PX / img.width
-let cellType; // per cell: 0 ink-black, 1 shadow, 2 background
-let cellC0; // per cell: base coverage from source brightness (052's c)
+let font;
+let size; // cell size in px (renderCell reads this, like 052's global)
+let cols, rows; // full-canvas hatch grid
+let artOx, artOy; // art position in the grid, in cells
+let cellType; // per art cell: 0 ink-black, 1 shadow, 2 background
+let cellC0; // per art cell: base coverage from source brightness (052's c)
 let rampInk = []; // css colors, straight from the palette
 let rampLight = []; // same colors at low alpha, for the bg hatch
+let textSizePx;
 
 window.preload = function () {
   img = loadImage("../052-artcode80x80-shadow.png");
+  font = loadFont("../assets/fonts/joystix/joystix monospace.otf");
 };
 
 window.setup = function () {
@@ -74,8 +97,13 @@ window.setup = function () {
   rampInk = [...RAMP_HEX];
   rampLight = RAMP_HEX.map((hex) => hex + BG_ALPHA);
 
+  size = GRID.cell;
+  cols = Math.ceil(CANVAS_PX / size);
+  rows = Math.ceil(CANVAS_PX / size);
+  artOx = Math.floor((cols - img.width) / 2);
+  artOy = GRID.artTopCells;
+
   img.loadPixels();
-  size = CANVAS_PX / img.width;
   cellType = new Uint8Array(img.width * img.height);
   cellC0 = new Float32Array(img.width * img.height);
   for (let i = 0; i < img.width * img.height; i++) {
@@ -84,11 +112,17 @@ window.setup = function () {
     cellC0[i] = 1 - b / 255;
   }
 
-  const cnv = createCanvas(CANVAS_PX, img.height * size);
+  const cnv = createCanvas(CANVAS_PX, CANVAS_PX);
   pixelDensity(1);
   frameRate(LOOP.fps);
   cnv.elt.style.width = `${DISPLAY_PX}px`;
-  cnv.elt.style.height = `${(DISPLAY_PX * img.height) / img.width}px`;
+  cnv.elt.style.height = `${DISPLAY_PX}px`;
+
+  // Fit the widest info line to TEXT.maxWidth.
+  textFont(font);
+  textSize(100);
+  const widest = Math.max(...TEXT.lines.map((ln) => textWidth(ln.str)));
+  textSizePx = Math.floor((100 * TEXT.maxWidth) / widest);
 
   window.renderFrame = renderFrame; // debug/testing hook
 };
@@ -109,41 +143,60 @@ function renderFrame(u) {
   background(255);
   noFill();
 
-  for (let y = 0; y < img.height; y++) {
-    for (let x = 0; x < img.width; x++) {
-      const i = x + y * img.width;
-      const rampIdx = rampIndex(loopNoise(x, y, u, FIELDS.color));
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      const ix = gx - artOx;
+      const iy = gy - artOy;
+      const inArt = ix >= 0 && ix < img.width && iy >= 0 && iy < img.height;
+      const i = inArt ? ix + iy * img.width : -1;
 
-      if (cellType[i] === 2) {
-        renderBgCell(x, y, u, rampLight[rampIdx]);
+      if (!inArt || cellType[i] === 2) {
+        renderBgCell(gx, gy, u);
         continue;
       }
 
       let c = cellC0[i];
       if (cellType[i] === 1) {
         // Shadow: coverage wobbles around its base value, looping seamlessly.
-        c = clamp01(c + INK.shadowAmp * (loopNoise(x, y, u, FIELDS.shadow) - 0.5) * 2);
+        c = clamp01(c + INK.shadowAmp * (loopNoise(gx, gy, u, FIELDS.shadow) - 0.5) * 2);
       }
-      stroke(rampInk[rampIdx]);
+      stroke(rampInk[rampIndex(loopNoise(gx, gy, u, FIELDS.color))]);
       strokeWeight(INK.weight);
-      renderCell(x, y, c, INK.divisions);
+      renderCell(gx, gy, c, INK.divisions);
     }
   }
+
+  drawInfoText();
 }
 
-/** Background pixel: 45° and 135° hatch lines, each grown by its own field. */
-function renderBgCell(x, y, u, color) {
-  const g45 = hatchGrowth(loopNoise(x, y, u, FIELDS.bg45));
-  const g135 = hatchGrowth(loopNoise(x, y, u, FIELDS.bg135));
+/** Background cell: 45° and 135° hatch lines, each grown by its own field. */
+function renderBgCell(gx, gy, u) {
+  const g45 = hatchGrowth(loopNoise(gx, gy, u, FIELDS.bg45));
+  const g135 = hatchGrowth(loopNoise(gx, gy, u, FIELDS.bg135));
   if (g45 <= 0 && g135 <= 0) return;
 
   const hs = size / 2;
   push();
-  translate(x * size + hs, y * size + hs);
-  stroke(color);
+  translate(gx * size + hs, gy * size + hs);
+  stroke(rampLight[rampIndex(loopNoise(gx, gy, u, FIELDS.color))]);
   strokeWeight(BG.weight);
   if (g45 > 0) renderFill45(size, BG.divisions, 1 - g45);
   if (g135 > 0) renderFill135(size, BG.divisions, 1 - g135);
+  pop();
+}
+
+function drawInfoText() {
+  push();
+  textFont(font);
+  textSize(textSizePx);
+  textAlign(CENTER, CENTER);
+  noStroke();
+  const lead = textSizePx * TEXT.leadingEm;
+  const y0 = TEXT.centerY - (lead * (TEXT.lines.length - 1)) / 2;
+  for (let i = 0; i < TEXT.lines.length; i++) {
+    fill(TEXT.lines[i].color);
+    text(TEXT.lines[i].str, width / 2, y0 + i * lead);
+  }
   pop();
 }
 
