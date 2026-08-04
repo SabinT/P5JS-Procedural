@@ -74,7 +74,7 @@ const COPY = {
   cta2: "Have ideas/resources/time to share?",
   interest: [
     { text: "Interest form: ", color: "text" },
-    { text: "bit.ly/pcdseattle", color: "title2", sweep: true },
+    { text: "tinyurl.com/pcdseattle", color: "title2", sweep: true },
   ],
 };
 
